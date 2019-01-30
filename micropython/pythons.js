@@ -124,7 +124,7 @@ function init_loop(){
         var script = scripts[i]
         if(script.type == "text/µpython"){
             var cs = allocate(intArrayFromString(script.text), 'i8', ALLOC_STACK);
-            console.log(script.text)
+            //console.log(script.text)
             Module._PyRun_SimpleString(cs)
             Module._free(cs);
             break

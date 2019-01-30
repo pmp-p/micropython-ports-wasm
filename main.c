@@ -282,25 +282,10 @@ main(int argc, char *argv[]) {
 
     //chdir("/data/data/u.root.upy/assets");
     chdir("/");
-    EM_ASM({
 
-        String.prototype.startswith = function(prefix) {
-            return this.indexOf(prefix, 0) !== -1;
-        };
-
-        String.prototype.rsplit = function(sep, maxsplit) {
-            var split = this.split(sep);
-            return maxsplit ? [ split.slice(0, -maxsplit).join(sep) ].concat(split.slice(-maxsplit)) : split;
-        };
-
-        String.prototype.endswith = function(suffix) {
-            return this.indexOf(suffix, this.length - suffix.length) !== -1;
-        };
-
-    });
 writecode("boot.py",
 "import sys\n"
-"print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n\n"
+"print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
 );
 
     PyRun_VerySimpleFile("/boot.py");

@@ -5,11 +5,18 @@ Follow the instructions for getting started with Emscripten [here](http://kripke
 Then you can run
 
 ```
-. /path/to/emsdk/emsdk_set_env.sh
-cd /directory/of/micropython//ports
+# micropython-ports-wasm will go in micropython/ports/wasm
+
+git clone --recursive https://github.com/micropython/micropython
+
+cd micropython/ports
 git clone https://github.com/pmp-p/micropython-ports-wasm.git wasm
+
 cd wasm
+
+. /path/to/emsdk/emsdk_set_env.sh
 emmake make && ./runtest.sh
+
 chromium-browser http://127.0.0.1:8000/test.html
 ```
 
@@ -29,7 +36,6 @@ https://kiwi.freenode.net/?nick=upy-wasm-guest&channel=#micropython-fr
 codebase
 https://github.com/matthewelse/micropython
 
-
 Micropython webassembly target
 https://github.com/micropython/micropython/issues/3313
 
@@ -43,8 +49,10 @@ Emscripten
 https://github.com/micropython/micropython/issues/888
 
 
-
 MicroPython and emscripten
+
 https://www.bountysource.com/issues/5037165-emscripten
+
 https://github.com/micropython/micropython/issues/3474
+
 https://github.com/kkimdev/epsilon
