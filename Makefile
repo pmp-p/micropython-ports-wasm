@@ -17,11 +17,11 @@ QSTR_DEFS = qstrdefsport.h
 # include py core make definitions
 include ../../py/py.mk
 
-CC = emcc -s ASSERTIONS=2 -s EMULATE_FUNCTION_POINTER_CASTS=1
+CC = emcc -s ASSERTIONS=2
 CPP = gcc -E
 CLANG = 1
 SIZE = echo
-LD = emcc -s ASSERTIONS=2 -s EMULATE_FUNCTION_POINTER_CASTS=1
+LD = $(CC)
 
 INC += -I.
 INC += -I../..
@@ -48,13 +48,28 @@ LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_getf','_setf', '_Py_InitializeEx',
 
 SRC_C = \
 	main.c \
-	stdio_core.c \
+	wasm_mphal.c \
+	modtime.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/pyexec.c \
-	lib/mp-readline/readline.c \
-	$(BUILD)/_frozen_mpy.c \
+	lib/mp-readline/readline.c
 
-OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
+ifeq ($(MICROPY_PY_TIME),1)
+CFLAGS_MOD += -DMICROPY_PY_TIME=1
+SRC_MOD += modtime.c
+endif
+
+# List of sources for qstr extraction
+SRC_QSTR += $(SRC_C) $(LIB_SRC_C)
+# Append any auto-generated sources that are needed by sources listed in
+# SRC_QSTR
+SRC_QSTR_AUTO_DEPS +=
+
+SRC_ALL = $(SRC_C)
+SRC_ALL+= $(BUILD)/_frozen_mpy.c
+
+OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_ALL:.c=.o))
+
 
 all: $(PROG)
 

@@ -14,14 +14,13 @@
 
 #include "extmod/vfs_posix.h"
 
+#ifdef __EMSCRIPTEN__
 #include "emscripten.h"
-
-// TODO: make this work properly with emscripten
-#ifdef _WIN32
-#define PATHLIST_SEP_CHAR ';'
 #else
-#define PATHLIST_SEP_CHAR ':'
+    #define EMSCRIPTEN_KEEPALIVE
 #endif
+
+#define PATHLIST_SEP_CHAR ':'
 
 static char *stack_top;
 
@@ -40,6 +39,8 @@ mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
     printf("mp_builtin_open_obj");
     return mp_const_none;
 }
+
+
 /*
 extern const mp_obj_type_t mp_type_stringio;
 */
@@ -241,6 +242,7 @@ setf(const char *code) {
 }
 
 void getf(const char *url) {
+    #ifdef __EMSCRIPTEN__
     EM_ASM( {
         var url=""+Pointer_stringify($0);
         if (url.startswith("http")){
@@ -258,7 +260,7 @@ void getf(const char *url) {
 
 
     }, url );
-
+    #endif
 }
 
 void

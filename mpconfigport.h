@@ -7,10 +7,23 @@
 #define MICROPY_ERROR_REPORTING     (MICROPY_ERROR_REPORTING_TERSE)
 #define MICROPY_CPYTHON_COMPAT      (1)
 #define MICROPY_LONGINT_IMPL        (MICROPY_LONGINT_IMPL_NONE)
-#define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_NONE)
+#define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_DOUBLE)
 #define MICROPY_ALLOC_PATH_MAX      (256)
 #define MICROPY_ALLOC_PARSE_CHUNK_INIT (16)
 #define MICROPY_BUILTIN_METHOD_CHECK_SELF_ARG (0)
+#define MICROPY_CAN_OVERRIDE_BUILTINS (1)
+#define MICROPY_USE_INTERNAL_ERRNO (0)
+
+//#define MICROPY_USE_INTERNAL_PRINTF (0)
+
+//??
+#define MICROPY_PY_DELATTR_SETATTR (0)
+#define MICROPY_PY_BUILTINS_STR_UNICODE (0)
+#define MICROPY_PY_COLLECTIONS_ORDEREDDICT (0)
+#define MICROPY_PY_MATH_SPECIAL_FUNCTIONS (0)
+#define MICROPY_PY_MATH_FACTORIAL (0)
+#define MICROPY_PY_SYS_GETSIZEOF (0)
+
 
 #define MICROPY_COMP_MODULE_CONST   (1)
 #define MICROPY_COMP_CONST          (1)
@@ -26,26 +39,28 @@
 
 #define MICROPY_PY_BUILTINS_BYTEARRAY (1)
 #define MICROPY_PY_BUILTINS_ENUMERATE (1)
-#define MICROPY_PY_BUILTINS_EXECFILE (1)
-#define MICROPY_PY_BUILTINS_FILTER  (1)
+#define MICROPY_PY_BUILTINS_EXECFILE  (1)
+#define MICROPY_PY_BUILTINS_FILTER    (1)
+//#define MICROPY_PY_BUILTINS_FLOAT     (1) because MICROPY_FLOAT_IMPL_DOUBLE == MICROPY_FLOAT_IMPL_DOUBLE
 #define MICROPY_PY_BUILTINS_FROZENSET (1)
 #define MICROPY_PY_BUILTINS_MEMORYVIEW (1)
-#define MICROPY_PY_BUILTINS_MIN_MAX (1)
-#define MICROPY_PY_BUILTINS_PROPERTY (1)
-#define MICROPY_PY_BUILTINS_REVERSED (1)
-#define MICROPY_PY_BUILTINS_SET     (1)
-#define MICROPY_PY_BUILTINS_SLICE   (1)
+#define MICROPY_PY_BUILTINS_MIN_MAX   (1)
+#define MICROPY_PY_BUILTINS_PROPERTY  (1)
+#define MICROPY_PY_BUILTINS_REVERSED  (1)
+#define MICROPY_PY_BUILTINS_SET       (1)
+#define MICROPY_PY_BUILTINS_SLICE     (1)
 
 #define MICROPY_PY_ASYNC_AWAIT      (1)
 #define MICROPY_PY_ARRAY            (1)
 #define MICROPY_PY_ATTRTUPLE        (1)
+#define MICROPY_PY_BTREE            (0)
 #define MICROPY_PY_COLLECTIONS      (1)
-//F
-#define MICROPY_PY_MATH             (1)
 //F
 #define MICROPY_PY_CMATH            (1)
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)
+//F
+#define MICROPY_PY_MATH             (1)
 #define MICROPY_PY_STRUCT           (1)
 #define MICROPY_PY_SYS              (1)
 #define MICROPY_PY_SYS_PLATFORM     "wasm"
@@ -53,14 +68,17 @@
 
 #define MICROPY_PY_UBINASCII        (1)
 #define MICROPY_PY_UCTYPES          (1)
+#define MICROPY_PY_UERRNO           (1)
+#define MICROPY_PY_UERRNO_ERRORCODE (1)
 #define MICROPY_PY_UHEAPQ           (1)
 #define MICROPY_PY_UHASHLIB         (1)
-#define MICROPY_PY_UERRNO           (1)
-#define MICROPY_PY_UZLIB            (1)
 #define MICROPY_PY_UJSON            (1)
 #define MICROPY_PY_URE              (1)
+#define MICROPY_PY_USELECT          (0)
 //F
 #define MICROPY_PY_UTIME            (1)
+#define MICROPY_PY_UTIMEQ           (1)
+#define MICROPY_PY_UZLIB            (1)
 
 #define MICROPY_PY_IO               (0)
 #define MICROPY_PY___FILE__         (0)
@@ -99,7 +117,34 @@ typedef long mp_off_t;
 
 // extra built in names to add to the global namespace
 #define MICROPY_PORT_BUILTINS \
-    { MP_OBJ_NEW_QSTR(MP_QSTR_open), (mp_obj_t)&mp_builtin_open_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_open), (mp_obj_t)&mp_builtin_open_obj }, \
+
+
+
+extern const struct _mp_obj_module_t mp_module_time;
+
+#define MICROPY_PORT_BUILTIN_MODULES \
+     { MP_ROM_QSTR(MP_QSTR_time), MP_ROM_PTR(&mp_module_time) }, \
+     { MP_ROM_QSTR(MP_QSTR_utime), MP_ROM_PTR(&mp_module_time) }, \
+
+#define MICROPY_PORT_BUILTIN_MODULE_WEAK_LINKS \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_binascii), (mp_obj_t)&mp_module_ubinascii }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_collections), (mp_obj_t)&mp_module_collections }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_errno), (mp_obj_t)&mp_module_uerrno }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_hashlib), (mp_obj_t)&mp_module_uhashlib }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_heapq), (mp_obj_t)&mp_module_uheapq }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_io), (mp_obj_t)&mp_module_io }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_json), (mp_obj_t)&mp_module_ujson }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_os), (mp_obj_t)&uos_module }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_random), (mp_obj_t)&mp_module_urandom }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_re), (mp_obj_t)&mp_module_ure }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_select), (mp_obj_t)&mp_module_uselect }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_socket), (mp_obj_t)&mp_module_usocket }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_ssl), (mp_obj_t)&mp_module_ussl }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_struct), (mp_obj_t)&mp_module_ustruct }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_time), (mp_obj_t)&mp_module_time }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_zlib), (mp_obj_t)&mp_module_uzlib }, \
+
 
 // We need to provide a declaration/definition of alloca()
 #include <alloca.h>
