@@ -10,10 +10,10 @@ print()
 print("sys.path :",sys.path)
 print()
 
-mods = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq array math cmath ustruct ucollections".split(" ")
+mods = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom uselect ustruct ucollections uio".split(" ")
 #mods.extend( "json os zlib time ctypes re hashlib binascii heapq array math cmath struct collections".split(" ") )
 mods.sort()
-mods.extend( "time gc ffi".split(" ") )
+mods.extend( "array math cmath time gc ffi io".split(" ") )
 mods.append('hello')
 
 missing = []
@@ -27,8 +27,13 @@ while len(missing):
     print(missing.pop())
 print()
 
+import utime as time
+
+print("time = {}\n".format( time.time() ) )
+
 print("import frozentest")
 import frozentest
+
 
 
 print( open('/hello.py') )

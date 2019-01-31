@@ -37,3 +37,12 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     else
         printf("%s %lu\n",str,len);
 }
+
+
+
+mp_obj_t
+mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+    printf("mp_builtin_open_obj");
+    return mp_const_none;
+}
+

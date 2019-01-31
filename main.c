@@ -34,16 +34,6 @@ char *global_readline = NULL;
 #define REPL_INPUT_MAX REPL_INPUT_SIZE-1
 
 
-mp_obj_t
-mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-    printf("mp_builtin_open_obj");
-    return mp_const_none;
-}
-
-
-/*
-extern const mp_obj_type_t mp_type_stringio;
-*/
 
 
 EMSCRIPTEN_KEEPALIVE void
@@ -55,9 +45,9 @@ Py_InitializeEx(int param) {
     char *path = getenv("MICROPYPATH");
     if (path == NULL) {
         #ifdef MICROPY_PY_SYS_PATH_DEFAULT
-        path = MICROPY_PY_SYS_PATH_DEFAULT;
+            path = MICROPY_PY_SYS_PATH_DEFAULT;
         #else
-        path = "~/.micropython/lib:/usr/lib/micropython";
+            path = "~/.micropython/lib:/usr/lib/micropython";
         #endif
     }
     size_t path_num = 1; // [0] is for current dir (or base dir of the script)

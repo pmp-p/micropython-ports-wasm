@@ -50,6 +50,8 @@ SRC_C = \
 	main.c \
 	wasm_mphal.c \
 	modtime.c \
+	modos.c \
+	moduos_vfs.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/pyexec.c \
 	lib/mp-readline/readline.c

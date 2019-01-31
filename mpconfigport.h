@@ -18,7 +18,6 @@
 
 //??
 #define MICROPY_PY_DELATTR_SETATTR (0)
-#define MICROPY_PY_BUILTINS_STR_UNICODE (0)
 #define MICROPY_PY_COLLECTIONS_ORDEREDDICT (0)
 #define MICROPY_PY_MATH_SPECIAL_FUNCTIONS (0)
 #define MICROPY_PY_MATH_FACTORIAL (0)
@@ -49,38 +48,44 @@
 #define MICROPY_PY_BUILTINS_REVERSED  (1)
 #define MICROPY_PY_BUILTINS_SET       (1)
 #define MICROPY_PY_BUILTINS_SLICE     (1)
+#define MICROPY_PY_BUILTINS_STR_UNICODE (1)
+
 
 #define MICROPY_PY_ASYNC_AWAIT      (1)
-#define MICROPY_PY_ARRAY            (1)
 #define MICROPY_PY_ATTRTUPLE        (1)
 #define MICROPY_PY_BTREE            (0)
 #define MICROPY_PY_COLLECTIONS      (1)
-//F
 #define MICROPY_PY_CMATH            (1)
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)
-//F
 #define MICROPY_PY_MATH             (1)
 #define MICROPY_PY_STRUCT           (1)
 #define MICROPY_PY_SYS              (1)
 #define MICROPY_PY_SYS_PLATFORM     "wasm"
 #define MICROPY_PY_SYS_MAXSIZE      (1)
 
+#define MICROPY_PY_ARRAY            (1)
 #define MICROPY_PY_UBINASCII        (1)
 #define MICROPY_PY_UCTYPES          (1)
 #define MICROPY_PY_UERRNO           (1)
 #define MICROPY_PY_UERRNO_ERRORCODE (1)
 #define MICROPY_PY_UHEAPQ           (1)
 #define MICROPY_PY_UHASHLIB         (1)
-#define MICROPY_PY_UJSON            (1)
-#define MICROPY_PY_URE              (1)
-#define MICROPY_PY_USELECT          (0)
 //F
+#define MICROPY_PY_UHASHLIB_SHA1   (0)
+#define MICROPY_PY_UHASHLIB_SHA256  (1)
+#define MICROPY_PY_UJSON            (1)
+#define MICROPY_PY_URANDOM          (1)
+#define MICROPY_PY_URANDOM_EXTRA_FUNCS (1)
+#define MICROPY_PY_URE              (1)
+#define MICROPY_PY_URE_SUB          (1)
+//F
+#define MICROPY_PY_USELECT          (0) //? need #define MICROPY_EVENT_POLL_HOOK + select_select
 #define MICROPY_PY_UTIME            (1)
 #define MICROPY_PY_UTIMEQ           (1)
 #define MICROPY_PY_UZLIB            (1)
 
-#define MICROPY_PY_IO               (0)
+#define MICROPY_PY_IO               (1)
 #define MICROPY_PY___FILE__         (0)
 #define MICROPY_DEBUG_PRINTERS      (0)
 #define MICROPY_MEM_STATS           (0)
@@ -122,10 +127,14 @@ typedef long mp_off_t;
 
 
 extern const struct _mp_obj_module_t mp_module_time;
+extern const struct _mp_obj_module_t mp_module_io;
 
 #define MICROPY_PORT_BUILTIN_MODULES \
-     { MP_ROM_QSTR(MP_QSTR_time), MP_ROM_PTR(&mp_module_time) }, \
-     { MP_ROM_QSTR(MP_QSTR_utime), MP_ROM_PTR(&mp_module_time) }, \
+    { MP_ROM_QSTR(MP_QSTR_time), (mp_obj_t)&mp_module_time }, \
+    { MP_ROM_QSTR(MP_QSTR_utime), (mp_obj_t)&mp_module_time }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_random), (mp_obj_t)&mp_module_urandom }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_io), (mp_obj_t)&mp_module_io }, \
+
 
 #define MICROPY_PORT_BUILTIN_MODULE_WEAK_LINKS \
     { MP_OBJ_NEW_QSTR(MP_QSTR_binascii), (mp_obj_t)&mp_module_ubinascii }, \
