@@ -13,7 +13,7 @@ print()
 mods = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom uselect ustruct ucollections uio".split(" ")
 #mods.extend( "json os zlib time ctypes re hashlib binascii heapq array math cmath struct collections".split(" ") )
 mods.sort()
-mods.extend( "array math cmath time gc ffi io".split(" ") )
+mods.extend( "builtins array math cmath time gc ffi io".split(" ") )
 mods.append('hello')
 
 missing = []
@@ -29,14 +29,19 @@ print()
 
 import utime as time
 
-print("time = {}\n".format( time.time() ) )
-
-print("import frozentest")
+print("\nimport frozentest")
 import frozentest
 
+print("time = {}\n".format( time.time() ) )
 
+print('open:', open('assets/boot.py','rb').read() )
 
-print( open('/hello.py') )
+print("#FIXME: utf-8 :")
+b= b'\xc3\xa9\xc3\xa8\xc3\xa0\xc3\xb9\xc3\xa7\xe2\x82\xac\xc2\xa9'
+print('%r' % b )
+print( b.decode('utf-8') )
+print("some\n")
+
 </script>
 
 </head>

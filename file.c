@@ -37,24 +37,27 @@
 #include "py/mphal.h"
 #include "fdfile.h"
 
+#ifdef __EMSCRIPTEN__
+#include "emscripten.h"
+#else
+    #define EMSCRIPTEN_KEEPALIVE
+#endif
+
 #if MICROPY_PY_IO && !MICROPY_VFS
 
-    #ifdef _WIN32
-        #define fsync _commit
-    #endif
-
-    #ifdef MICROPY_CPYTHON_COMPAT
-        STATIC void check_fd_is_open(const mp_obj_fdfile_t *o) {
-            if (o->fd < 0) {
-                mp_raise_ValueError("I/O operation on closed file");
-            }
+#ifdef MICROPY_CPYTHON_COMPAT
+    STATIC void check_fd_is_open(const mp_obj_fdfile_t *o) {
+        if (o->fd < 0) {
+            mp_raise_ValueError("I/O operation on closed file");
         }
-    #else
-        #define check_fd_is_open(o)
-    #endif
+    }
+#else
+    #define check_fd_is_open(o)
+#endif
 
-extern const mp_obj_type_t mp_type_fileio;
-extern const mp_obj_type_t mp_type_textio;
+//included from fdfile
+//extern const mp_obj_type_t mp_type_fileio;
+//extern const mp_obj_type_t mp_type_textio;
 
 STATIC void fdfile_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     (void)kind;
@@ -138,6 +141,12 @@ STATIC mp_obj_t fdfile___exit__(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(fdfile___exit___obj, 4, 4, fdfile___exit__);
 
+STATIC mp_obj_t fdfile_fileno(mp_obj_t self_in) {
+    mp_obj_fdfile_t *self = MP_OBJ_TO_PTR(self_in);
+    check_fd_is_open(self);
+    return MP_OBJ_NEW_SMALL_INT(self->fd);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(fdfile_fileno_obj, fdfile_fileno);
 
 // Note: encoding is ignored for now; it's also not a valid kwarg for CPython's FileIO,
 // but by adding it here we can use one single mp_arg_t array for open() and FileIO's constructor
@@ -200,13 +209,15 @@ STATIC mp_obj_t fdfile_open(const mp_obj_type_t *type, mp_arg_val_t *args) {
     return MP_OBJ_FROM_PTR(o);
 }
 
-STATIC mp_obj_t fdfile_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
+STATIC mp_obj_t
+fdfile_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_arg_val_t arg_vals[FILE_OPEN_NUM_ARGS];
     mp_arg_parse_all_kw_array(n_args, n_kw, args, FILE_OPEN_NUM_ARGS, file_open_args, arg_vals);
     return fdfile_open(type, arg_vals);
 }
-/*
-STATIC const mp_rom_map_elem_t rawfile_locals_dict_table[] = {
+
+STATIC const mp_rom_map_elem_t
+rawfile_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fileno), MP_ROM_PTR(&fdfile_fileno_obj) },
     { MP_ROM_QSTR(MP_QSTR_read), MP_ROM_PTR(&mp_stream_read_obj) },
     { MP_ROM_QSTR(MP_QSTR_readinto), MP_ROM_PTR(&mp_stream_readinto_obj) },
@@ -220,66 +231,40 @@ STATIC const mp_rom_map_elem_t rawfile_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___enter__), MP_ROM_PTR(&mp_identity_obj) },
     { MP_ROM_QSTR(MP_QSTR___exit__), MP_ROM_PTR(&fdfile___exit___obj) },
 };
-*/
-
-/*
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(fdfile_fileno_obj, fdfile_fileno);
-STATIC mp_obj_t fdfile_fileno(mp_obj_t self_in) {
-    mp_obj_fdfile_t *self = MP_OBJ_TO_PTR(self_in);
-    check_fd_is_open(self);
-    return MP_OBJ_NEW_SMALL_INT(self->fd);
-}
-*/
-
-STATIC const mp_rom_map_elem_t rawfile_locals_dict_table[] = {
-//    { MP_ROM_QSTR(MP_QSTR_fileno), MP_ROM_PTR(&fdfile_fileno_obj) },
-    { MP_ROM_QSTR(MP_QSTR_read), MP_ROM_PTR(&mp_stream_read_obj) },
-    { MP_ROM_QSTR(MP_QSTR_readinto), MP_ROM_PTR(&mp_stream_readinto_obj) },
-    { MP_ROM_QSTR(MP_QSTR_readline), MP_ROM_PTR(&mp_stream_unbuffered_readline_obj) },
-//    { MP_ROM_QSTR(MP_QSTR_readlines), MP_ROM_PTR(&mp_stream_unbuffered_readlines_obj) },
-    { MP_ROM_QSTR(MP_QSTR_write), MP_ROM_PTR(&mp_stream_write_obj) },
-    { MP_ROM_QSTR(MP_QSTR_seek), MP_ROM_PTR(&mp_stream_seek_obj) },
-//    { MP_ROM_QSTR(MP_QSTR_tell), MP_ROM_PTR(&mp_stream_tell_obj) },
-    { MP_ROM_QSTR(MP_QSTR_flush), MP_ROM_PTR(&mp_stream_flush_obj) },
-    { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&mp_stream_close_obj) },
-    { MP_ROM_QSTR(MP_QSTR___enter__), MP_ROM_PTR(&mp_identity_obj) },
-    { MP_ROM_QSTR(MP_QSTR___exit__), MP_ROM_PTR(&fdfile___exit___obj) },
-};
-
 
 STATIC MP_DEFINE_CONST_DICT(rawfile_locals_dict, rawfile_locals_dict_table);
 
 #if MICROPY_PY_IO_FILEIO
-    STATIC const mp_stream_p_t fileio_stream_p = {
-        .read = fdfile_read,
-        .write = fdfile_write,
-        .ioctl = fdfile_ioctl,
-    };
+STATIC const mp_stream_p_t
+fileio_stream_p = {
+    .read = fdfile_read,
+    .write = fdfile_write,
+    .ioctl = fdfile_ioctl,
+};
 
-    const mp_obj_type_t mp_type_fileio = {
-        { &mp_type_type },
-        .name = MP_QSTR_FileIO,
-        .print = fdfile_print,
-        .make_new = fdfile_make_new,
-        .getiter = mp_identity_getiter,
-        .iternext = mp_stream_unbuffered_iter,
-        .protocol = &fileio_stream_p,
-        .locals_dict = (mp_obj_dict_t*)&rawfile_locals_dict,
-    };
+const mp_obj_type_t
+mp_type_fileio = {
+    { &mp_type_type },
+    .name = MP_QSTR_FileIO,
+    .print = fdfile_print,
+    .make_new = fdfile_make_new,
+    .getiter = mp_identity_getiter,
+    .iternext = mp_stream_unbuffered_iter,
+    .protocol = &fileio_stream_p,
+    .locals_dict = (mp_obj_dict_t*)&rawfile_locals_dict,
+};
 #endif
 
-STATIC const mp_stream_p_t textio_stream_p = {
+STATIC const mp_stream_p_t
+textio_stream_p = {
     .read = fdfile_read,
     .write = fdfile_write,
     .ioctl = fdfile_ioctl,
     .is_text = true,
 };
 
-#ifndef MP_QSTR_TextIOWrapper
-#pragma message "mp_type_textio->MP_QSTR_TextIOWrapper requires MICROPY_CPYTHON_COMPAT"
-#endif
-
-const mp_obj_type_t mp_type_textio = {
+const mp_obj_type_t
+mp_type_textio = {
     { &mp_type_type },
     .name = MP_QSTR_TextIOWrapper,
     .print = fdfile_print,
@@ -291,16 +276,29 @@ const mp_obj_type_t mp_type_textio = {
 };
 
 // Factory function for I/O stream classes
-mp_obj_t mp_builtin_open(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+mp_obj_t
+mp_builtin_open(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
     // TODO: analyze buffering args and instantiate appropriate type
     mp_arg_val_t arg_vals[FILE_OPEN_NUM_ARGS];
     mp_arg_parse_all(n_args, args, kwargs, FILE_OPEN_NUM_ARGS, file_open_args, arg_vals);
     return fdfile_open(&mp_type_textio, arg_vals);
 }
+
 MP_DEFINE_CONST_FUN_OBJ_KW(mp_builtin_open_obj, 1, mp_builtin_open);
 
+/*
+EMSCRIPTEN_KEEPALIVE mp_obj_t
+mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
+    // TODO: analyze buffering args and instantiate appropriate type
+    #pragma message "finally there"
+    mp_arg_val_t arg_vals[FILE_OPEN_NUM_ARGS];
+    mp_arg_parse_all(n_args, args, kwargs, FILE_OPEN_NUM_ARGS, file_open_args, arg_vals);
+    return fdfile_open(&mp_type_textio, arg_vals);
+}
+*/
 const mp_obj_fdfile_t mp_sys_stdin_obj  = { .base = {&mp_type_textio}, .fd = STDIN_FILENO };
 const mp_obj_fdfile_t mp_sys_stdout_obj = { .base = {&mp_type_textio}, .fd = STDOUT_FILENO };
 const mp_obj_fdfile_t mp_sys_stderr_obj = { .base = {&mp_type_textio}, .fd = STDERR_FILENO };
-
+#else
+    #error WTF
 #endif // MICROPY_PY_IO && !MICROPY_VFS

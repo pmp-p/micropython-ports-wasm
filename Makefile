@@ -50,6 +50,7 @@ SRC_C = \
 	main.c \
 	wasm_mphal.c \
 	modtime.c \
+	file.c \
 	modos.c \
 	moduos_vfs.c \
 	lib/utils/stdout_helpers.c \

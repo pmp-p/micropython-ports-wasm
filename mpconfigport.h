@@ -48,7 +48,7 @@
 #define MICROPY_PY_BUILTINS_REVERSED  (1)
 #define MICROPY_PY_BUILTINS_SET       (1)
 #define MICROPY_PY_BUILTINS_SLICE     (1)
-#define MICROPY_PY_BUILTINS_STR_UNICODE (1)
+#define MICROPY_PY_BUILTINS_STR_UNICODE (0)
 
 
 #define MICROPY_PY_ASYNC_AWAIT      (1)
@@ -86,6 +86,13 @@
 #define MICROPY_PY_UZLIB            (1)
 
 #define MICROPY_PY_IO               (1)
+#define MICROPY_VFS                 (0)
+#define MICROPY_PY_IO_IOBASE            (1)
+#define MICROPY_PY_IO_RESOURCE_STREAM   (1)
+#define MICROPY_PY_IO_FILEIO            (1)
+#define MICROPY_PY_IO_BYTESIO           (1)
+#define MICROPY_PY_IO_BUFFEREDWRITER    (1)
+
 #define MICROPY_PY___FILE__         (0)
 #define MICROPY_DEBUG_PRINTERS      (0)
 #define MICROPY_MEM_STATS           (0)
@@ -120,14 +127,15 @@ typedef long mp_off_t;
 
 #define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn_cooked(str, len)
 
-// extra built in names to add to the global namespace
-#define MICROPY_PORT_BUILTINS \
-    { MP_OBJ_NEW_QSTR(MP_QSTR_open), (mp_obj_t)&mp_builtin_open_obj }, \
-
-
 
 extern const struct _mp_obj_module_t mp_module_time;
 extern const struct _mp_obj_module_t mp_module_io;
+
+
+// extra built in names to add to the global namespace
+#define MICROPY_PORT_BUILTINS { MP_OBJ_NEW_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_builtin_open_obj) },
+
+
 
 #define MICROPY_PORT_BUILTIN_MODULES \
     { MP_ROM_QSTR(MP_QSTR_time), (mp_obj_t)&mp_module_time }, \
