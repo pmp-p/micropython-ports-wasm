@@ -190,7 +190,7 @@ window.Module = {
     preRun : [preRun],
     postRun: [postRun],
     print : text_area_out,
-    printErr : text_area_out,
+    printErr : console.log,
 }
 
 
