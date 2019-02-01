@@ -56,7 +56,6 @@ LD = $(CC)
 LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
 LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_getf','_setf', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
 
-
 SRC_C = \
 	main.c \
 	wasm_mphal.c \
@@ -68,17 +67,21 @@ SRC_C = \
 	lib/utils/pyexec.c \
 	lib/mp-readline/readline.c \
 
+SRC_MOD+=modembed.c
+
+
 # List of sources for qstr extraction
 SRC_QSTR += $(SRC_C) $(LIB_SRC_C)
+
 # Append any auto-generated sources that are needed by sources listed in
 # SRC_QSTR
 SRC_QSTR_AUTO_DEPS +=
 
-SRC_ALL = $(SRC_C)
-#SRC_ALL = $(SRC_C)
 
+OBJ = $(PY_O)
+OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
+OBJ += $(addprefix $(BUILD)/, $(SRC_MOD:.c=.o))
 
-OBJ = $(PY_O) $(addprefix $(BUILD)/, $(SRC_ALL:.c=.o))
 
 all: $(PROG)
 

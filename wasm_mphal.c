@@ -54,7 +54,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
         return ;
     }
     //should not happen, also buffered output is bad for terminal/repl use since emscripten will only flush on \n
-    printf("%s %lu\n",str,len);
+    printf("%s %lu\n","str",len);
 }
 
 

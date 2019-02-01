@@ -24,13 +24,8 @@ String.prototype.rsplit = function(sep, maxsplit) {
     return maxsplit ? [ split.slice(0, -maxsplit).join(sep) ].concat(split.slice(-maxsplit)) : split;
 }
 
-String.prototype.endswith = function(suffix) {
-    return this.indexOf(suffix, this.length - suffix.length) !== -1;
-}
-
-String.prototype.startswith = function(prefix) {
-    return this.indexOf(prefix, 0) !== -1;
-}
+String.prototype.endswith = String.prototype.endsWith
+String.prototype.startswith = String.prototype.startsWith
 
 
 function setdefault(n,v,o){
@@ -98,6 +93,11 @@ function _until(fn_solver){
 function preRun(){
     console.log("preRun: Begin")
     //FS.init()
+    //Module.arguments.shift() // remove silly "./this.program"
+    var argv = window.location.href.split('?')
+    var e;
+    while (e=argv.shift())
+        Module.arguments.push(e)
 
     console.log("preRun: End")
 }
@@ -118,7 +118,8 @@ function postRun(){
 
 
 function init_loop(){
-    console.log("init_loop:Begin")
+
+    console.log("init_loop:Begin (" + Module.arguments+")")
     var scripts = document.getElementsByTagName('script')
     for(var i = 0; i < scripts.length; i++){
         var script = scripts[i]
@@ -184,7 +185,6 @@ function text_area_out(text){
         console.log("text_area_out: "+ x +" text="+text);
     }
 }
-
 
 window.Module = {
     preRun : [preRun],

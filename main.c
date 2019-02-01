@@ -28,7 +28,7 @@ static char *stack_top;
 static char heap[32*1024*1024];
 #endif
 
-char *global_readline = NULL;
+char *repl_line = NULL;
 
 #define REPL_INPUT_SIZE 16384
 #define REPL_INPUT_MAX REPL_INPUT_SIZE-1
@@ -41,8 +41,14 @@ Py_InitializeEx(int param) {
     gc_init(heap, heap + sizeof(heap));
     mp_init();
 
+    repl_line = (char *)malloc(REPL_INPUT_SIZE);
+    mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
+
+
+
     char *home = getenv("HOME");
     char *path = getenv("MICROPYPATH");
+
     if (path == NULL) {
         #ifdef MICROPY_PY_SYS_PATH_DEFAULT
             path = MICROPY_PY_SYS_PATH_DEFAULT;
@@ -105,10 +111,10 @@ mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
     if (!file)
-        fprintf(stderr, "fopen failed %s\n", filename);
+        fprintf(stderr, "fopen failed %s\n", "filename");
     fseeko(file, 0, SEEK_END);
     off_t size_of_file = ftello(file);
-    fprintf(stderr, "File %s, size %i\n", filename, size_of_file );
+    fprintf(stderr, "mp_lexer_new_from_file(%s size=%i)\n", filename, size_of_file );
     fseeko(file, 0, SEEK_SET);
 
     char * code_buf = malloc(size_of_file);
@@ -168,13 +174,8 @@ PyRun_VerySimpleFile(const char *filename) {
     do_str(filename, MP_PARSE_FILE_INPUT, 1);
 }
 
-EMSCRIPTEN_KEEPALIVE void
-PyRun_str(char *str) {
-    printf("char *'%s' OK\n",str);
-}
-
-
 mp_import_stat_t mp_import_stat(const char *path) {
+    printf("stat '%s'\n", "path");
     /*
     if (mp_js_context.import_stat == NULL) {
         return MP_IMPORT_STAT_NO_EXIST;
@@ -215,9 +216,9 @@ void MP_WEAK __assert_func(const char *file, int line, const char *func, const c
 
 void
 py_iter_one(void){
-    if (global_readline[0]){
-        PyRun_SimpleString(global_readline);
-        global_readline[0]=0;
+    if (repl_line[0]){
+        PyRun_SimpleString(repl_line);
+        repl_line[0]=0;
     }
 }
 
@@ -228,7 +229,7 @@ setf(const char *code) {
         stl=REPL_INPUT_SIZE;
         fprintf( stderr, "REPL Buffer overflow: %i > %i", stl, REPL_INPUT_SIZE);
     }
-    strncpy(global_readline, code, stl);
+    strncpy(repl_line, code, stl);
 }
 
 void getf(const char *url) {
@@ -262,24 +263,33 @@ writecode(char *filename,char *code) {
 
 int
 main(int argc, char *argv[]) {
-    printf("Micropython-wasm\n");
-    global_readline = (char *)malloc(REPL_INPUT_SIZE);
+
+//#FIXME: add sys.executable to sys
+
     //setenv("HOME","/data/data/u.root.upy",0);
     setenv("HOME","/",1);
+
     //setenv("MICROPYPATH","/data/data/u.root.upy/assets",0);
     setenv("MICROPYPATH","/",1);
 
     //printf("Py_InitializeEx\n");
     Py_InitializeEx(0);
 
+    for (int i=0; i<argc; i++) {
+        fprintf(stderr,"Micropython-wasm argv[%d]='%s'\n",i,argv[i]);
+        if (i>1)  // skip silly "./this.program" and sys.executable
+            mp_obj_list_append(mp_sys_argv, MP_OBJ_NEW_QSTR(qstr_from_str(argv[i])));
+    }
+
     //chdir("/data/data/u.root.upy/assets");
     chdir("/");
 
-writecode("boot.py",
-"import sys\n"
-"sys.path.clear()\n"
-"sys.path.append( '' )\n"
-);
+    writecode(
+        "boot.py",
+        "import sys\n"
+        "sys.path.clear()\n"
+        "sys.path.append( '' )\n"
+    );
 
     PyRun_VerySimpleFile("/boot.py");
 

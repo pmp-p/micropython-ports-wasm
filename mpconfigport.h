@@ -1,5 +1,8 @@
 #include <stdint.h>
 
+#define MODULES_H "modules.h"
+#include MODULES_H
+
 // options to control how Micro Python is built
 
 #define MICROPY_QSTR_BYTES_IN_HASH  (1)
@@ -199,10 +202,8 @@ extern const struct _mp_obj_module_t mp_module_os;
 // { MP _ ROM_QSTR(MP_QSTR_umachine), MP _ ROM_PTR(&mp_module_machine) },
 
 #define MICROPY_PORT_BUILTIN_MODULES \
-    { MP_OBJ_NEW_QSTR(MP_QSTR_random), (mp_obj_t)&mp_module_urandom }, \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_utime), (mp_obj_t)&mp_module_time }, \
     { MP_OBJ_NEW_QSTR(MP_QSTR_io), (mp_obj_t)&mp_module_io }, \
-    { MP_ROM_QSTR(MP_QSTR_time), (mp_obj_t)&mp_module_time }, \
-    { MP_ROM_QSTR(MP_QSTR_utime), (mp_obj_t)&mp_module_time }, \
     MICROPY_PY_FFI_DEF \
     MICROPY_PY_JNI_DEF \
     MICROPY_PY_SOCKET_DEF \
@@ -210,9 +211,14 @@ extern const struct _mp_obj_module_t mp_module_os;
     MICROPY_PY_UOS_DEF \
     MICROPY_PY_USELECT_DEF \
     MICROPY_PY_TERMIOS_DEF \
+    MODULES_LINKS
+
+
 
 // extra built in names to add to the global namespace
-#define MICROPY_PORT_BUILTINS { MP_OBJ_NEW_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_builtin_open_obj) },
+#define MICROPY_PORT_BUILTINS \
+    { MP_OBJ_NEW_QSTR(MP_QSTR_open), MP_ROM_PTR(&mp_builtin_open_obj) }, \
+
 
 
 #define MICROPY_PORT_BUILTIN_MODULE_WEAK_LINKS \
@@ -234,6 +240,9 @@ extern const struct _mp_obj_module_t mp_module_os;
     { MP_OBJ_NEW_QSTR(MP_QSTR_zlib), (mp_obj_t)&mp_module_uzlib }, \
 
 
+
+
+
 // We need to provide a declaration/definition of alloca()
 #include <alloca.h>
 
@@ -251,7 +260,11 @@ extern const struct _mp_obj_module_t mp_module_os;
 
 #define MP_STATE_PORT MP_STATE_VM
 
-#define MICROPY_PORT_ROOT_POINTERS const char *readline_hist[16];
+#define MPR_const_char_readline_hist const char *readline_hist[16];
+
+#define MICROPY_PORT_ROOT_POINTERS \
+ MPR_const_char_readline_hist
+
 
 
 
