@@ -1,0 +1,1 @@
+print("assets.py")

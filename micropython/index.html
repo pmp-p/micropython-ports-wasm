@@ -6,12 +6,7 @@
 
 
 <script type="text/µpython">
-print("Hello WASM")
-print()
-sys.path.clear()
-sys.path.append( '' )
-
-
+print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)
 print("sys.path :",sys.path)
 print()
 
@@ -28,7 +23,8 @@ print("i am hello module",__import__(__name__))
 
 '''.encode())
 
-print(b'open-read: boot.py', open('data/data/micro.python/boot.py','rb').read() )
+print(b'open-read: assets', open('assets/assets.py','rb').read() )
+
 missing = []
 for module in modules:
     try:

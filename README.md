@@ -16,9 +16,12 @@ cd wasm
 
 . /path/to/emsdk/emsdk_set_env.sh
 emmake make && ./runtest.sh
-
-chromium-browser http://127.0.0.1:8000/test.html
 ```
+
+now you can navigate http://127.0.0.1:8000/index.html
+
+to edit code samples look in micropython/*.html
+
 
 ![Preview1](./docs/runtest.png)
 

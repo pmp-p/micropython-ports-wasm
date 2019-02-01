@@ -4,7 +4,7 @@ BASENAME=micropython
 PROG=$(BASENAME).html
 LIBMICROPYTHON = lib$(BASENAME).a
 FROZEN_MPY_DIR = modules
-FROZEN_DIR = assets
+FROZEN_DIR = flash
 
 # clang has slightly different options to GCC
 CLANG = 1
@@ -107,7 +107,7 @@ EMOPTS += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s
 
 $(PROG): static-lib
 	$(ECHO) "LINK $@"
-	$(Q)$(CC) $(COPT) $(EMOPTS) -o $@ $(LIBMICROPYTHON) --preload-file data@/data
+	$(Q)$(CC) $(COPT) $(EMOPTS) -o $@ $(LIBMICROPYTHON) --preload-file assets@/assets
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
 #
