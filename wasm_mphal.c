@@ -8,6 +8,7 @@
 #include "py/runtime.h"
 #include "extmod/misc.h"
 
+#include <stdarg.h>
 
 #ifdef __EMSCRIPTEN__
 #include "emscripten.h"
@@ -58,10 +59,22 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 }
 
 
-/*
-mp_obj_t
-mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
-    printf("mp_builtin_open_obj");
-    return mp_const_none;
+int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
+    va_list argptr;
+    va_start (argptr, fmt );
+    vfprintf(stderr,fmt,argptr);
+    va_end (argptr);
+    return 0;
 }
-*/
+
+EMSCRIPTEN_KEEPALIVE static PyObject *
+embed_run_script(PyObject *self, PyObject *argv) {
+    char *runstr = NULL;
+    if (!PyArg_ParseTuple(argv, "s", &runstr)) {
+        return NULL;
+    }
+    emscripten_run_script( runstr );
+    Py_RETURN_NONE;
+}
+
+#include "bindgen/ffi.c"

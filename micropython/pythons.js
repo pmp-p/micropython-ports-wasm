@@ -40,7 +40,7 @@ function setdefault(n,v,o){
     return false;
 }
 
-setdefault('JSDIR','./');
+setdefault('JSDIR','./js');
 
 function include(filename, filetype){
     if (filetype===null ||typeof filetype === 'undefined')
@@ -90,17 +90,21 @@ function _until(fn_solver){
     }
 }
 
+// =================  EMSCRIPTEN ================================
+
 function preRun(){
     console.log("preRun: Begin")
     //FS.init()
-    //Module.arguments.shift() // remove silly "./this.program"
-    var argv = window.location.href.split('?')
+    var argv = window.location.href.split('?',2)
     var e;
     while (e=argv.shift())
         Module.arguments.push(e)
-
+    argv = Module.arguments.pop().split('&')
+    while (e=argv.shift())
+        Module.arguments.push(e)
     console.log("preRun: End")
 }
+
 
 function write_file(dirname, filename, arraybuffer) {
     FS.createPath('/',dirname,true,true);
@@ -114,7 +118,6 @@ function postRun(){
     setTimeout(init_loop,1)
     console.log("postRun: End")
 }
-
 
 
 function init_loop(){
@@ -134,11 +137,11 @@ function init_loop(){
     console.log("init_loop:End")
 }
 
+
+// ================ STDOUT =================================================
+
 function term_impl(text){
     window.text_area.value += text
-//    var element = document.doc_form.text_area;
-//    element.value += text;
-//    return element;
 }
 
 
@@ -186,6 +189,8 @@ function text_area_out(text){
     }
 }
 
+// ========================== startup hooks ======================================
+
 window.Module = {
     preRun : [preRun],
     postRun: [postRun],
@@ -205,9 +210,43 @@ async function pythons(argc, argv){
         var script = scripts[i]
         if(script.type == "text/µpython"){
             console.log("starting upython")
-            include("micropython.js")
+            include("../micropython.js")
             break
         }
     }
 }
+
+
+
+// ========================== C =============================
+window.lib = {"name":"lib"};
+window.urls = {"name":"http"}
+
+async function _get(url,trigger){
+    fetch(url).then( function(r) { return r.arrayBuffer(); } ).then( function(udata) { window[trigger] = udata } );
+    await _until(defined)(trigger,window.urls);
+    return window.urls[trigger];
+}
+
+async function dlopen_lzma(lib,size_hint) {
+    if ( file_exists("lib/lib"+lib +".js") ){
+        console.log(" =========== CAN RAW EVAL ========== ")
+    }
+    var lzma_file = "lib"+lib+".js.lzma"
+    var blob = await get_lzma( window.lib, lib, lzma_file, size_hint, false, false)
+    write_file("lib","lib"+trigger+".so",blob)
+}
+
+function file_exists(urlToFile) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('HEAD', urlToFile, false);
+    xhr.send();
+    return (xhr.status == 200 );
+}
+
+
+
+
+
+
 

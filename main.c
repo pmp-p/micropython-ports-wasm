@@ -12,7 +12,9 @@
 #include "py/gc.h"
 #include "lib/utils/pyexec.h"
 
-#include "extmod/vfs_posix.h"
+//#include "extmod/vfs_posix.h"
+
+#include "py/mphal.h"
 
 #ifdef __EMSCRIPTEN__
 #include "emscripten.h"
@@ -33,7 +35,7 @@ char *repl_line = NULL;
 #define REPL_INPUT_SIZE 16384
 #define REPL_INPUT_MAX REPL_INPUT_SIZE-1
 
-
+#include <dlfcn.h>
 
 
 EMSCRIPTEN_KEEPALIVE void
@@ -254,6 +256,14 @@ void getf(const char *url) {
     #endif
 }
 
+
+int
+await_dlopen(const char *def){
+    return !EM_ASM_INT( { return defined(Pointer_stringify($0), window.lib); }, def );
+}
+
+
+
 void
 writecode(char *filename,char *code) {
     EM_ASM({
@@ -264,7 +274,12 @@ writecode(char *filename,char *code) {
 int
 main(int argc, char *argv[]) {
 
-//#FIXME: add sys.executable to sys
+    //keep symbol global for wasm debugging
+    fprintf(stderr,"//#FIXME: add sys.executable to sys\n");
+    void *lib_handle = dlopen("lib/libtest.wasm", RTLD_NOW | RTLD_GLOBAL);
+    if (!lib_handle) {
+        puts("cannot load side module");
+    }
 
     //setenv("HOME","/data/data/u.root.upy",0);
     setenv("HOME","/",1);
@@ -283,6 +298,10 @@ main(int argc, char *argv[]) {
 
     //chdir("/data/data/u.root.upy/assets");
     chdir("/");
+
+    fprintf(stderr," =================================================\n");
+    PyArg_ParseTuple(nullptr,"%s\n","argv1");
+    fprintf(stderr," =================================================\n");
 
     writecode(
         "boot.py",

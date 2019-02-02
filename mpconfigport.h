@@ -80,6 +80,8 @@
 #define MICROPY_PY_BTREE            (0)
 #define MICROPY_PY_COLLECTIONS      (1)
 #define MICROPY_PY_CMATH            (1)
+//?
+#define MICROPY_PY_FFI              (1)
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)
 #define MICROPY_PY_MATH             (1)
@@ -96,10 +98,9 @@
 #define MICROPY_PY_UHEAPQ           (1)
 #define MICROPY_PY_UHASHLIB         (1)
 //F
-#define MICROPY_PY_UHASHLIB_SHA1   (0)
+#define MICROPY_PY_UHASHLIB_SHA1    (0)
 #define MICROPY_PY_UHASHLIB_SHA256  (1)
 #define MICROPY_PY_UJSON            (1)
-//
 #define MICROPY_PY_UOS              (1)
 #define MICROPY_PY_URANDOM          (1)
 #define MICROPY_PY_URANDOM_EXTRA_FUNCS (1)
@@ -168,6 +169,7 @@ extern const struct _mp_obj_module_t mp_module_os;
 #endif
 
 #if MICROPY_PY_FFI
+    extern const struct _mp_obj_module_t mp_module_ffi;
     #define MICROPY_PY_FFI_DEF { MP_ROM_QSTR(MP_QSTR_ffi), MP_ROM_PTR(&mp_module_ffi) },
 #else
     #define MICROPY_PY_FFI_DEF

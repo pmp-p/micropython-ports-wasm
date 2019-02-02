@@ -1,4 +1,10 @@
 #include <unistd.h>
+//#include "py/nlr.h"
+//#include "py/compile.h"
+#include "py/runtime.h"
+//#include "py/repl.h"
+//#include "py/gc.h"
+//#include "lib/utils/pyexec.h"
 
 #ifndef CHAR_CTRL_C
 #define CHAR_CTRL_C (3)
@@ -22,3 +28,11 @@ mp_uint_t mp_hal_ticks_ms(void);
     { if (err_flag == -1) \
         { mp_raise_OSError(error_val); } }
 
+
+
+#define nullptr NULL
+#define Py_RETURN_NONE return nullptr;
+#define PyObject mp_obj_t
+
+
+int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...);

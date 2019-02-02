@@ -63,6 +63,20 @@ else:
     for d in dir(embed):
         print( d )
 
+import ffi
+for d in dir(ffi):
+    print( d )
+
+lib = ffi.open('lib/libtest.wasm')
+print( lib )
+init_test  = lib.func("v", "init_test", "")
+init_plus_one = lib.func("i","init_plus_one","i")
+print( init_test )
+init_test()
+print("init_plus_one(41)==" , init_plus_one(41) )
+print("done")
+
+
 print()
 print("="*78)
 print()

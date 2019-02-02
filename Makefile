@@ -54,15 +54,18 @@ MPY_CROSS_FLAGS += -mcache-lookup-bc
 
 LD = $(CC)
 LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
-LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_getf','_setf', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
+LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_getf','_fprintf', '_setf', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
 
 SRC_C = \
 	main.c \
 	wasm_mphal.c \
 	file.c \
 	modos.c \
+	modffi.c \
 	modtime.c \
 	moduos_vfs.c \
+	ffi/types.c \
+	ffi/prep_cif.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/pyexec.c \
 	lib/mp-readline/readline.c \
@@ -104,13 +107,13 @@ $(LIBMICROPYTHON): $(OBJ)
 	$(ECHO) "LIB $(LIBMICROPYTHON)"
 	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
 
-
-EMOPTS = -s MAIN_MODULE=1  -Oz -g0  -s FORCE_FILESYSTEM=1 --memory-init-file 0
+EMTOPS = -s EXPORT_ALL=1  #see https://github.com/emscripten-core/emscripten/issues/7811
+EMOPTS += -s MAIN_MODULE=1  -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 0
 EMOPTS += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 
 $(PROG): static-lib
 	$(ECHO) "LINK $@"
-	$(Q)$(CC) $(COPT) $(EMOPTS) -o $@ $(LIBMICROPYTHON) --preload-file assets@/assets
+	$(Q)$(CC) $(COPT) $(EMOPTS) -o $@ $(LIBMICROPYTHON) -ldl --preload-file assets@/assets --preload-file micropython/lib@/lib
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
 #
