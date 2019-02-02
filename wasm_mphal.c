@@ -77,4 +77,4 @@ embed_run_script(PyObject *self, PyObject *argv) {
     Py_RETURN_NONE;
 }
 
-#include "bindgen/ffi.c"
+#include "ffi/ffi.c"
