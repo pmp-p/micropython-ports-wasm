@@ -1,3 +1,4 @@
+
 #include "ffi.h"
 #include "ffi_common.h"
 #include <stdint.h>
@@ -8,6 +9,56 @@
 #else
     #define EMSCRIPTEN_KEEPALIVE
 #endif
+
+
+
+/*
+
+ffi_prep_closure_loc BROKEN
+
+*/
+
+
+ffi_status
+ffi_prep_closure_loc (ffi_closure* closure,
+                      ffi_cif* cif,
+                      void (*fun)(ffi_cif*, void*, void**, void*),
+                      void *user_data,
+                      void *codeloc)
+{
+  closure->cif = cif;
+  closure->fun = fun;
+  closure->user_data = user_data;
+  return FFI_OK;
+}
+
+
+
+void *
+ffi_closure_alloc (size_t size, void **code)
+{
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ffi_status FFI_HIDDEN
 ffi_prep_cif_machdep(ffi_cif *cif)

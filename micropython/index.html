@@ -59,10 +59,12 @@ if not 'dev' in sys.argv:
     print( b.decode('utf-8') )
     print("end failed utf-8\n")
 else:
+    print("\nC-api:")
     import embed
     for d in dir(embed):
         print( d )
 
+print("\nFFI:")
 import ffi
 for d in dir(ffi):
     print( d )

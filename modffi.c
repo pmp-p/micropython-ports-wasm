@@ -229,6 +229,7 @@ STATIC mp_obj_t mod_ffi_func(mp_obj_t rettype, mp_obj_t addr_in, mp_obj_t argtyp
 }
 MP_DEFINE_CONST_FUN_OBJ_3(mod_ffi_func_obj, mod_ffi_func);
 
+
 STATIC void call_py_func(ffi_cif *cif, void *ret, void** args, void *func) {
     mp_obj_t pyargs[cif->nargs];
     for (uint i = 0; i < cif->nargs; i++) {
@@ -240,6 +241,7 @@ STATIC void call_py_func(ffi_cif *cif, void *ret, void** args, void *func) {
         *(ffi_arg*)ret = mp_obj_int_get_truncated(res);
     }
 }
+
 
 STATIC mp_obj_t mod_ffi_callback(mp_obj_t rettype_in, mp_obj_t func_in, mp_obj_t paramtypes_in) {
     const char *rettype = mp_obj_str_get_str(rettype_in);
@@ -264,7 +266,7 @@ STATIC mp_obj_t mod_ffi_callback(mp_obj_t rettype_in, mp_obj_t func_in, mp_obj_t
     if (res != FFI_OK) {
         mp_raise_ValueError("Error in ffi_prep_cif");
     }
-
+/* #FIXME: PMPP */
     res = ffi_prep_closure_loc(o->clo, &o->cif, call_py_func, MP_OBJ_TO_PTR(func_in), o->func);
     if (res != FFI_OK) {
         mp_raise_ValueError("ffi_prep_closure_loc");

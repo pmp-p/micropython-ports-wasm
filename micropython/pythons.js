@@ -40,7 +40,7 @@ function setdefault(n,v,o){
     return false;
 }
 
-setdefault('JSDIR','./js');
+setdefault('JSDIR','');
 
 function include(filename, filetype){
     if (filetype===null ||typeof filetype === 'undefined')
@@ -210,7 +210,7 @@ async function pythons(argc, argv){
         var script = scripts[i]
         if(script.type == "text/µpython"){
             console.log("starting upython")
-            include("../micropython.js")
+            include("micropython.js")
             break
         }
     }

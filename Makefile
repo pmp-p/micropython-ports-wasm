@@ -10,8 +10,6 @@ FROZEN_DIR = flash
 CLANG = 1
 EMSCRIPTEN = 1
 
-
-
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
 
@@ -29,7 +27,8 @@ INC += -I.
 INC += -I../..
 INC += -I$(BUILD)
 
-COPT=-s ASSERTIONS=2 -s ENVIRONMENT=web
+
+
 CFLAGS = $(INC) -Wall -Werror -ansi -std=gnu99
 
 #Debugging/Optimization
@@ -54,7 +53,7 @@ MPY_CROSS_FLAGS += -mcache-lookup-bc
 
 LD = $(CC)
 LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
-LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_getf','_fprintf', '_setf', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
+LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
 
 SRC_C = \
 	main.c \
@@ -89,11 +88,6 @@ OBJ += $(addprefix $(BUILD)/, $(SRC_MOD:.c=.o))
 all: $(PROG)
 
 
-#$(BUILD)/_frozen_mpy.c: frozentest.mpy $(BUILD)/genhdr/qstrdefs.generated.h
-#	$(ECHO) "MISC freezing bytecode"
-#	../../tools/mpy-tool.py -f -q $(BUILD)/genhdr/qstrdefs.preprocessed.h -mlongint-impl=none $< > $@
-
-
 include ../../py/mkrules.mk
 
 clean:
@@ -107,13 +101,27 @@ $(LIBMICROPYTHON): $(OBJ)
 	$(ECHO) "LIB $(LIBMICROPYTHON)"
 	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
 
-EMTOPS = -s EXPORT_ALL=1  #see https://github.com/emscripten-core/emscripten/issues/7811
-EMOPTS += -s MAIN_MODULE=1  -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 0
-EMOPTS += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
+
+# EMOPTS+= -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 1
+
+
+COPT=-s ENVIRONMENT=web
+# https://github.com/emscripten-core/emscripten/wiki/Linking
+COPT+= -s MAIN_MODULE=1
+
+#see https://github.com/emscripten-core/emscripten/issues/7811
+#COPT+= -s EXPORT_ALL=1
+
+COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
+#COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
+COPT += -Oz -g0 -s FORCE_FILESYSTEM=1
+COPT += -s LZ4=0 --memory-init-file 0
+COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
+
 
 $(PROG): static-lib
 	$(ECHO) "LINK $@"
-	$(Q)$(CC) $(COPT) $(EMOPTS) -o $@ $(LIBMICROPYTHON) -ldl --preload-file assets@/assets --preload-file micropython/lib@/lib
+	$(Q)$(CC) $(COPT) -o $@ $(LIBMICROPYTHON) -ldl --preload-file assets@/assets --preload-file micropython/lib@/lib
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
 #
