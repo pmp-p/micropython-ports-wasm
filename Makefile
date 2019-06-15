@@ -53,21 +53,25 @@ MPY_CROSS_FLAGS += -mcache-lookup-bc
 
 LD = $(CC)
 LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
-LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
+LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl','_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
 
 SRC_C = \
-	main.c \
+	upython.c \
 	wasm_mphal.c \
 	file.c \
 	modos.c \
-	modffi.c \
 	modtime.c \
 	moduos_vfs.c \
-	ffi/types.c \
-	ffi/prep_cif.c \
 	lib/utils/stdout_helpers.c \
 	lib/utils/pyexec.c \
 	lib/mp-readline/readline.c \
+
+#optionnal experimental FFI
+SRC_C+= \
+	modffi.c \
+	ffi/types.c \
+	ffi/prep_cif.c \
+
 
 SRC_MOD+=modembed.c
 
@@ -97,31 +101,46 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 
 #one day, maybe go via a *embeddable* static lib first  ?
 
-$(LIBMICROPYTHON): $(OBJ)
-	$(ECHO) "LIB $(LIBMICROPYTHON)"
-	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
-
-
-# EMOPTS+= -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 1
-
-
-COPT=-s ENVIRONMENT=web
-# https://github.com/emscripten-core/emscripten/wiki/Linking
-COPT+= -s MAIN_MODULE=1
 
 #see https://github.com/emscripten-core/emscripten/issues/7811
 #COPT+= -s EXPORT_ALL=1
 
+
+LOPT=-s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1
+
+libs: $(OBJ)
+	$(ECHO) "Linking static $(LIBMICROPYTHON)"
+	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
+	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
+	$(Q)$(LD) $(LDFLAGS) $(LOPT) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc
+
+
+# EMOPTS+= -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 1
+
+COPT=-s ENVIRONMENT=web
+
 COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
 #COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
+
 COPT += -Oz -g0 -s FORCE_FILESYSTEM=1
 COPT += -s LZ4=0 --memory-init-file 0
-COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
+#COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
+COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0
+# -s TOTAL_STACK=16777216
 
+# https://github.com/emscripten-core/emscripten/wiki/Linking
+#COPT+= -s MAIN_MODULE=1
 
-$(PROG): static-lib
-	$(ECHO) "LINK $@"
-	$(Q)$(CC) $(COPT) -o $@ $(LIBMICROPYTHON) -ldl --preload-file assets@/assets --preload-file micropython/lib@/lib
+WASM_FLAGS=-s BINARYEN_ASYNC_COMPILATION=1 -s WASM=1
+LINK_FLAGS=-s MAIN_MODULE=1
+THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
+
+$(PROG): libs
+	$(ECHO) "Building static executable $@"
+	$(CC) $(CFLAGS) -g -o build/main.o main.c
+	$(Q)$(CC) $(INC) $(COPT) $(WASM_FLAGS) $(LINK_FLAGS) $(THR_FLAGS) \
+ -o $@ main.c $(LIBMICROPYTHON) \
+ --preload-file assets@/assets --preload-file micropython/lib@/lib
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
 #

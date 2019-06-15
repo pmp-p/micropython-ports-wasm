@@ -299,6 +299,4 @@ mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 const mp_obj_fdfile_t mp_sys_stdin_obj  = { .base = {&mp_type_textio}, .fd = STDIN_FILENO };
 const mp_obj_fdfile_t mp_sys_stdout_obj = { .base = {&mp_type_textio}, .fd = STDOUT_FILENO };
 const mp_obj_fdfile_t mp_sys_stderr_obj = { .base = {&mp_type_textio}, .fd = STDERR_FILENO };
-#else
-    #error WTF
 #endif // MICROPY_PY_IO && !MICROPY_VFS

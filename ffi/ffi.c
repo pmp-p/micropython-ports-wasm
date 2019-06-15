@@ -1,4 +1,3 @@
-
 #include "ffi.h"
 #include "ffi_common.h"
 #include <stdint.h>
@@ -13,8 +12,18 @@
 
 
 /*
+#FIXME: PMPP
+
+https://groups.google.com/forum/#!topic/emscripten-discuss/cE3hUV3fDSw
+
+https://github.com/emscripten-core/emscripten/wiki/Linking
+
+https://github.com/dgym/cpython-emscripten/pull/1
 
 ffi_prep_closure_loc BROKEN
+ffi_closure_alloc BROKEN
+
+
 
 */
 
@@ -41,24 +50,9 @@ ffi_closure_alloc (size_t size, void **code)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//=====================================================================================================
+// following is a ripoff from https://github.com/brion/libffi/tree/emscripten-work
+//
 
 ffi_status FFI_HIDDEN
 ffi_prep_cif_machdep(ffi_cif *cif)

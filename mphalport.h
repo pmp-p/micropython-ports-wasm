@@ -29,10 +29,3 @@ mp_uint_t mp_hal_ticks_ms(void);
         { mp_raise_OSError(error_val); } }
 
 
-
-#define nullptr NULL
-#define Py_RETURN_NONE return nullptr;
-#define PyObject mp_obj_t
-
-
-int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...);

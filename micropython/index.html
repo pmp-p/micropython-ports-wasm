@@ -2,7 +2,21 @@
 <html>
 <head>
 <meta charset="utf-8">
-<script src="pythons.js"></script>
+<meta name=viewport content='width=device-width,initial-scale=1'>
+
+<style>
+body{
+    margin: 0;
+    overflow: hidden;
+}
+#mcanvas{
+    width: 100vw;
+    height: 100vh;
+}
+</style>
+
+
+<script src="pythons.js" defer></script>
 
 
 <script type="text/µpython">
@@ -88,7 +102,7 @@ micropython.qstr_info(1)
 
 </head>
 <body onLoad="pythons()">
-    <canvas width="250" height="250" id="clock">Your browser doesn't support Canvas</canvas>
+    <canvas width="250" height="250" id="canvas">Your browser doesn't support Canvas</canvas>
     <textarea id="output" cols=132></textarea>
 </body>
 </html>
@@ -163,7 +177,7 @@ def set_clock():
 
 browser.timer.set_interval(set_clock,100)
 
-canvas = doc["clock"]
+canvas = doc["canvas"]
 
 # draw clock border
 ctx = canvas.getContext("2d")

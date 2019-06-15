@@ -48,7 +48,11 @@ https://github.com/micropython/micropython/pull/2618
 RFC: emscripten: Got something to compile and link.
 https://github.com/micropython/micropython/pull/1561
 
+Javascript Port - MicroPython transmuted into Javascript by Emscripten.
+https://github.com/micropython/micropython/pull/3575
+
 Emscripten
+
 https://github.com/micropython/micropython/issues/888
 
 
@@ -59,3 +63,4 @@ https://www.bountysource.com/issues/5037165-emscripten
 https://github.com/micropython/micropython/issues/3474
 
 https://github.com/kkimdev/epsilon
+

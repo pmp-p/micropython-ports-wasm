@@ -126,7 +126,7 @@
 #define MICROPY_MEM_STATS           (0)
 #define MICROPY_MPY_CODE_SAVE       (0)
 #define MICROPY_GC_ALLOC_THRESHOLD  (0)
-#define MICROPY_REPL_EVENT_DRIVEN   (0)
+#define MICROPY_REPL_EVENT_DRIVEN   (1)
 #define MICROPY_HELPER_LEXER_UNIX   (0)
 #define MICROPY_ENABLE_DOC_STRING   (0)
 #define MICROPY_EMIT_X64            (0)

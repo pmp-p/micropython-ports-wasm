@@ -16,6 +16,7 @@
     #define EMSCRIPTEN_KEEPALIVE
 #endif
 
+#include "upython.h"
 
 mp_uint_t mp_hal_ticks_ms(void) {
     struct timeval tv;
@@ -47,9 +48,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
         }
         if (str[0]>127){
             unistash = str[0];
-            EM_ASM({
-               console.log("unicode found");
-            });
+            fprintf(stderr,"unicode found\n");
         }
         printf("%c%c%c\n",str[0],16,3);
         return ;
@@ -59,13 +58,6 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 }
 
 
-int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
-    va_list argptr;
-    va_start (argptr, fmt );
-    vfprintf(stderr,fmt,argptr);
-    va_end (argptr);
-    return 0;
-}
 
 EMSCRIPTEN_KEEPALIVE static PyObject *
 embed_run_script(PyObject *self, PyObject *argv) {
@@ -77,4 +69,3 @@ embed_run_script(PyObject *self, PyObject *argv) {
     Py_RETURN_NONE;
 }
 
-#include "ffi/ffi.c"
