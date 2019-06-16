@@ -139,54 +139,29 @@ function init_loop(){
 
 
 // ================ STDOUT =================================================
+window.stdout_array = []
 
-function term_impl(text){
-    window.text_area.value += text
-}
-
-
-function text_area_out(text){
-    try {
-
-        if (arguments.length > 1)
-            text = Array.prototype.slice.call(arguments).join(' ')
-
-        var add_trail = true;
-        var tl = text.length;
-
-        //maybe got DLE+ETX flush mark
-        if (tl>=2){
-
-            if (  (text.charCodeAt(tl-2)==16) &&  (text.charCodeAt(tl-1)==3) ) {
-
-                // only DLE_ETX get out , that's just an io flush
-                if (tl==2)
-                    return;
-                //chop
-                text = text.substring(0,tl-2);
-                //no \n for data transmission.
-                add_trail = false;
-            }
-        }
-
-        text = text.replace( String.fromCharCode(16)+ String.fromCharCode(3), '!!') ;
-
-        // anything raw data would have the trailing \n chopped.
-        if (!add_trail){
-            term_impl(text)
-            return ;
-        }
-
-        if (text.indexOf(">>> ", 0) !== -1){
-            var element = term_impl(">>> ");
-            element.scrollTop = element.scrollHeight;
-            Module.printErr = window.old_stderr;
-            return;
-        }
-
-    } catch (x){
-        console.log("text_area_out: "+ x +" text="+text);
+function pts_decode(text){
+    function flush_stdout(){
+        var uint8array = new Uint8Array(window.stdout_array)
+        var string = new TextDecoder().decode( uint8array )
+        term_impl(string)
+        window.stdout_array=[]
     }
+
+    try {
+        var jsdata = JSON.parse(text);
+        var cc = jsdata["1"]
+        window.stdout_array.push(cc)
+        if (cc==10)
+            flush_stdout()
+    } catch (x) {
+        // found a raw C string via libc
+        console.log("C-STR:"+x+":"+text)
+        flush_stdout()
+        term_impl(text+"\r\n")
+    }
+
 }
 
 // ========================== startup hooks ======================================
@@ -194,17 +169,19 @@ function text_area_out(text){
 window.Module = {
     preRun : [preRun],
     postRun: [postRun],
-    print : text_area_out,
+    print : pts_decode,
     printErr : console.log,
 }
 
 
 
 async function pythons(argc, argv){
+    /*
     var textarea = document.getElementById('output');
         textarea.rows=25 ;
         textarea.style.height = "640px";
     window.text_area = textarea
+    */
     var scripts = document.getElementsByTagName('script')
     for(var i = 0; i < scripts.length; i++){
         var script = scripts[i]
@@ -224,8 +201,8 @@ window.urls = {"name":"http"}
 
 async function _get(url,trigger){
     fetch(url).then( function(r) { return r.arrayBuffer(); } ).then( function(udata) { window[trigger] = udata } );
-    await _until(defined)(trigger,window.urls);
-    return window.urls[trigger];
+    await _until(defined)(trigger,window.urls)
+    return window.urls[trigger]
 }
 
 async function dlopen_lzma(lib,size_hint) {
@@ -238,15 +215,15 @@ async function dlopen_lzma(lib,size_hint) {
 }
 
 function file_exists(urlToFile) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('HEAD', urlToFile, false);
-    xhr.send();
-    return (xhr.status == 200 );
+    var xhr = new XMLHttpRequest()
+    xhr.open('HEAD', urlToFile, false)
+    xhr.send()
+    return (xhr.status == 200 )
 }
 
 
 
 
-
+console.log('pythons included')
 
 

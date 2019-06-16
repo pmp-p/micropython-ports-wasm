@@ -105,6 +105,8 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 #see https://github.com/emscripten-core/emscripten/issues/7811
 #COPT+= -s EXPORT_ALL=1
 
+# https://github.com/emscripten-core/emscripten/wiki/Linking
+
 
 LOPT=-s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1
 
@@ -124,12 +126,8 @@ COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
 
 COPT += -Oz -g0 -s FORCE_FILESYSTEM=1
 COPT += -s LZ4=0 --memory-init-file 0
-#COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
-COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0
-# -s TOTAL_STACK=16777216
+COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 
-# https://github.com/emscripten-core/emscripten/wiki/Linking
-#COPT+= -s MAIN_MODULE=1
 
 WASM_FLAGS=-s BINARYEN_ASYNC_COMPILATION=1 -s WASM=1
 LINK_FLAGS=-s MAIN_MODULE=1
@@ -142,6 +140,14 @@ $(PROG): libs
  -o $@ main.c $(LIBMICROPYTHON) \
  --preload-file assets@/assets --preload-file micropython/lib@/lib
 	$(shell mv $(BASENAME).* $(BASENAME)/)
+
+
+
+
+
+
+
+
 
 #
 

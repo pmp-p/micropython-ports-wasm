@@ -85,19 +85,31 @@ Py_InitializeEx(int param) {
 
 }
 
-
+#if 1
 
 void
 gc_collect(void) {
-    // WARNING: This gc_collect implementation doesn't try to get root
-    // pointers from CPU registers, and thus may function incorrectly.
     void *dummy;
     gc_collect_start();
     gc_collect_root(&dummy, ((mp_uint_t)stack_top - (mp_uint_t)&dummy) / sizeof(mp_uint_t));
     gc_collect_end();
     gc_dump_info();
 }
+#else
 
+void gc_collect(void) {
+    // WARNING: This gc_collect implementation doesn't try to get root
+    // pointers from CPU registers, and thus may function incorrectly.
+    jmp_buf dummy;
+    if (setjmp(dummy) == 0) {
+        longjmp(dummy, 1);
+    }
+    gc_collect_start();
+    gc_collect_root((void*)stack_top, ((mp_uint_t)(void*)(&dummy + 1) - (mp_uint_t)stack_top) / sizeof(mp_uint_t));
+    gc_collect_end();
+}
+
+#endif
 
 
 mp_lexer_t *
@@ -125,8 +137,9 @@ mp_lexer_new_from_file(const char *filename) {
 
 
 void
-do_str(const char *src, mp_parse_input_kind_t input_kind, int is_file) {
+do_str(const char *src,  int is_file) {
     mp_lexer_t *lex;
+    mp_parse_input_kind_t input_kind = MP_PARSE_FILE_INPUT;
 
     if (is_file)
         lex = mp_lexer_new_from_file(src);
@@ -134,7 +147,7 @@ do_str(const char *src, mp_parse_input_kind_t input_kind, int is_file) {
         lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
 
     if (lex == NULL) {
-        printf("128:malloc: lexer\n");
+        printf("147:malloc: lexer\n");
         return;
     }
 
@@ -151,20 +164,22 @@ do_str(const char *src, mp_parse_input_kind_t input_kind, int is_file) {
     }
 }
 
+#define IS_FILE 1
+#define IS_STR 0
 
 EMSCRIPTEN_KEEPALIVE void
 PyRun_SimpleString(const char * code) {
-    do_str(code, MP_PARSE_FILE_INPUT, 0);
+    do_str(code,  IS_STR);
 }
 
 EMSCRIPTEN_KEEPALIVE void
 PyRun_SimpleFile(FILE *fp, const char *filename) {
-    do_str(filename, MP_PARSE_FILE_INPUT, 1);
+    do_str(filename,  IS_FILE);
 }
 
 EMSCRIPTEN_KEEPALIVE void
 PyRun_VerySimpleFile(const char *filename) {
-    do_str(filename, MP_PARSE_FILE_INPUT, 1);
+    do_str(filename, IS_FILE);
 }
 
 mp_import_stat_t mp_import_stat(const char *path) {

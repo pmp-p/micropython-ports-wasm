@@ -38,25 +38,10 @@ int mp_hal_stdin_rx_chr(void) {
     return c;
 }
 
-char unistash={0};
-
-// Send string of given length
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
-    if (len==1){
-        if (unistash){
-            printf("%c%c%c%c\n",unistash,str[0],16,3);
-        }
-        if (str[0]>127){
-            unistash = str[0];
-            fprintf(stderr,"unicode found\n");
-        }
-        printf("%c%c%c\n",str[0],16,3);
-        return ;
-    }
-    //should not happen, also buffered output is bad for terminal/repl use since emscripten will only flush on \n
-    printf("%s %lu\n","str",len);
+    for(int i=0;i<len;i++)
+        printf("{\"%c\":%u}\n",49,(unsigned char)str[i]);
 }
-
 
 
 EMSCRIPTEN_KEEPALIVE static PyObject *
