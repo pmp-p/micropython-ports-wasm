@@ -25,6 +25,11 @@ extern char *repl_line;
 
 void
 py_iter_one(void){
+    /*
+    int rx = mp_hal_stdin_rx_chr();
+    if (rx && rx!=10)
+        fprintf(stderr, "stdin:%u\n", rx );
+*/
     if (repl_line[0]){
         PyRun_SimpleString(repl_line);
         repl_line[0]=0;
@@ -92,12 +97,15 @@ main(int argc, char *argv[]) {
 
     writecode(
         "boot.py",
-        "import sys\n"
-        "sys.path.clear()\n"
+        "import sys;"
+        "sys.path.clear();"
         "sys.path.append( '' )\n"
+        "import sys;print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
     );
 
     PyRun_VerySimpleFile("/boot.py");
+
+
 
     emscripten_set_main_loop( py_iter_one, 0, 1);  // <= this will exit to js now.
 

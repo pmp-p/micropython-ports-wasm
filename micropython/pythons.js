@@ -119,22 +119,105 @@ function postRun(){
     console.log("postRun: End")
 }
 
+function PyRun_VerySimpleFile(text){
+    var cs = allocate(intArrayFromString(text), 'i8', ALLOC_STACK);
+    //console.log(script.text)
+    Module._PyRun_VerySimpleFile(cs)
+    Module._free(cs)
+}
+
+function PyRun_SimpleString(text){
+    var cs = allocate(intArrayFromString(text), 'i8', ALLOC_STACK);
+    //console.log(script.text)
+    Module._PyRun_SimpleString(cs)
+    Module._free(cs)
+}
+
+
+function awfull_get(url) {
+    function updateProgress (oEvent) {
+      if (oEvent.lengthComputable) {
+        var percentComplete = oEvent.loaded / oEvent.total;
+      } else {
+            // Unable to compute progress information since the total size is unknown
+      }
+    }
+
+    function transferFailed(evt) {
+      console.log("callfs: An error occurred while transferring the file '"+window.currentTransfer+"'");
+    }
+
+    function transferCanceled(evt) {
+      console.log("callfs: transfer '"+window.currentTransfer+"' has been canceled by the user.");
+    }
+
+    var oReq = new XMLHttpRequest();
+
+    function transferComplete(evt) {
+        if (oReq.status==404){
+            console.log("callfs: File not found : "+ tB_name + ' in ' + (tD_name || '/') );
+            window.currentTransferSize = -1 ;
+
+        } else {
+            window.currentTransferSize = oReq.response.length;
+            console.log("callfs: Transfer is complete saving : "+window.currentTransferSize);
+        }
+    }
+
+    oReq.overrideMimeType("text/plain; charset=x-user-defined");
+    oReq.addEventListener("progress", updateProgress);
+    oReq.addEventListener("load", transferComplete);
+    oReq.addEventListener("error", transferFailed);
+    oReq.addEventListener("abort", transferCanceled);
+    oReq.open("GET",url ,false);
+    oReq.send();
+    return oReq.response
+}
 
 function init_loop(){
 
-    console.log("init_loop:Begin (" + Module.arguments+")")
+    console.log("init_loop:Begin (" + Module.arguments.length+")")
     var scripts = document.getElementsByTagName('script')
+
+    if (Module.arguments.length>1) {
+
+        var argv0 = ""+Module.arguments[1]
+        if (argv0.startswith('http')) {
+            argv0 = "https://cors-anywhere.herokuapp.com/"+argv0
+        }
+        console.log('running with sys.argv', argv0)
+
+        window.currentTransferSize = 0
+        window.currentTransfer = argv0
+
+        var ab = awfull_get(argv0)
+        console.log(ab.length)
+        FS.createDataFile("/",'main.py', ab, true, true);
+        PyRun_VerySimpleFile('main.py')
+        return
+    }
+
     for(var i = 0; i < scripts.length; i++){
         var script = scripts[i]
         if(script.type == "text/µpython"){
-            var cs = allocate(intArrayFromString(script.text), 'i8', ALLOC_STACK);
-            //console.log(script.text)
-            Module._PyRun_SimpleString(cs)
-            Module._free(cs);
+            PyRun_SimpleString(script.text)
             break
         }
     }
     console.log("init_loop:End")
+}
+// ================= STDIN =================================================
+window.stdin_array = []
+window.stdin = ""
+
+function window_prompt(){
+    if (window.stdin.length>0) {
+        var string = window.stdin
+        window.stdin = ""
+        console.log("sent ["+string+"]")
+        return string
+    }
+    return null
 }
 
 
@@ -176,13 +259,25 @@ window.Module = {
 
 
 async function pythons(argc, argv){
-    /*
-    var textarea = document.getElementById('output');
-        textarea.rows=25 ;
-        textarea.style.height = "640px";
-    window.text_area = textarea
-    */
     var scripts = document.getElementsByTagName('script')
+    /*
+    for ?0=xxxxx&1=xxxx argv style
+    var argv = []
+    for (var i=0;i<10;i++) {
+        var arg = new URL(window.location.href).searchParams.get(i);
+        if (arg) {
+            console.log("argv["+i+"]=",arg)
+            argv.push(arg)
+        }
+        else break
+    }
+    if (argv.length>0) {
+        console.log('running with sys.argv',argv)
+        //Module.arguments = argv
+        include("micropython.js")
+        return;
+    }
+    */
     for(var i = 0; i < scripts.length; i++){
         var script = scripts[i]
         if(script.type == "text/µpython"){

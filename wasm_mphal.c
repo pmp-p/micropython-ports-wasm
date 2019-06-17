@@ -38,6 +38,7 @@ int mp_hal_stdin_rx_chr(void) {
     return c;
 }
 
+//FIXME: libc print with valid json are likely to pass and get interpreted by pts
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     for(int i=0;i<len;i++)
         printf("{\"%c\":%u}\n",49,(unsigned char)str[i]);
@@ -54,3 +55,25 @@ embed_run_script(PyObject *self, PyObject *argv) {
     Py_RETURN_NONE;
 }
 
+
+#if MICROPY_USE_READLINE == 0
+char *prompt(char *p) {
+    fprintf(stderr,"61:simple read string\n");
+    static char buf[256];
+    //fputs(p, stdout);
+    fputs(p, stderr);
+    char *s = fgets(buf, sizeof(buf), stdin);
+    if (!s) {
+        return NULL;
+    }
+    int l = strlen(buf);
+    if (buf[l - 1] == '\n') {
+        buf[l - 1] = 0;
+    } else {
+        l++;
+    }
+    char *line = malloc(l);
+    memcpy(line, buf, l);
+    return line;
+}
+#endif

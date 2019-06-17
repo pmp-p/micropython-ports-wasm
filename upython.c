@@ -85,18 +85,6 @@ Py_InitializeEx(int param) {
 
 }
 
-#if 1
-
-void
-gc_collect(void) {
-    void *dummy;
-    gc_collect_start();
-    gc_collect_root(&dummy, ((mp_uint_t)stack_top - (mp_uint_t)&dummy) / sizeof(mp_uint_t));
-    gc_collect_end();
-    gc_dump_info();
-}
-#else
-
 void gc_collect(void) {
     // WARNING: This gc_collect implementation doesn't try to get root
     // pointers from CPU registers, and thus may function incorrectly.
@@ -109,14 +97,15 @@ void gc_collect(void) {
     gc_collect_end();
 }
 
-#endif
-
 
 mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
-    if (!file)
-        fprintf(stderr, "fopen failed %s\n", "filename");
+    if (!file) {
+        printf("404: fopen(%s)\n", filename);
+        fprintf(stderr, "404: fopen(%s)\n", filename);
+        return NULL;
+    }
     fseeko(file, 0, SEEK_END);
     off_t size_of_file = ftello(file);
     fprintf(stderr, "mp_lexer_new_from_file(%s size=%i)\n", filename, size_of_file );
@@ -147,7 +136,7 @@ do_str(const char *src,  int is_file) {
         lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
 
     if (lex == NULL) {
-        printf("147:malloc: lexer\n");
+        printf("152:malloc: lexer %s\n",src);
         return;
     }
 
@@ -183,7 +172,7 @@ PyRun_VerySimpleFile(const char *filename) {
 }
 
 mp_import_stat_t mp_import_stat(const char *path) {
-    printf("stat '%s'\n", "path");
+    printf("stat '%s'\n", path);
     /*
     if (mp_js_context.import_stat == NULL) {
         return MP_IMPORT_STAT_NO_EXIST;
