@@ -23,17 +23,43 @@
 // vstr_t *repl_line;
 extern char *repl_line;
 
+static int repl_started = 0;
+
 void
 py_iter_one(void){
-    /*
-    int rx = mp_hal_stdin_rx_chr();
-    if (rx && rx!=10)
-        fprintf(stderr, "stdin:%u\n", rx );
-*/
     if (repl_line[0]){
         PyRun_SimpleString(repl_line);
         repl_line[0]=0;
     }
+
+    if (!repl_started) return;
+
+    int rx = EM_ASM_INT({
+if (window.stdin_array.length)
+    return window.stdin_array.shift();
+    return 0;
+});
+    if (rx) {
+        if (rx>127)
+            fprintf(stderr, "FIXME:stdin-utf8:%u\n", rx );
+        pyexec_event_repl_process_char(rx);
+    }
+
+}
+
+
+
+int hack_open(const char *url) {
+    fprintf(stderr,"204:hack_open[%s]\n", url);
+    if (url[0]==':') {
+        fprintf(stderr,"  -> same host[%s]\n", url);
+        int fidx = EM_ASM_INT({ hack_open(Pointer_stringify($0)); }, url );
+        char fname[256];
+        snprintf(fname, sizeof(fname), "cache_%d", fidx);
+        return fileno( fopen(fname,"r") );
+    }
+
+    return 0;
 }
 
 EMSCRIPTEN_KEEPALIVE void
@@ -61,7 +87,12 @@ await_dlopen(const char *def){
 }
 
 
-
+EMSCRIPTEN_KEEPALIVE void
+repl_init(){
+    if (repl_started) return;
+    pyexec_event_repl_init();
+    repl_started=1;
+}
 
 int
 main(int argc, char *argv[]) {

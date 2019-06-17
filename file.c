@@ -157,15 +157,17 @@ STATIC const mp_arg_t file_open_args[] = {
     { MP_QSTR_encoding, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_PTR(&mp_const_none_obj)} },
 };
 #define FILE_OPEN_NUM_ARGS MP_ARRAY_SIZE(file_open_args)
+extern int hack_open(const char *url);
 
 STATIC mp_obj_t fdfile_open(const mp_obj_type_t *type, mp_arg_val_t *args) {
     mp_obj_fdfile_t *o = m_new_obj(mp_obj_fdfile_t);
     const char *mode_s = mp_obj_str_get_str(args[1].u_obj);
-
+    int can_online = 0;
     int mode_rw = 0, mode_x = 0;
     while (*mode_s) {
         switch (*mode_s++) {
             case 'r':
+                can_online = 1;
                 mode_rw = O_RDONLY;
                 break;
             case 'w':
@@ -201,7 +203,14 @@ STATIC mp_obj_t fdfile_open(const mp_obj_type_t *type, mp_arg_val_t *args) {
     }
 
     const char *fname = mp_obj_str_get_str(fid);
-    int fd = open(fname, mode_x | mode_rw, 0644);
+    int fd=0;
+
+    if (can_online)
+        fd = hack_open( fname );
+
+    if (!fd)
+        fd = open(fname, mode_x | mode_rw, 0644);
+
     if (fd == -1) {
         mp_raise_OSError(errno);
     }

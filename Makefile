@@ -53,7 +53,7 @@ MPY_CROSS_FLAGS += -mcache-lookup-bc
 
 LD = $(CC)
 LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
-LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl','_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
+LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl','_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile', '_repl_init']"
 
 SRC_C = \
 	upython.c \

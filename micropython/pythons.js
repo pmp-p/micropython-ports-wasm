@@ -174,6 +174,17 @@ function awfull_get(url) {
     return oReq.response
 }
 
+function hack_open(url){
+        if (url[0]==":")
+            url = url.substr(1)
+
+        var ab = awfull_get(url)
+        console.log(ab.length)
+        window.urls.index += 1
+        FS.createDataFile("/","cache_"+window.urls.index, ab, true, true);
+        return window.urls.index
+}
+
 function init_loop(){
 
     console.log("init_loop:Begin (" + Module.arguments.length+")")
@@ -194,21 +205,24 @@ function init_loop(){
         console.log(ab.length)
         FS.createDataFile("/",'main.py', ab, true, true);
         PyRun_VerySimpleFile('main.py')
-        return
-    }
+    } else {
 
-    for(var i = 0; i < scripts.length; i++){
-        var script = scripts[i]
-        if(script.type == "text/µpython"){
-            PyRun_SimpleString(script.text)
-            break
+        for(var i = 0; i < scripts.length; i++){
+            var script = scripts[i]
+            if(script.type == "text/µpython"){
+                PyRun_SimpleString(script.text)
+            }
         }
     }
+    setTimeout(Module._repl_init, 500);
     console.log("init_loop:End")
+
+
 }
 // ================= STDIN =================================================
 window.stdin_array = []
 window.stdin = ""
+window.stdin_raw = true
 
 function window_prompt(){
     if (window.stdin.length>0) {
@@ -220,6 +234,23 @@ function window_prompt(){
     return null
 }
 
+function stdin_tx(key){
+    window.stdin = window.stdin + key
+
+    if (!window.stdin_raw) {
+        console.log("key:"+key);
+        return ;
+    }
+    var utf8 = unescape(encodeURIComponent(key));
+    for(var i = 0; i < utf8.length; i++) {
+        window.stdin_array.push( utf8.charCodeAt(i) );
+    }
+}
+
+function stdin_tx_chr(chr){
+    console.log("stdin:control charkey:"+chr);
+    window.stdin_array.push( chr );
+}
 
 // ================ STDOUT =================================================
 window.stdout_array = []
@@ -236,8 +267,15 @@ function pts_decode(text){
         var jsdata = JSON.parse(text);
         var cc = jsdata["1"]
         window.stdout_array.push(cc)
-        if (cc==10)
-            flush_stdout()
+
+        if (window.stdin_raw) {
+            if (cc<128)
+                flush_stdout()
+            return;
+        }
+
+        if (cc==10) flush_stdout()
+
     } catch (x) {
         // found a raw C string via libc
         console.log("C-STR:"+x+":"+text)
@@ -292,7 +330,7 @@ async function pythons(argc, argv){
 
 // ========================== C =============================
 window.lib = {"name":"lib"};
-window.urls = {"name":"http"}
+window.urls = {"name":"http","index":-1}
 
 async function _get(url,trigger){
     fetch(url).then( function(r) { return r.arrayBuffer(); } ).then( function(udata) { window[trigger] = udata } );
