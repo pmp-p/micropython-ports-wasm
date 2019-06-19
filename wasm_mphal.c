@@ -34,6 +34,7 @@ mp_uint_t mp_hal_ticks_us(void) {
 
 // Receive single character
 int mp_hal_stdin_rx_chr(void) {
+    fprintf(stderr,"mp_hal_stdin_rx_chr");
     unsigned char c = fgetc(stdin);
     return c;
 }

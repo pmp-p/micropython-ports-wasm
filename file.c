@@ -156,7 +156,11 @@ STATIC const mp_arg_t file_open_args[] = {
     { MP_QSTR_buffering, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_PTR(&mp_const_none_obj)} },
     { MP_QSTR_encoding, MP_ARG_OBJ, {.u_rom_obj = MP_ROM_PTR(&mp_const_none_obj)} },
 };
+
+
 #define FILE_OPEN_NUM_ARGS MP_ARRAY_SIZE(file_open_args)
+
+// FIXME:
 extern int hack_open(const char *url);
 
 STATIC mp_obj_t fdfile_open(const mp_obj_type_t *type, mp_arg_val_t *args) {

@@ -100,6 +100,18 @@ void gc_collect(void) {
 }
 
 
+#define IS_FILE 1
+#define IS_STR 0
+
+#if !MICROPY_VFS
+// FIXME:
+extern mp_import_stat_t hack_modules(const char *modname);
+mp_import_stat_t mp_import_stat(const char *path) {
+    return hack_modules(path);
+}
+#endif
+
+
 mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
@@ -117,18 +129,17 @@ mp_lexer_new_from_file(const char *filename) {
     fread(code_buf, size_of_file, 1, file);
 
     if (code_buf == NULL) {
+        fprintf(stderr, "READ ERROR: mp_lexer_new_from_file(%s size=%i)\n", filename, size_of_file );
         return NULL;
     }
-
+    //fprintf(stderr, "%s" ,  code_buf);
     mp_lexer_t* lex = mp_lexer_new_from_str_len(qstr_from_str(filename), code_buf, strlen(code_buf), 0);
     free(code_buf);
     return lex;
 }
 
-
-
 void
-do_str(const char *src,  int is_file) {
+do_code(const char *src,  int is_file) {
     mp_lexer_t *lex;
     mp_parse_input_kind_t input_kind = MP_PARSE_FILE_INPUT;
 
@@ -141,6 +152,14 @@ do_str(const char *src,  int is_file) {
         printf("152:malloc: lexer %s\n",src);
         return;
     }
+
+    qstr source_name = lex->source_name;
+
+    #if MICROPY_PY___FILE__
+    if (input_kind == MP_PARSE_FILE_INPUT) {
+        mp_store_global(MP_QSTR___file__, MP_OBJ_NEW_QSTR(source_name));
+    }
+    #endif
 
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
@@ -155,44 +174,20 @@ do_str(const char *src,  int is_file) {
     }
 }
 
-#define IS_FILE 1
-#define IS_STR 0
-
 EMSCRIPTEN_KEEPALIVE void
 PyRun_SimpleString(const char * code) {
-    do_str(code,  IS_STR);
+    do_code(code,  IS_STR);
 }
 
 EMSCRIPTEN_KEEPALIVE void
 PyRun_SimpleFile(FILE *fp, const char *filename) {
-    do_str(filename,  IS_FILE);
+    do_code(filename,  IS_FILE);
 }
 
 EMSCRIPTEN_KEEPALIVE void
 PyRun_VerySimpleFile(const char *filename) {
-    do_str(filename, IS_FILE);
+    do_code(filename, IS_FILE);
 }
-
-mp_import_stat_t mp_import_stat(const char *path) {
-    printf("stat '%s'\n", path);
-    /*
-    if (mp_js_context.import_stat == NULL) {
-        return MP_IMPORT_STAT_NO_EXIST;
-    }
-
-    int s = mp_js_context.import_stat(path);
-
-    if (s == -1) {
-        return MP_IMPORT_STAT_NO_EXIST;
-    } else if (s == 1) {
-        return MP_IMPORT_STAT_DIR;
-    } else {
-        return MP_IMPORT_STAT_FILE;
-    }
-    */
-    return MP_IMPORT_STAT_NO_EXIST;
-}
-
 
 
 int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
@@ -206,6 +201,7 @@ int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...) {
 
 void
 nlr_jump_fail(void *val) {
+    fprintf(stderr, "FATAL: uncaught NLR %p\n", val);
     while(1);
 }
 

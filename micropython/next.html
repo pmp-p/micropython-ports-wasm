@@ -209,15 +209,19 @@ modules.extend( "micropython embed builtins array math cmath gc ffi io hello".sp
 
 print("open-write hello module")
 with open('hello.py','wb') as file:
-    file.write('''
-
-print("i am hello module",__import__(__name__))
-
+    file.write('''#
+#
+#
+print("i am module %s" % __import__(__name__))
+pass
+pass
+pass
+#
 '''.encode())
 
 import micropython
 
-if not 'dev' in sys.argv:
+if 'dev' in sys.argv:
     print(b'open-read: assets', open('assets/assets.py','rb').read() )
 
     missing = []
@@ -250,32 +254,36 @@ if not 'dev' in sys.argv:
     print('%r' % b )
     print( b.decode('utf-8') )
     print("end fixed utf-8!!\n")
-else:
+
     print("\nC-api:")
     import embed
     for d in dir(embed):
         print( d )
 
-print("\nFFI:")
-import ffi
-for d in dir(ffi):
-    print( d )
+    print("\nFFI:")
+    import ffi
+    for d in dir(ffi):
+        print( d )
 
-lib = ffi.open('lib/libtest.wasm')
-print( lib )
-init_test  = lib.func("v", "init_test", "")
-init_plus_one = lib.func("i","init_plus_one","i")
-print( init_test )
-init_test()
-print("init_plus_one(41)==" , init_plus_one(41) )
-print("done")
+    lib = ffi.open('lib/libtest.wasm')
+    print( lib )
+    init_test  = lib.func("v", "init_test", "")
+    init_plus_one = lib.func("i","init_plus_one","i")
+    print( init_test )
+    init_test()
+    print("init_plus_one(41)==" , init_plus_one(41) )
+    print("done")
 
+    micropython.qstr_info(1)
 
 print()
 print("="*78)
 print()
 
-micropython.qstr_info(1)
+import embed
+#embed.os_compile('hello.py','hello.mpy')
+import hello
+
 </script>
 <br/>
   <!--  <textarea id="output" cols=132></textarea> -->

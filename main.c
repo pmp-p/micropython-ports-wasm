@@ -47,13 +47,19 @@ if (window.stdin_array.length)
 
 }
 
+/* =====================================================================================
+    bad sync experiment with file access trying to help on
+    https://github.com/littlevgl/lvgl/issues/792
+
+*/
 
 
+// VERY BAD
 int hack_open(const char *url) {
     fprintf(stderr,"204:hack_open[%s]\n", url);
     if (url[0]==':') {
         fprintf(stderr,"  -> same host[%s]\n", url);
-        int fidx = EM_ASM_INT({ hack_open(Pointer_stringify($0)); }, url );
+        int fidx = EM_ASM_INT({return hack_open(Pointer_stringify($0)); }, url );
         char fname[256];
         snprintf(fname, sizeof(fname), "cache_%d", fidx);
         return fileno( fopen(fname,"r") );
@@ -61,6 +67,32 @@ int hack_open(const char *url) {
 
     return 0;
 }
+
+// BAD ENOUGH
+mp_import_stat_t hack_modules(const char *modname) {
+    if( access( modname, F_OK ) != -1 ) {
+        struct stat stats;
+        stat(modname, &stats);
+        if (S_ISDIR(stats.st_mode))
+            return MP_IMPORT_STAT_DIR;
+        return MP_IMPORT_STAT_FILE;
+    }
+    //FIXME: directory vs files ?
+    int found = EM_ASM_INT({return file_exists(Pointer_stringify($0), true); }, modname ) ;
+    if ( found ) {
+        int dl = EM_ASM_INT({return hack_open(Pointer_stringify($0),Pointer_stringify($0)); }, modname );
+        fprintf(stderr,"hack_modules: dl %s size=%d", modname, dl);
+        if (dl)
+            return MP_IMPORT_STAT_FILE;
+    }
+    fprintf(stderr,"404:hack_modules '%s' (%d)\n", modname, found);
+    return MP_IMPORT_STAT_NO_EXIST;
+}
+
+//=====================================================================================
+
+
+
 
 EMSCRIPTEN_KEEPALIVE void
 repl(const char *code) {
@@ -75,7 +107,7 @@ repl(const char *code) {
 EMSCRIPTEN_KEEPALIVE void
 writecode(char *filename,char *code) {
     EM_ASM({
-    FS.createDataFile("/", Pointer_stringify($0), Pointer_stringify($1) , true, true);
+        FS.createDataFile("/", Pointer_stringify($0), Pointer_stringify($1) , true, true);
     }, filename, code);
 }
 
@@ -128,10 +160,20 @@ main(int argc, char *argv[]) {
 
     writecode(
         "boot.py",
-        "import sys;"
-        "sys.path.clear();"
+        "import sys\n"
+        "print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
+        "sys.path.clear()\n"
         "sys.path.append( '' )\n"
-        "import sys;print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
+//        "import sys\n"
+        "def run(file):\n"
+        "    if not file.endswith('.py'): file+='.py'\n"
+        "    print(file)\n"
+        "    code = compile( open(file).read(), file, 'exec')\n"
+        "    exec( code, globals(), globals())\n"
+        "\n"
+        "\n"
+        "\n"
+
     );
 
     PyRun_VerySimpleFile("/boot.py");

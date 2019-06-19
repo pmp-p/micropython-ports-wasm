@@ -90,7 +90,11 @@ function _until(fn_solver){
     }
 }
 
+
+
 // =================  EMSCRIPTEN ================================
+
+
 
 function preRun(){
     console.log("preRun: Begin")
@@ -134,6 +138,47 @@ function PyRun_SimpleString(text){
 }
 
 
+
+function init_loop(){
+
+    console.log("init_loop:Begin (" + Module.arguments.length+")")
+    var scripts = document.getElementsByTagName('script')
+
+    if (Module.arguments.length>1) {
+
+        var argv0 = ""+Module.arguments[1]
+        if (1)
+            if (argv0.startswith('http')) {
+                argv0 = CORS_BROOKER+argv0
+            }
+        else console.log("CORS PATCH OFF")
+        console.log('running with sys.argv', argv0)
+
+        window.currentTransferSize = 0
+        window.currentTransfer = argv0
+
+        var ab = awfull_get(argv0)
+        console.log(ab.length)
+        FS.createDataFile("/",'main.py', ab, true, true);
+        PyRun_VerySimpleFile('main.py')
+    } else {
+
+        for(var i = 0; i < scripts.length; i++){
+            var script = scripts[i]
+            if(script.type == "text/µpython"){
+                PyRun_SimpleString(script.text)
+            }
+        }
+    }
+    setTimeout(Module._repl_init, 500);
+    console.log("init_loop:End")
+
+
+}
+
+// ============================== FILE I/O (sync => bad) =================================
+
+
 function awfull_get(url) {
     function updateProgress (oEvent) {
       if (oEvent.lengthComputable) {
@@ -174,51 +219,49 @@ function awfull_get(url) {
     return oReq.response
 }
 
-function hack_open(url){
+function hack_open(url, cachefile){
+    try {
         if (url[0]==":")
             url = url.substr(1)
 
         var ab = awfull_get(url)
-        console.log(ab.length)
+        var ret = ab.length
+
         window.urls.index += 1
-        FS.createDataFile("/","cache_"+window.urls.index, ab, true, true);
-        return window.urls.index
-}
-
-function init_loop(){
-
-    console.log("init_loop:Begin (" + Module.arguments.length+")")
-    var scripts = document.getElementsByTagName('script')
-
-    if (Module.arguments.length>1) {
-
-        var argv0 = ""+Module.arguments[1]
-        if (argv0.startswith('http')) {
-            argv0 = "https://cors-anywhere.herokuapp.com/"+argv0
+        if (!cachefile){
+            cachefile = "cache_"+window.urls.index
+            ret = window.urls.index
         }
-        console.log('running with sys.argv', argv0)
-
-        window.currentTransferSize = 0
-        window.currentTransfer = argv0
-
-        var ab = awfull_get(argv0)
-        console.log(ab.length)
-        FS.createDataFile("/",'main.py', ab, true, true);
-        PyRun_VerySimpleFile('main.py')
-    } else {
-
-        for(var i = 0; i < scripts.length; i++){
-            var script = scripts[i]
-            if(script.type == "text/µpython"){
-                PyRun_SimpleString(script.text)
-            }
-        }
+        FS.createDataFile("/", cachefile, ab, true, true);
+        return ret
+    } catch (x) {
+        console.log("hack_open :"+x)
+        return 0
     }
-    setTimeout(Module._repl_init, 500);
-    console.log("init_loop:End")
-
-
 }
+
+
+function file_exists(urlToFile, need_dot) {
+    if (need_dot) {
+        need_dot = urlToFile.split('.').pop()
+        if (need_dot==urlToFile) {
+            //console.log("file_exists not-a-file :"+urlToFile)
+            return 0
+        }
+        //console.log("file_exists ? :"+urlToFile)
+    }
+
+    var xhr = new XMLHttpRequest()
+    xhr.open('HEAD', urlToFile, false)
+    xhr.send()
+    var ret=0
+    if (xhr.status == 200 )
+        ret=1
+    //console.log(ret)
+    return ret
+}
+
+
 // ================= STDIN =================================================
 window.stdin_array = []
 window.stdin = ""
@@ -327,6 +370,12 @@ async function pythons(argc, argv){
 }
 
 
+if ( undef("CORS_BROOKER") ){
+    window.CORS_BROOKER = "https://cors-anywhere.herokuapp.com/"
+    console.log("using default brooker CORS_BROOKER="+CORS_BROOKER)
+}
+
+
 
 // ========================== C =============================
 window.lib = {"name":"lib"};
@@ -345,13 +394,6 @@ async function dlopen_lzma(lib,size_hint) {
     var lzma_file = "lib"+lib+".js.lzma"
     var blob = await get_lzma( window.lib, lib, lzma_file, size_hint, false, false)
     write_file("lib","lib"+trigger+".so",blob)
-}
-
-function file_exists(urlToFile) {
-    var xhr = new XMLHttpRequest()
-    xhr.open('HEAD', urlToFile, false)
-    xhr.send()
-    return (xhr.status == 200 )
 }
 
 
