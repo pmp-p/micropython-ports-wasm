@@ -14,7 +14,6 @@
 #include "py/mphal.h"
 
 
-
 #ifdef __EMSCRIPTEN__
 #include "emscripten.h"
 #else
@@ -111,7 +110,7 @@ mp_import_stat_t mp_import_stat(const char *path) {
 }
 #endif
 
-
+#if !MICROPY_READER_POSIX && MICROPY_EMIT_WASM
 mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
@@ -137,6 +136,19 @@ mp_lexer_new_from_file(const char *filename) {
     free(code_buf);
     return lex;
 }
+#if MICROPY_HELPER_LEXER_UNIX
+
+mp_lexer_t *mp_lexer_new_from_fd(qstr filename, int fd, bool close_fd) {
+    mp_reader_t reader;
+    mp_reader_new_file_from_fd(&reader, fd, close_fd);
+    return mp_lexer_new(filename, reader);
+}
+
+#endif
+
+#else
+extern mp_lexer_t *mp_lexer_new_from_file(const char *filename);
+#endif
 
 void
 do_code(const char *src,  int is_file) {
@@ -163,7 +175,6 @@ do_code(const char *src,  int is_file) {
 
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
-        qstr source_name = lex->source_name;
         mp_parse_tree_t parse_tree = mp_parse(lex, input_kind);
         mp_obj_t module_fun = mp_compile(&parse_tree, source_name, MP_EMIT_OPT_NONE, true);
         mp_call_function_0(module_fun);
@@ -216,3 +227,126 @@ void MP_WEAK __assert_func(const char *file, int line, const char *func, const c
     __fatal_error("Assertion failed");
 }
 #endif
+
+
+#if !MICROPY_READER_POSIX && MICROPY_EMIT_WASM
+
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include "py/mperrno.h"
+
+typedef struct _mp_reader_posix_t {
+    bool close_fd;
+    int fd;
+    size_t len;
+    size_t pos;
+    byte buf[20];
+} mp_reader_posix_t;
+
+STATIC mp_uint_t mp_reader_posix_readbyte(void *data) {
+    mp_reader_posix_t *reader = (mp_reader_posix_t*)data;
+    if (reader->pos >= reader->len) {
+        if (reader->len == 0) {
+            return MP_READER_EOF;
+        } else {
+            int n = read(reader->fd, reader->buf, sizeof(reader->buf));
+            if (n <= 0) {
+                reader->len = 0;
+                return MP_READER_EOF;
+            }
+            reader->len = n;
+            reader->pos = 0;
+        }
+    }
+    return reader->buf[reader->pos++];
+}
+
+STATIC void mp_reader_posix_close(void *data) {
+    mp_reader_posix_t *reader = (mp_reader_posix_t*)data;
+    if (reader->close_fd) {
+        close(reader->fd);
+    }
+    m_del_obj(mp_reader_posix_t, reader);
+}
+
+void mp_reader_new_file_from_fd(mp_reader_t *reader, int fd, bool close_fd) {
+    mp_reader_posix_t *rp = m_new_obj(mp_reader_posix_t);
+    rp->close_fd = close_fd;
+    rp->fd = fd;
+    int n = read(rp->fd, rp->buf, sizeof(rp->buf));
+    if (n == -1) {
+        if (close_fd) {
+            close(fd);
+        }
+        mp_raise_OSError(errno);
+    }
+    rp->len = n;
+    rp->pos = 0;
+    reader->data = rp;
+    reader->readbyte = mp_reader_posix_readbyte;
+    reader->close = mp_reader_posix_close;
+}
+
+void mp_reader_new_file(mp_reader_t *reader, const char *filename) {
+    int fd = open(filename, O_RDONLY, 0644);
+    if (fd < 0) {
+        mp_raise_OSError(errno);
+    }
+    mp_reader_new_file_from_fd(reader, fd, true);
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

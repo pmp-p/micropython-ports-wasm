@@ -74,9 +74,24 @@ embed_os_read(size_t argc, const mp_obj_t *argv) {
 //   # py comment #1
 
 
+/* #2@41 vars(module_obj : mp_obj_t = None ) -> dict  */
+
+STATIC mp_obj_t //dict
+embed_vars(size_t argc, const mp_obj_t *argv) {
+
+    mp_obj_t* module_obj;
+    if (argc>0)
+        module_obj = (mp_obj_t*)argv[0];
+    else module_obj = NULL ;
 
 
-/* #2@43 raw_code_save_file(rc:mp_raw_code_t="", filename:str="") -> int  */
+    mp_obj_dict_t *mod_globals = mp_obj_module_get_globals(module_obj);
+    return mod_globals;
+    //return dict()
+} /* vars */
+
+
+/* #3@47 raw_code_save_file(rc:mp_raw_code_t="", filename:str="") -> int  */
 
 STATIC mp_obj_t //int
 embed_raw_code_save_file(size_t argc, const mp_obj_t *argv) {
@@ -117,7 +132,7 @@ embed_raw_code_save_file(size_t argc, const mp_obj_t *argv) {
 } /* raw_code_save_file */
 
 
-/* #3@66 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
+/* #4@70 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
 
 STATIC mp_obj_t //ptr
 embed_os_compile(size_t argc, const mp_obj_t *argv) {
@@ -176,7 +191,7 @@ embed_os_compile(size_t argc, const mp_obj_t *argv) {
 } /* os_compile */
 
 
-/* #4@107 echosum1(num : int=0) -> int  */
+/* #5@111 echosum1(num : int=0) -> int  */
 
 STATIC mp_obj_t //int
 embed_echosum1(size_t argc, const mp_obj_t *argv) {
@@ -193,7 +208,7 @@ embed_echosum1(size_t argc, const mp_obj_t *argv) {
 
 // py comment #2
 
-/* #5@113 callsome(fn : void=npe) -> void  */
+/* #6@117 callsome(fn : void=npe) -> void  */
 
 STATIC mp_obj_t //ptr
 embed_callsome(size_t argc, const mp_obj_t *argv) {
@@ -209,7 +224,7 @@ embed_callsome(size_t argc, const mp_obj_t *argv) {
 } /* callsome */
 
 
-/* #6@118 somecall(s:str='pouet')  */
+/* #7@122 somecall(s:str='pouet')  */
 
 STATIC mp_obj_t //void
 embed_somecall(size_t argc, const mp_obj_t *argv) {
@@ -249,6 +264,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_raw_code_save_file_obj,
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_somecall_obj,
     0, 1, embed_somecall);
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_vars_obj,
+    0, 1, embed_vars);
+
 STATIC const mp_map_elem_t embed_globals_table[] = {
 
     {MP_ROM_QSTR(MP_QSTR_callsome), (mp_obj_t)&embed_callsome_obj },
@@ -257,6 +275,7 @@ STATIC const mp_map_elem_t embed_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR_os_read), (mp_obj_t)&embed_os_read_obj },
     {MP_ROM_QSTR(MP_QSTR_raw_code_save_file), (mp_obj_t)&embed_raw_code_save_file_obj },
     {MP_ROM_QSTR(MP_QSTR_somecall), (mp_obj_t)&embed_somecall_obj },
+    {MP_ROM_QSTR(MP_QSTR_vars), (mp_obj_t)&embed_vars_obj },
 
 };
 

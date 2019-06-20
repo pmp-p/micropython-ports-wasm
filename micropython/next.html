@@ -211,12 +211,6 @@ print("open-write hello module")
 with open('hello.py','wb') as file:
     file.write('''#
 #
-#
-print("i am module %s" % __import__(__name__))
-pass
-pass
-pass
-#
 '''.encode())
 
 import micropython
@@ -277,12 +271,26 @@ if 'dev' in sys.argv:
     micropython.qstr_info(1)
 
 print()
-print("="*78)
+print("-"*78)
 print()
 
 import embed
 #embed.os_compile('hello.py','hello.mpy')
+
 import hello
+
+if 1:
+    code ="""
+def hi():
+    print("i am module %s" % __import__(__name__))
+hi()
+"""
+    print("================================")
+    runc(code, embed.vars( hello ))
+    print("================================")
+
+dir(sys.modules['hello'])
+
 
 </script>
 <br/>

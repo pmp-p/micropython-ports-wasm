@@ -81,7 +81,7 @@ mp_import_stat_t hack_modules(const char *modname) {
     int found = EM_ASM_INT({return file_exists(Pointer_stringify($0), true); }, modname ) ;
     if ( found ) {
         int dl = EM_ASM_INT({return hack_open(Pointer_stringify($0),Pointer_stringify($0)); }, modname );
-        fprintf(stderr,"hack_modules: dl %s size=%d", modname, dl);
+        fprintf(stderr,"hack_modules: dl %s size=%d ", modname, dl);
         if (dl)
             return MP_IMPORT_STAT_FILE;
     }
@@ -164,13 +164,16 @@ main(int argc, char *argv[]) {
         "print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
         "sys.path.clear()\n"
         "sys.path.append( '' )\n"
-//        "import sys\n"
-        "def run(file):\n"
+        "def runc(code, module=globals(), file='<code>'):\n"
+        "    code = compile( code, file, 'exec')\n"
+        "    exec( code, module, module)\n"
+        "    return module\n"
+        "\n"
+        "def runf(file='', module=globals()):\n"
         "    if not file.endswith('.py'): file+='.py'\n"
         "    print(file)\n"
-        "    code = compile( open(file).read(), file, 'exec')\n"
-        "    exec( code, globals(), globals())\n"
-        "\n"
+        "    with open(file,'r') as code:\n"
+        "       return crun(code.read(), module, file=file)\n"
         "\n"
         "\n"
 
