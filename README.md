@@ -23,6 +23,26 @@ now you can navigate http://127.0.0.1:8000/index.html
 to edit code samples look in micropython/*.html
 
 
+# Usage
+
+
+copy the 4 files located in micropython folder found inside the build folder
+ ``pythons.js micropython.js micropython.data micropython.wasm``
+and drop them where your main let's say myupython.html file will be
+
+now you have 3 options to run code :
+
+ 1) from the web via arguments ( sys.argv ) with a call myupython.html?full_url_to_the_script.py
+
+ 2) from a <script type="text/µpython> tag
+
+ 3) interactively from repl with xterm.js
+
+
+for 1&2 you will need to provide a javascript term_impl(text) function that output stdout stream where you want it to go
+
+
+
 ![Preview1](./docs/runtest.png)
 
 
