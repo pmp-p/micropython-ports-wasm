@@ -1,5 +1,9 @@
 # MicroPython on Emscripten
 
+What are the differences between this repo and the official javascript port?
+
+see https://github.com/pmp-p/micropython-ports-wasm/issues/4
+
 Follow the instructions for getting started with Emscripten [here](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
 
 Then you can run
