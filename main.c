@@ -59,7 +59,7 @@ int hack_open(const char *url) {
     fprintf(stderr,"204:hack_open[%s]\n", url);
     if (url[0]==':') {
         fprintf(stderr,"  -> same host[%s]\n", url);
-        int fidx = EM_ASM_INT({return hack_open(Pointer_stringify($0)); }, url );
+        int fidx = EM_ASM_INT({return hack_open(UTF8ToString($0)); }, url );
         char fname[256];
         snprintf(fname, sizeof(fname), "cache_%d", fidx);
         return fileno( fopen(fname,"r") );
@@ -78,9 +78,9 @@ mp_import_stat_t hack_modules(const char *modname) {
         return MP_IMPORT_STAT_FILE;
     }
     //FIXME: directory vs files ?
-    int found = EM_ASM_INT({return file_exists(Pointer_stringify($0), true); }, modname ) ;
+    int found = EM_ASM_INT({return file_exists(UTF8ToString($0), true); }, modname ) ;
     if ( found ) {
-        int dl = EM_ASM_INT({return hack_open(Pointer_stringify($0),Pointer_stringify($0)); }, modname );
+        int dl = EM_ASM_INT({return hack_open(UTF8ToString($0),UTF8ToString($0)); }, modname );
         fprintf(stderr,"hack_modules: dl %s size=%d ", modname, dl);
         if (dl)
             return MP_IMPORT_STAT_FILE;
@@ -107,7 +107,7 @@ repl(const char *code) {
 EMSCRIPTEN_KEEPALIVE void
 writecode(char *filename,char *code) {
     EM_ASM({
-        FS.createDataFile("/", Pointer_stringify($0), Pointer_stringify($1) , true, true);
+        FS.createDataFile("/", UTF8ToString($0), UTF8ToString($1) , true, true);
     }, filename, code);
 }
 
@@ -115,7 +115,7 @@ writecode(char *filename,char *code) {
 
 int
 await_dlopen(const char *def){
-    return !EM_ASM_INT( { return defined(Pointer_stringify($0), window.lib); }, def );
+    return !EM_ASM_INT( { return defined(UTF8ToString($0), window.lib); }, def );
 }
 
 

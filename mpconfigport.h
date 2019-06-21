@@ -46,7 +46,10 @@
 #define MICROPY_HELPER_LEXER_UNIX (1)
 
 #define MICROPY_EMIT_WASM (1)
-//#define MICROPY_EMIT_INLINE_ASM
+#define MICROPY_NLR_X86 (0)
+#define MICROPY_NLR_X64 (0)
+#define MICROPY_NLR_OS_WINDOWS (0)
+//#define MICROPY_EMIT_INLINE_ASM (1)
 //#define MICROPY_EMIT_NATIVE
 #define MICROPY_EMIT_X64            (0)
 #define MICROPY_EMIT_THUMB          (0)
@@ -56,7 +59,7 @@
 
 
 #define MICROPY_NLR_SETJMP          (1)   //nlr.h  MICROPY_NLR_* must match a supported arch
-
+#define MICROPY_KBD_EXCEPTION       (1)
 
 
 //??

@@ -108,7 +108,7 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 # https://github.com/emscripten-core/emscripten/wiki/Linking
 
 
-LOPT=-s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1
+LOPT=-s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1 -s TOTAL_MEMORY=512MB
 
 libs: $(OBJ)
 	$(ECHO) "Linking static $(LIBMICROPYTHON)"

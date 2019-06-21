@@ -123,14 +123,14 @@ mp_lexer_new_from_file(const char *filename) {
     }
     fseeko(file, 0, SEEK_END);
     off_t size_of_file = ftello(file);
-    fprintf(stderr, "mp_lexer_new_from_file(%s size=%i)\n", filename, size_of_file );
+    fprintf(stderr, "mp_lexer_new_from_file(%s size=%lld)\n", filename, size_of_file );
     fseeko(file, 0, SEEK_SET);
 
     char * code_buf = malloc(size_of_file);
     fread(code_buf, size_of_file, 1, file);
 
     if (code_buf == NULL) {
-        fprintf(stderr, "READ ERROR: mp_lexer_new_from_file(%s size=%i)\n", filename, size_of_file );
+        fprintf(stderr, "READ ERROR: mp_lexer_new_from_file(%s size=%lld)\n", filename, size_of_file );
         return NULL;
     }
     //fprintf(stderr, "%s" ,  code_buf);
