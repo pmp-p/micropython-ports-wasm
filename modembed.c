@@ -38,7 +38,7 @@ STATIC mp_obj_t PyBytes_FromString(char *string){
 #include "py/compile.h"
 
 extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
-
+extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
 // Save .mpy file to file system
 int raw_code_save_file(mp_raw_code_t *rc, const char *filename) {  return 0; }
 
@@ -91,69 +91,28 @@ embed_vars(size_t argc, const mp_obj_t *argv) {
 } /* vars */
 
 
-/* #3@47 raw_code_save_file(rc:mp_raw_code_t="", filename:str="") -> int  */
-
-STATIC mp_obj_t //int
-embed_raw_code_save_file(size_t argc, const mp_obj_t *argv) {
-
-    mp_raw_code_t* rc;
-    if (argc>0)
-        rc = (mp_raw_code_t*)argv[0];
-    else rc = NULL ;
-
-
-
-    mp_obj_t filename;
-    if (argc>1)
-        filename = (mp_obj_t*)argv[1];
-    else filename =  mp_obj_new_str_via_qstr("",0);
-
-
-    /*
-    RTOS_ERR rtos_err;
-
-    fh_t file_handle = file_open(wrk_dir_handle,
-                                           filename,
-                                           ACCESS_MODE_WR
-                                               | ACCESS_MODE_CREATE
-                                               | ACCESS_MODE_TRUNCATE,
-                                           &rtos_err);
-    check_rtos_err_raise(file_handle, RTOS_ERR_CODE_GET(rtos_err));
-
-    mp_print_t code_print = { (void*)(intptr_t)file_handle,
-                              file_write_strn };
-    mp_raw_code_save(rc, &code_print);
-    int ret = file_seek(file_handle, 0, ORIGIN_CUR, &rtos_err);
-    file_close(file_handle, &rtos_err);
-    return ret;
-    */
-    return 0;
-    //return int()
-} /* raw_code_save_file */
-
-
-/* #4@70 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
+/* #3@47 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
 
 STATIC mp_obj_t //ptr
 embed_os_compile(size_t argc, const mp_obj_t *argv) {
 
-    const char* source_file;
+    const char *source_file;
     if (argc>0)
-        source_file = (const char*)argv[0];
-    else source_file = NULL ;
+        source_file = mp_obj_str_get_str(argv[0]);
+    else
+        source_file = mp_obj_new_str_via_qstr("",0);
 
 
-
-    const char* mpy_file;
+    const char *mpy_file;
     if (argc>1)
-        mpy_file = (const char*)argv[1];
-    else mpy_file = NULL ;
-
+        mpy_file = mp_obj_str_get_str(argv[1]);
+    else
+        mpy_file = mp_obj_new_str_via_qstr("",0);
 
     vstr_t vstr;
 
     if (argc == 2 && argv[1] != mp_const_none) {
-        mpy_file = mp_obj_str_get_str(argv[1]);
+        //done by glue code
     } else {
         vstr_init(&vstr, strlen(source_file) + 5);  // +5 for NUL and .mpy
         vstr_add_str(&vstr, source_file);
@@ -162,36 +121,22 @@ embed_os_compile(size_t argc, const mp_obj_t *argv) {
             vstr_cut_tail_bytes(&vstr, 3);
         }
         vstr_add_str(&vstr, ".mpy");
-
         mpy_file = vstr_null_terminated_str(&vstr);
     }
 
-    //gc_collect();
-    //mp_micropython_mem_info(0, NULL);
-
-    mp_printf(MP_PYTHON_PRINTER, "Parsing %s...\n", source_file);
-    mp_parse_tree_t parse_tree = mp_parse(mp_lexer_new_from_file(source_file),
-                                          MP_PARSE_FILE_INPUT);
-    //gc_collect();
-    //mp_micropython_mem_info(0, NULL);
-
-    mp_printf(MP_PYTHON_PRINTER, "Compiling...\n");
+    mp_lexer_t *lex = mp_lexer_new_from_file(source_file);
+    mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
     mp_raw_code_t *rc = mp_compile_to_raw_code(&parse_tree,
                                                qstr_from_str(source_file),
                                                MP_EMIT_OPT_NONE,
                                                false);
-    //gc_collect();
-    //mp_micropython_mem_info(0, NULL);
-
-    mp_printf(MP_PYTHON_PRINTER, "Saving %s...\n", mpy_file);
-    raw_code_save_file(rc, mpy_file);
-
+    mp_raw_code_save_file(rc, mpy_file);
     return mp_const_none;
     return None;
 } /* os_compile */
 
 
-/* #5@111 echosum1(num : int=0) -> int  */
+/* #4@74 echosum1(num : int=0) -> int  */
 
 STATIC mp_obj_t //int
 embed_echosum1(size_t argc, const mp_obj_t *argv) {
@@ -208,7 +153,7 @@ embed_echosum1(size_t argc, const mp_obj_t *argv) {
 
 // py comment #2
 
-/* #6@117 callsome(fn : void=npe) -> void  */
+/* #5@80 callsome(fn : void=npe) -> void  */
 
 STATIC mp_obj_t //ptr
 embed_callsome(size_t argc, const mp_obj_t *argv) {
@@ -224,7 +169,7 @@ embed_callsome(size_t argc, const mp_obj_t *argv) {
 } /* callsome */
 
 
-/* #7@122 somecall(s:str='pouet')  */
+/* #6@85 somecall(s:str='pouet')  */
 
 STATIC mp_obj_t //void
 embed_somecall(size_t argc, const mp_obj_t *argv) {
@@ -258,9 +203,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_compile_obj,
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_read_obj,
     0, 0, embed_os_read);
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_raw_code_save_file_obj,
-    0, 2, embed_raw_code_save_file);
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_somecall_obj,
     0, 1, embed_somecall);
 
@@ -273,7 +215,6 @@ STATIC const mp_map_elem_t embed_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR_echosum1), (mp_obj_t)&embed_echosum1_obj },
     {MP_ROM_QSTR(MP_QSTR_os_compile), (mp_obj_t)&embed_os_compile_obj },
     {MP_ROM_QSTR(MP_QSTR_os_read), (mp_obj_t)&embed_os_read_obj },
-    {MP_ROM_QSTR(MP_QSTR_raw_code_save_file), (mp_obj_t)&embed_raw_code_save_file_obj },
     {MP_ROM_QSTR(MP_QSTR_somecall), (mp_obj_t)&embed_somecall_obj },
     {MP_ROM_QSTR(MP_QSTR_vars), (mp_obj_t)&embed_vars_obj },
 

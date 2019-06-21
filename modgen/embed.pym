@@ -6,7 +6,7 @@
 #include "py/compile.h"
 
 extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
-
+extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
 // Save .mpy file to file system
 int raw_code_save_file(mp_raw_code_t *rc, const char *filename) {  return 0; }
 
@@ -42,33 +42,11 @@ def vars(module_obj : mp_obj_t = None ) -> dict:
     return mod_globals;
 
 
-def raw_code_save_file(rc:mp_raw_code_t="", filename:str="") -> int:
-    /*
-    RTOS_ERR rtos_err;
-
-    fh_t file_handle = file_open(wrk_dir_handle,
-                                           filename,
-                                           ACCESS_MODE_WR
-                                               | ACCESS_MODE_CREATE
-                                               | ACCESS_MODE_TRUNCATE,
-                                           &rtos_err);
-    check_rtos_err_raise(file_handle, RTOS_ERR_CODE_GET(rtos_err));
-
-    mp_print_t code_print = { (void*)(intptr_t)file_handle,
-                              file_write_strn };
-    mp_raw_code_save(rc, &code_print);
-    int ret = file_seek(file_handle, 0, ORIGIN_CUR, &rtos_err);
-    file_close(file_handle, &rtos_err);
-    return ret;
-    */
-    return 0;
-
-
 def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void:
     vstr_t vstr;
 
     if (argc == 2 && argv[1] != mp_const_none) {
-        mpy_file = mp_obj_str_get_str(argv[1]);
+        //done by glue code
     } else {
         vstr_init(&vstr, strlen(source_file) + 5);  // +5 for NUL and .mpy
         vstr_add_str(&vstr, source_file);
@@ -77,30 +55,16 @@ def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> voi
             vstr_cut_tail_bytes(&vstr, 3);
         }
         vstr_add_str(&vstr, ".mpy");
-
         mpy_file = vstr_null_terminated_str(&vstr);
     }
 
-    //gc_collect();
-    //mp_micropython_mem_info(0, NULL);
-
-    mp_printf(MP_PYTHON_PRINTER, "Parsing %s...\n", source_file);
-    mp_parse_tree_t parse_tree = mp_parse(mp_lexer_new_from_file(source_file),
-                                          MP_PARSE_FILE_INPUT);
-    //gc_collect();
-    //mp_micropython_mem_info(0, NULL);
-
-    mp_printf(MP_PYTHON_PRINTER, "Compiling...\n");
+    mp_lexer_t *lex = mp_lexer_new_from_file(source_file);
+    mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
     mp_raw_code_t *rc = mp_compile_to_raw_code(&parse_tree,
                                                qstr_from_str(source_file),
                                                MP_EMIT_OPT_NONE,
                                                false);
-    //gc_collect();
-    //mp_micropython_mem_info(0, NULL);
-
-    mp_printf(MP_PYTHON_PRINTER, "Saving %s...\n", mpy_file);
-    raw_code_save_file(rc, mpy_file);
-
+    mp_raw_code_save_file(rc, mpy_file);
     return mp_const_none;
 
 

@@ -210,6 +210,9 @@ modules.extend( "micropython embed builtins array math cmath gc ffi io hello".sp
 print("open-write hello module")
 with open('hello.py','wb') as file:
     file.write('''#
+def hi():
+    print("i am module %s" % __import__(__name__))
+hi()
 #
 '''.encode())
 
@@ -275,7 +278,6 @@ print("-"*78)
 print()
 
 import embed
-#embed.os_compile('hello.py','hello.mpy')
 
 import hello
 
@@ -290,6 +292,9 @@ hi()
     print("================================")
 
 dir(sys.modules['hello'])
+
+embed.os_compile('hello.py','c.mpy');import c
+#len( open('c.mpy','rb').read() )
 
 
 </script>

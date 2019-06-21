@@ -105,7 +105,9 @@ void gc_collect(void) {
 #if !MICROPY_VFS
 // FIXME:
 extern mp_import_stat_t hack_modules(const char *modname);
+
 mp_import_stat_t mp_import_stat(const char *path) {
+    fprintf(stderr,"stat(%s) : ", path);
     return hack_modules(path);
 }
 #endif
