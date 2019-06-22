@@ -1,4 +1,25 @@
-# MicroPython on Emscripten
+# MicroPython and Web Assembly (wasm)
+
+
+## What ?
+
+wasm is a virtual machine for internet browsers which run bytecode closer to native speeds
+see https://webassembly.org/
+
+but we want to run python virtual machine and its own bytecode ;) so thanks to micropython
+we'll be able to by compiling micropython core to wasm bytecode first.
+
+
+## Requirements
+
+ - Linux OS with gcc/clang, a decent build environnement and libltdl-dev
+
+ - have python3 in your path 3.6 should do it but 3.7 / 3.8 are safer.
+
+ - Follow the instructions for getting started with Emscripten [here](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
+
+
+## Getting started
 
 Beware this is not a micropython fork :
  it's a port folder to add support to official micropython for a new "machine"
@@ -12,8 +33,6 @@ Follow the instructions for getting started with micropython unix build
 https://github.com/micropython/micropython/
 
 
-Follow the instructions for getting started with Emscripten [here](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
-
 and to check if your emscripten build works
 
     https://github.com/micropython/micropython/tree/master/ports/javascript
@@ -24,7 +43,9 @@ What are the differences between this repo and the official javascript port?
 see https://github.com/pmp-p/micropython-ports-wasm/issues/4
 
 
-Then you can run
+## Dive in !
+
+now you're ready to build the port, you can run
 
 ```
 # micropython-ports-wasm will go in micropython/ports/wasm
@@ -69,7 +90,7 @@ now you can navigate http://127.0.0.1:8000/index.html
 to edit code samples look in micropython/*.html
 
 
-# Usage
+## Usage
 
 
 copy the 4 files located in micropython folder found inside the build folder
