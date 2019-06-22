@@ -77,12 +77,12 @@ git clone https://github.com/pmp-p/micropython-ports-wasm.git wasm
 cd wasm
 
 #transpile the mixed python/C module to pure C
-#use a python version with annotations support !
-/usr/local/bin/python3.8 -mmodgen
+#use a python3 version with annotations support !
+. modgen.sh
 
 
 . /path/to/emsdk/emsdk_set_env.sh
-emmake make && ./runtest.sh
+emmake make && . runtest.sh
 ```
 
 now you can navigate http://127.0.0.1:8000/index.html
