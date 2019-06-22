@@ -35,7 +35,7 @@ https://github.com/micropython/micropython/
 
 and to check if your emscripten build works
 
-    https://github.com/micropython/micropython/tree/master/ports/javascript
+https://github.com/micropython/micropython/tree/master/ports/javascript
 
 
 What are the differences between this repo and the official javascript port?
