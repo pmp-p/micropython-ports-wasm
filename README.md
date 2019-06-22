@@ -121,7 +121,7 @@ https://kiwi.freenode.net/?nick=upy-wasm-guest&channel=#micropython-fr
 
 
 
-## history:
+## History:
 
 codebase
 https://github.com/matthewelse/micropython
