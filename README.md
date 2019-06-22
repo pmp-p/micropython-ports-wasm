@@ -1,22 +1,64 @@
 # MicroPython on Emscripten
 
+Beware this is not a micropython fork :
+ it's a port folder to add support to official micropython for a new "machine"
+
+
+You first need to get easy building your own official micropython and it's javascript port
+
+
+Follow the instructions for getting started with micropython unix build
+
+https://github.com/micropython/micropython/
+
+
+Follow the instructions for getting started with Emscripten [here](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
+
+and to check if your emscripten build works
+
+    https://github.com/micropython/micropython/tree/master/ports/javascript
+
+
 What are the differences between this repo and the official javascript port?
 
 see https://github.com/pmp-p/micropython-ports-wasm/issues/4
 
-Follow the instructions for getting started with Emscripten [here](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
 
 Then you can run
 
 ```
 # micropython-ports-wasm will go in micropython/ports/wasm
+# as it's not a fork but a drop in target port we need to checkout a full microPython
 
-git clone --recursive https://github.com/micropython/micropython
+# get the micropython core.
 
+# official ( should always work ! )
+git clone --recursive --recurse-submodules https://github.com/micropython/micropython
+cd micropython
+
+
+# or lvgl enabled ( wip could not work )
+# git clone --recursive --recurse-submodules https://github.com/littlevgl/lv_micropython.git
+# cd lv_micropython
+# git checkout dev-6.0
+# git submodule update --recursive --init
+
+
+#build host tools
+make -C mpy-cross
+make -C ports/unix
+
+#add the target port
 cd micropython/ports
 git clone https://github.com/pmp-p/micropython-ports-wasm.git wasm
 
+
 cd wasm
+
+#transpile the mixed python/C module to pure C
+#use a python version with annotations support !
+/usr/local/bin/python3.8 -mmodgen
+
 
 . /path/to/emsdk/emsdk_set_env.sh
 emmake make && ./runtest.sh

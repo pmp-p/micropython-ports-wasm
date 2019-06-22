@@ -260,6 +260,106 @@ function file_exists(urlToFile, need_dot) {
     //console.log(ret)
     return ret
 }
+// ================= ulink =================================================
+window.embed = {}
+window.embed.state = {}
+window.embed.ref = []
+
+function ID(){
+     return 'js|' + Math.random().toString(36).substr(2, 9);
+}
+
+document.getElementById('test').textContent = "THIS IS A TEST BLOCK\n"
+document.title="THIS IS A TEST TITLE"
+
+function embed_call_impl(callid, fn, owner, params) {
+    var rv = null;
+    try {
+        rv = fn.apply(owner,params)
+    } catch(x){
+        console.log("call failed : "+fn+"("+params+") : "+ x )
+    }
+    if ( (rv !== null) && (typeof rv === 'object')) {
+        var seen = false
+        var rvid = null;
+        for (var i=0;i<window.embed.ref.length;i++) {
+            if ( Object.is(rv, window.embed.ref[i][1]) ){
+                rvid = window.embed.ref[i][0]
+                //console.log('re-using id = ', rvid)
+                seen = true
+                break
+            }
+        }
+
+        if (!seen) {
+            rvid = ID();
+            window[rvid] = rv;
+            window.embed.ref.push( [rvid, rv ] )
+            //transmit bloat only on first access to object
+            window.embed.state[""+callid ] =  rvid +"/"+ rv
+        } else
+            window.embed.state[""+callid ] =  rvid
+    } else
+        window.embed.state[""+callid ] =""+rv
+    //console.log("embed_call_impl:" + window.embed.state )
+}
+
+function isCallable(value) {
+    if (!value) { return false; }
+    if (typeof value !== 'function' && typeof value !== 'object') { return false; }
+    if (typeof value === 'function' && !value.prototype) { return true; }
+    if (hasToStringTag) { return tryFunctionObject(value); }
+    if (isES6ClassFn(value)) { return false; }
+    var strClass = toStr.call(value);
+    return strClass === fnClass || strClass === genClass;
+}
+
+
+function embed_call(jsdata) {
+    //var jsdata = JSON.parse(jsdata);
+
+    //always
+    var callid = jsdata['id'];
+    var name = jsdata['m'];
+    try {
+        var path = name.rsplit('.')
+        var solved = []
+        solved.push( window )
+
+        while (path){
+            var elem = path.shift()
+            if (elem){
+                var leaf = solved[ solved.length -1 ][ elem ]
+                console.log( solved[ solved.length -1 ]+" -> "+ leaf)
+                solved.push( leaf )
+            } else break
+        }
+        var target = solved[ solved.length -1 ]
+        var owner = solved[ solved.length -2 ]
+
+        if (!isCallable(target)) {
+            console.log("embed_call(query="+name+") == "+target)
+            window.embed.state[""+callid ] = ""+target;
+            return;
+        }
+
+        //only if method call
+        var params = jsdata['a'];
+        var env = jsdata['k'] || {};
+
+        console.log('embed_call:'+target +' call '+callid+' launched with',params,' on object ' +owner)
+
+        setTimeout( embed_call_impl ,1, callid, target, owner, params );
+    } catch (x) {
+        console.log('malformed RPC '+jsdata+" : "+x )
+    }
+}
+
+
+function log(msg) {
+    document.getElementById('log').textContent += msg + '\n'
+}
+
 
 
 // ================= STDIN =================================================
@@ -296,28 +396,48 @@ function stdin_tx_chr(chr){
 }
 
 // ================ STDOUT =================================================
+
+// TODO: add a dupterm for stderr, and display error in color in xterm if not in stdin_raw mode
+
+
 window.stdout_array = []
 
-function pts_decode(text){
+
+function stdout_process(cc) {
     function flush_stdout(){
         var uint8array = new Uint8Array(window.stdout_array)
         var string = new TextDecoder().decode( uint8array )
         term_impl(string)
         window.stdout_array=[]
     }
+    window.stdout_array.push(cc)
+
+    if (window.stdin_raw) {
+        if (cc<128)
+            flush_stdout()
+        return
+    }
+    if (cc==10) flush_stdout()
+}
+
+
+// this is a demultiplexer for stdout and os (DOM/js ...) control
+function pts_decode(text){
 
     try {
         var jsdata = JSON.parse(text);
-        var cc = jsdata["1"]
-        window.stdout_array.push(cc)
-
-        if (window.stdin_raw) {
-            if (cc<128)
-                flush_stdout()
-            return;
+        for (key in jsdata) {
+            // TODO: multiple fds for pty.js
+            if (key=="1") {
+                stdout_process( jsdata[key] )
+                continue
+            }
+            if (key=="id") {
+                embed_call(jsdata)
+                continue
+            }
+            console.log("muliplexer noise : "+ key+ " = " + jsdata[key] )
         }
-
-        if (cc==10) flush_stdout()
 
     } catch (x) {
         // found a raw C string via libc

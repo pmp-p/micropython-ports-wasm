@@ -35,7 +35,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.13.2/addons/fit/fit.min.js"></script>
   </head>
 
-  <script src="pythons.js"></script>
+
 
   <body>
     <h1>MicroPython simulator + <strike>LittlevGL</strike></h1>
@@ -45,6 +45,12 @@
     You can type your own Python code into the prompt in the usual way.
     <br>
     For examples, see the README for the MicroPython binding.
+
+    <pre id="url"></pre>
+
+    <pre id="test"></pre>
+
+    <pre id="log"></pre>
 
     <div id="mp_js_stdout"></div>
 
@@ -65,7 +71,7 @@
 
     <!-- scripts -->
 
-
+    <script src="pythons.js"></script>
 
     <script defer>
 
@@ -277,24 +283,26 @@ print()
 print("-"*78)
 print()
 
-import embed
 
-import hello
+if 0:
+    import embed
+    import hello
 
-if 1:
     code ="""
 def hi():
     print("i am module %s" % __import__(__name__))
+
 hi()
 """
     print("================================")
     runc(code, embed.vars( hello ))
     print("================================")
 
-dir(sys.modules['hello'])
+    dir(sys.modules['hello'])
 
-embed.os_compile('hello.py','c.mpy');import c
-#len( open('c.mpy','rb').read() )
+    embed.os_compile('hello.py','c.mpy');import c
+
+from ulink import window
 
 
 </script>

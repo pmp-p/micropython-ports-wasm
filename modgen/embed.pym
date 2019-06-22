@@ -1,4 +1,8 @@
-#modgen
+// modgen
+// python annotations describe the C types you need, argv is always a varialble size array of mp_obj_t.
+// glue code will do its best to do the conversion or init.
+//
+// you *must* take care of return type yourself, glue code can only return None for you.
 
 #include "py/emitglue.h"
 #include "py/parse.h"
@@ -36,6 +40,11 @@ def os_read() -> bytes:
     return bytes(buf);
     # py comment #1
 
+def os_write( data : const_char_p = "{}" ) -> void :
+    fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
+    fprintf( stdout , "%s\n" , data );
+
+
 
 def vars(module_obj : mp_obj_t = None ) -> dict:
     mp_obj_dict_t *mod_globals = mp_obj_module_get_globals(module_obj);
@@ -65,7 +74,6 @@ def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> voi
                                                MP_EMIT_OPT_NONE,
                                                false);
     mp_raw_code_save_file(rc, mpy_file);
-    return mp_const_none;
 
 
 def echosum1(num : int=0) -> int:

@@ -129,6 +129,8 @@ def cify(instance,namespace=None):
     module_table='\n'.join( module_table )
     table.append(f"""
 STATIC const mp_map_elem_t {namespace}_globals_table[] = {{
+    {{ MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_{namespace}) }},
+    {{ MP_ROM_QSTR(MP_QSTR___file__), MP_ROM_QSTR(MP_QSTR_flashrom) }},
 
 {module_table}
 

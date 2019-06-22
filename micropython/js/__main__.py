@@ -27,7 +27,6 @@ def test(HandlerClass=BaseHTTPRequestHandler, ServerClass=ThreadingHTTPServer, p
 
 
 parser = argparse.ArgumentParser()
-#parser.add_argument("--cgi", action="store_true", help="Run as CGI Server")
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
@@ -41,9 +40,6 @@ parser.add_argument("port", action="store", default=8000, type=int, nargs="?", h
 
 args = parser.parse_args()
 
-#if args.cgi:
-#    handler_class = CGIHTTPRequestHandler
-#else:
 handler_class = partial(SimpleHTTPRequestHandler, directory=args.directory)
 
 if not ".wasm" in SimpleHTTPRequestHandler.extensions_map:
