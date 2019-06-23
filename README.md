@@ -86,8 +86,8 @@ cd wasm
 
 . /path/to/emsdk/emsdk_set_env.sh
 
-#for LVGL support use "emmake make LVGL=1 && . runtest.sh" instead
-emmake make && . runtest.sh
+#for LVGL support use "emmake make LVGL=1 USER_C_MODULES=cmod && . runtest.sh" instead
+emmake make USER_C_MODULES=cmod && . runtest.sh
 
 
 ```

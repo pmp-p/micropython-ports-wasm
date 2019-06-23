@@ -158,9 +158,15 @@ function init_loop(){
         window.currentTransfer = argv0
 
         var ab = awfull_get(argv0)
-        console.log(ab.length)
-        FS.createDataFile("/",'main.py', ab, true, true);
-        PyRun_VerySimpleFile('main.py')
+        if (window.currentTransferSize>=0) {
+            console.log(ab.length)
+            FS.createDataFile("/",'main.py', ab, true, true);
+            PyRun_VerySimpleFile('main.py')
+        } else {
+            console.log("an error occured getting main.py from '"+argv0+"'")
+            term_impl("Javascript : error occured getting main.py from '"+argv0+"'")
+        }
+
     } else {
 
         for(var i = 0; i < scripts.length; i++){

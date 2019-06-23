@@ -164,19 +164,21 @@ main(int argc, char *argv[]) {
         "print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
         "sys.path.clear()\n"
         "sys.path.append( '' )\n"
+        "sys.path.append( 'assets' )\n"
         "def runc(code, module=globals(), file='<code>'):\n"
         "    code = compile( code, file, 'exec')\n"
         "    exec( code, module, module)\n"
         "    return module\n"
         "\n"
-        "def runf(file='', module=globals()):\n"
+        "def runf(file='', module=globals(),patch=''):\n"
         "    if not file.endswith('.py'): file+='.py'\n"
         "    print(file)\n"
+        "    print('='*40)\n"
         "    with open(file,'r') as code:\n"
-        "       return crun(code.read(), module, file=file)\n"
-        "\n"
-        "\n"
-
+        "       runc(code.read()+patch, module, file)\n"
+        "    print('='*40)\n"
+        "runf('assets/imp.py')\n"
+        "imp = __import__(__name__)\n"
     );
 
     PyRun_VerySimpleFile("/boot.py");
@@ -188,6 +190,16 @@ main(int argc, char *argv[]) {
 }
 
 #else
+
+
+
+
+
+
+
+
+
+
 
 
 

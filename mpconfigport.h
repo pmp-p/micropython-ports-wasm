@@ -1,3 +1,10 @@
+#if __EMSCRIPTEN__
+    // obviously compiling
+#else
+    // prepro
+    #define __CPP__ 1
+#endif
+
 #include <stdint.h>
 
 #define MODULES_H "modules.h"
@@ -269,7 +276,6 @@ extern const struct _mp_obj_module_t mp_module_os;
     #define MICROPY_PY_LVGL_DEF
     #define MPR_void_mp_lv_user_data
     #define MPR_LVGL
-    #error WTF
 #endif
 
 
@@ -338,7 +344,9 @@ extern const struct _mp_obj_module_t mp_module_os;
 #define MICROPY_PORT_ROOT_POINTERS \
  MPR_LVGL \
  MPR_void_mp_lv_user_data \
- MPR_const_char_readline_hist
+ MPR_const_char_readline_hist \
+ void *PyOS_InputHook; \
+ int coro_call_counter; \
 
 
 #define FFCONF_H "lib/oofatfs/ffconf.h"

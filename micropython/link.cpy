@@ -106,6 +106,15 @@ class JSProxy(Proxy):
         return cid
 
 
+class obj:
+
+    def __init__(self):
+        self.myattr = 666
+
+    def __delattr__(self, name):
+        print('delattr ',name)
+
+
 
 class CallPath(dict):
 
@@ -142,6 +151,8 @@ class CallPath(dict):
         cls.set = proxy.set
         cls.act = proxy.act
 
+    def __delattr__(self, name):
+        print('delattr ',name)
 
     def __getattr__(self, name):
         if name in self:
@@ -263,7 +274,12 @@ class CallPath(dict):
 
         #return ":async-pe-get:%s" % self.__fqn
 
-CallPath.set_proxy(JSProxy())
+#CallPath.set_proxy(JSProxy())
 
 window = CallPath().__setup__(None, 'window', tip="[ object Window]")
-window.document.title = 'pouet'
+
+testo = obj()
+#window.document.title = 'pouet'
+
+
+

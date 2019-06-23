@@ -59,7 +59,7 @@ def py2c(modname, source, clines):
                 clines.append('//'+l[1:])
                 continue
 
-        if len(l) < 4:
+        if not len(ls):
             clines.append("")
             continue
 

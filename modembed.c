@@ -33,7 +33,7 @@ STATIC mp_obj_t PyBytes_FromString(char *string){
 // modgen
 // python annotations describe the C types you need, argv is always a varialble size array of mp_obj_t.
 // glue code will do its best to do the conversion or init.
-
+//
 // you *must* take care of return type yourself, glue code can only return None for you.
 
 #include "py/emitglue.h"
@@ -48,37 +48,37 @@ extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
 int raw_code_save_file(mp_raw_code_t *rc, const char *filename) {  return 0; }
 #endif
 
-/* #1@19 os_read() -> bytes  */
-
-STATIC mp_obj_t //bytes
-embed_os_read(size_t argc, const mp_obj_t *argv) {
-    // simple read string
-
-    static char buf[256];
-    //fputs(p, stdout);
-    char *s = fgets(buf, sizeof(buf), stdin);
-    if (!s) {
-        //return mp_obj_new_int(0);
-        buf[0]=0;
-        fprintf(stderr,"embed.os_read EOF\n" );
+mp_obj_t execute_from_str(const char *str) {
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        qstr src_name = 1/*MP_QSTR_*/;
+        mp_lexer_t *lex = mp_lexer_new_from_str_len(src_name, str, strlen(str), false);
+        mp_parse_tree_t pt = mp_parse(lex, MP_PARSE_FILE_INPUT);
+        mp_obj_t module_fun = mp_compile(&pt, src_name, MP_EMIT_OPT_NONE, false);
+        mp_call_function_0(module_fun);
+        nlr_pop();
+        return 0;
     } else {
-        int l = strlen(buf);
-        if (buf[l - 1] == '\n') {
-            if ( (l>1) && (buf[l - 2] == '\r') )
-                buf[l - 2] = 0;
-            else
-                buf[l - 1] = 0;
-        } else {
-            l++;
-        }
-        fprintf(stderr,"embed.os_read [%s]\n", buf );
+        // uncaught exception
+        return (mp_obj_t)nlr.ret_val;
     }
-    return bytes(buf);
-    //return bytes()
-} /* os_read */
-//   # py comment #1
+}
 
-/* #2@45 os_write( data : const_char_p = "{}" ) -> void  */
+
+
+STATIC void coropass(void) {
+    const char sched[] =
+        "__module__ = __import__('sys').modules.get('asyncio',None);"
+        "__module__ = __module__ and __module__.get_event_loop().step()";
+
+    const char *sched_ptr = &sched[0];
+    execute_from_str( sched_ptr);
+    MP_STATE_PORT(coro_call_counter++);
+}
+
+
+
+/* #1@49 os_write( data : const_char_p = "{}" ) -> void  */
 
 STATIC mp_obj_t //ptr
 embed_os_write(size_t argc, const mp_obj_t *argv) {
@@ -96,7 +96,7 @@ embed_os_write(size_t argc, const mp_obj_t *argv) {
 
 
 
-/* #3@52 vars(module_obj : mp_obj_t = None ) -> dict  */
+/* #2@56 vars(module_obj : mp_obj_t = None ) -> dict  */
 
 STATIC mp_obj_t //dict
 embed_vars(size_t argc, const mp_obj_t *argv) {
@@ -113,7 +113,7 @@ embed_vars(size_t argc, const mp_obj_t *argv) {
 } /* vars */
 
 
-/* #4@58 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
+/* #3@62 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
 
 STATIC mp_obj_t //ptr
 embed_os_compile(size_t argc, const mp_obj_t *argv) {
@@ -160,7 +160,71 @@ embed_os_compile(size_t argc, const mp_obj_t *argv) {
 } /* os_compile */
 
 
-/* #5@87 echosum1(num : int=0) -> int  */
+
+/* #4@92 os_hook() ->void  */
+
+STATIC mp_obj_t //ptr
+embed_os_hook(size_t argc, const mp_obj_t *argv) {
+    void (*void_ptr)(int) = MP_STATE_PORT(PyOS_InputHook);
+    if ( void_ptr != NULL ) {
+        printf("PyOS_InputHook %p\n", void_ptr);
+    } else {
+        printf("PyOS_InputHook undef\n");
+        if ( !MP_STATE_PORT(coro_call_counter)) {
+            MP_STATE_PORT(PyOS_InputHook) = &coropass ;
+            //system_os_task( coroloop, CORO_TASK_ID, coro_event_queue, sizeof(coro_event_queue) / sizeof(*coro_event_queue) );
+            //system_os_post(CORO_TASK_ID, 0 ,0 );
+            printf("coro task started\n");
+            //coropass(1);
+            //coropass(-1);
+            coropass();
+        }
+    }
+    return None;
+} /* os_hook */
+
+
+
+
+// TODO: remove after tests
+
+
+
+
+
+
+/* #5@120 os_read() -> bytes  */
+
+STATIC mp_obj_t //bytes
+embed_os_read(size_t argc, const mp_obj_t *argv) {
+    // simple read string
+
+    static char buf[256];
+    //fputs(p, stdout);
+    char *s = fgets(buf, sizeof(buf), stdin);
+    if (!s) {
+        //return mp_obj_new_int(0);
+        buf[0]=0;
+        fprintf(stderr,"embed.os_read EOF\n" );
+    } else {
+        int l = strlen(buf);
+        if (buf[l - 1] == '\n') {
+            if ( (l>1) && (buf[l - 2] == '\r') )
+                buf[l - 2] = 0;
+            else
+                buf[l - 1] = 0;
+        } else {
+            l++;
+        }
+        fprintf(stderr,"embed.os_read [%s]\n", buf );
+    }
+    return bytes(buf);
+    //return bytes()
+} /* os_read */
+//   # py comment #1
+
+
+/* #6@147 echosum1(num : int=0) -> int  */
 
 STATIC mp_obj_t //int
 embed_echosum1(size_t argc, const mp_obj_t *argv) {
@@ -177,7 +241,7 @@ embed_echosum1(size_t argc, const mp_obj_t *argv) {
 
 // py comment #2
 
-/* #6@93 callsome(fn : void=npe) -> void  */
+/* #7@153 callsome(fn : void=npe) -> void  */
 
 STATIC mp_obj_t //ptr
 embed_callsome(size_t argc, const mp_obj_t *argv) {
@@ -193,7 +257,7 @@ embed_callsome(size_t argc, const mp_obj_t *argv) {
 } /* callsome */
 
 
-/* #7@98 somecall(s:str='pouet')  */
+/* #8@158 somecall(s:str='pouet')  */
 
 STATIC mp_obj_t //void
 embed_somecall(size_t argc, const mp_obj_t *argv) {
@@ -224,6 +288,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_echosum1_obj,
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_compile_obj,
     0, 2, embed_os_compile);
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_hook_obj,
+    0, 0, embed_os_hook);
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_read_obj,
     0, 0, embed_os_read);
 
@@ -243,6 +310,7 @@ STATIC const mp_map_elem_t embed_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR_callsome), (mp_obj_t)&embed_callsome_obj },
     {MP_ROM_QSTR(MP_QSTR_echosum1), (mp_obj_t)&embed_echosum1_obj },
     {MP_ROM_QSTR(MP_QSTR_os_compile), (mp_obj_t)&embed_os_compile_obj },
+    {MP_ROM_QSTR(MP_QSTR_os_hook), (mp_obj_t)&embed_os_hook_obj },
     {MP_ROM_QSTR(MP_QSTR_os_read), (mp_obj_t)&embed_os_read_obj },
     {MP_ROM_QSTR(MP_QSTR_os_write), (mp_obj_t)&embed_os_write_obj },
     {MP_ROM_QSTR(MP_QSTR_somecall), (mp_obj_t)&embed_somecall_obj },
