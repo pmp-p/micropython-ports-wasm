@@ -10,10 +10,11 @@
 #include "py/compile.h"
 
 extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
+#if MICROPY_PERSISTENT_CODE_SAVE
 extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
 // Save .mpy file to file system
 int raw_code_save_file(mp_raw_code_t *rc, const char *filename) {  return 0; }
-
+#endif
 
 def os_read() -> bytes:
     // simple read string
@@ -66,14 +67,17 @@ def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> voi
         vstr_add_str(&vstr, ".mpy");
         mpy_file = vstr_null_terminated_str(&vstr);
     }
-
+    #if MICROPY_PERSISTENT_CODE_SAVE
     mp_lexer_t *lex = mp_lexer_new_from_file(source_file);
     mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
+
     mp_raw_code_t *rc = mp_compile_to_raw_code(&parse_tree,
                                                qstr_from_str(source_file),
                                                MP_EMIT_OPT_NONE,
                                                false);
+
     mp_raw_code_save_file(rc, mpy_file);
+    #endif
 
 
 def echosum1(num : int=0) -> int:

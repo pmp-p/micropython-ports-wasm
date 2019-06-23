@@ -1,9 +1,14 @@
-import embed
-from ujson import dumps,loads
-
-ID = 1
 __UPY__ = True
-DBG=1
+# maybe related https://github.com/mavier/jsobject
+
+
+if __UPY__:
+    import embed
+    from ujson import dumps,loads
+    DBG=1
+else:
+    DBG=0
+
 
 class Proxy:
 
@@ -153,8 +158,10 @@ class CallPath(dict):
 
     def __setattr__(self, name, value):
         if name.startswith("_"):
-            return dict.__setattr__(self, name, value)
+            self[name]=value
+            return
 
+        print('setattr',name,value)
         fqn = "%s.%s" % (self.__fqn, name)
         if DBG:
             print("105:cp->pe", fqn, ":=", value, self.__cs)
@@ -256,4 +263,7 @@ class CallPath(dict):
 
         #return ":async-pe-get:%s" % self.__fqn
 
+CallPath.set_proxy(JSProxy())
+
 window = CallPath().__setup__(None, 'window', tip="[ object Window]")
+window.document.title = 'pouet'

@@ -43,9 +43,19 @@ def py2c(modname, source, clines):
 
     for l in source.readlines():
         l = l.rstrip()
-
-        if len(l) and l.strip()[0] == "#":
-            if not l.strip().startswith('#include '):
+        ls = l.strip()
+        if len(ls) and ls[0] == "#":
+            if ls.startswith('#include '):
+                pass
+            elif ls.startswith('#define '):
+                pass
+            elif ls.startswith('#if'):
+                pass
+            elif ls.startswith('#else'):
+                pass
+            elif ls.startswith('#endif'):
+                pass
+            else:
                 clines.append('//'+l[1:])
                 continue
 

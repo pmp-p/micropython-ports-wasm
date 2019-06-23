@@ -42,12 +42,13 @@ STATIC mp_obj_t PyBytes_FromString(char *string){
 #include "py/compile.h"
 
 extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
+#if MICROPY_PERSISTENT_CODE_SAVE
 extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
 // Save .mpy file to file system
 int raw_code_save_file(mp_raw_code_t *rc, const char *filename) {  return 0; }
+#endif
 
-
-/* #1@18 os_read() -> bytes  */
+/* #1@19 os_read() -> bytes  */
 
 STATIC mp_obj_t //bytes
 embed_os_read(size_t argc, const mp_obj_t *argv) {
@@ -77,7 +78,7 @@ embed_os_read(size_t argc, const mp_obj_t *argv) {
 } /* os_read */
 //   # py comment #1
 
-/* #2@44 os_write( data : const_char_p = "{}" ) -> void  */
+/* #2@45 os_write( data : const_char_p = "{}" ) -> void  */
 
 STATIC mp_obj_t //ptr
 embed_os_write(size_t argc, const mp_obj_t *argv) {
@@ -95,7 +96,7 @@ embed_os_write(size_t argc, const mp_obj_t *argv) {
 
 
 
-/* #3@51 vars(module_obj : mp_obj_t = None ) -> dict  */
+/* #3@52 vars(module_obj : mp_obj_t = None ) -> dict  */
 
 STATIC mp_obj_t //dict
 embed_vars(size_t argc, const mp_obj_t *argv) {
@@ -112,7 +113,7 @@ embed_vars(size_t argc, const mp_obj_t *argv) {
 } /* vars */
 
 
-/* #4@57 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
+/* #4@58 os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> void  */
 
 STATIC mp_obj_t //ptr
 embed_os_compile(size_t argc, const mp_obj_t *argv) {
@@ -144,19 +145,22 @@ embed_os_compile(size_t argc, const mp_obj_t *argv) {
         vstr_add_str(&vstr, ".mpy");
         mpy_file = vstr_null_terminated_str(&vstr);
     }
-
+    #if MICROPY_PERSISTENT_CODE_SAVE
     mp_lexer_t *lex = mp_lexer_new_from_file(source_file);
     mp_parse_tree_t parse_tree = mp_parse(lex, MP_PARSE_FILE_INPUT);
+
     mp_raw_code_t *rc = mp_compile_to_raw_code(&parse_tree,
                                                qstr_from_str(source_file),
                                                MP_EMIT_OPT_NONE,
                                                false);
+
     mp_raw_code_save_file(rc, mpy_file);
+    #endif
     return None;
 } /* os_compile */
 
 
-/* #5@83 echosum1(num : int=0) -> int  */
+/* #5@87 echosum1(num : int=0) -> int  */
 
 STATIC mp_obj_t //int
 embed_echosum1(size_t argc, const mp_obj_t *argv) {
@@ -173,7 +177,7 @@ embed_echosum1(size_t argc, const mp_obj_t *argv) {
 
 // py comment #2
 
-/* #6@89 callsome(fn : void=npe) -> void  */
+/* #6@93 callsome(fn : void=npe) -> void  */
 
 STATIC mp_obj_t //ptr
 embed_callsome(size_t argc, const mp_obj_t *argv) {
@@ -189,7 +193,7 @@ embed_callsome(size_t argc, const mp_obj_t *argv) {
 } /* callsome */
 
 
-/* #7@94 somecall(s:str='pouet')  */
+/* #7@98 somecall(s:str='pouet')  */
 
 STATIC mp_obj_t //void
 embed_somecall(size_t argc, const mp_obj_t *argv) {

@@ -25,7 +25,7 @@ Beware this is not a micropython fork :
  it's a port folder to add support to official micropython for a new "machine"
 
 
-You first need to get easy building your own official micropython and it's javascript port
+You first need to get easy building your own official micropython and its javascript port
 
 
 Follow the instructions for getting started with micropython unix build
@@ -33,9 +33,12 @@ Follow the instructions for getting started with micropython unix build
 https://github.com/micropython/micropython/
 
 
-and to check if your emscripten build works
+to check if your emscripten build works ( facultative, FYI last test on emscripten 1.38.31 was ok )
 
 https://github.com/micropython/micropython/tree/master/ports/javascript
+
+but i suggest using ```emmake make -C ports/javascript PYTHON=python2``` instead of just make
+
 
 
 What are the differences between this repo and the official javascript port?
