@@ -28,15 +28,24 @@ char *repl_line = NULL;
 
 static char *stack_top;
 
+#if MICROPY_ENABLE_PYSTACK
+    static mp_obj_t pystack[16384];
+#endif
 EMSCRIPTEN_KEEPALIVE void
 Py_InitializeEx(int param) {
-    gc_init(heap, heap + sizeof(heap));
+
+    #if MICROPY_ENABLE_GC
+        gc_init(heap, heap + sizeof(heap));
+    #endif
+
+    #if MICROPY_ENABLE_PYSTACK
+        mp_pystack_init(pystack, &pystack[MP_ARRAY_SIZE(pystack)]);
+    #endif
+
     mp_init();
 
     repl_line = (char *)malloc(REPL_INPUT_SIZE);
     mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
-
-
 
     char *home = getenv("HOME");
     char *path = getenv("MICROPYPATH");
@@ -87,6 +96,7 @@ Py_InitializeEx(int param) {
 
 
 void gc_collect(void) {
+#if MICROPY_ENABLE_GC
     // WARNING: This gc_collect implementation doesn't try to get root
     // pointers from CPU registers, and thus may function incorrectly.
     jmp_buf dummy;
@@ -96,6 +106,7 @@ void gc_collect(void) {
     gc_collect_start();
     gc_collect_root((void*)stack_top, ((mp_uint_t)(void*)(&dummy + 1) - (mp_uint_t)stack_top) / sizeof(mp_uint_t));
     gc_collect_end();
+#endif
 }
 
 

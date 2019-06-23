@@ -200,7 +200,7 @@ function awfull_get(url) {
 
     function transferComplete(evt) {
         if (oReq.status==404){
-            console.log("callfs: File not found : "+ tB_name + ' in ' + (tD_name || '/') );
+            console.log("callfs: File not found : "+ url );
             window.currentTransferSize = -1 ;
 
         } else {

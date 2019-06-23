@@ -4,12 +4,12 @@
 #include MODULES_H
 
 // options to control how Micro Python is built
-
 #define MICROPY_QSTR_BYTES_IN_HASH  (1)
 #define MICROPY_ERROR_REPORTING     (MICROPY_ERROR_REPORTING_TERSE)
 #define MICROPY_CPYTHON_COMPAT      (1)
 #define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_DOUBLE)
-#define MICROPY_ALLOC_PATH_MAX      (256)
+//just in case of long urls and a local cache ?
+#define MICROPY_ALLOC_PATH_MAX      (1024)
 #define MICROPY_ALLOC_PARSE_CHUNK_INIT (16)
 #define MICROPY_BUILTIN_METHOD_CHECK_SELF_ARG (0)
 #define MICROPY_CAN_OVERRIDE_BUILTINS (1)
@@ -46,22 +46,32 @@
 #define MICROPY_HELPER_LEXER_UNIX (1)
 
 #define MICROPY_EMIT_WASM (1)
-#define MICROPY_NLR_X86 (0)
-#define MICROPY_NLR_X64 (0)
-#define MICROPY_NLR_OS_WINDOWS (0)
 //#define MICROPY_EMIT_INLINE_ASM (1)
 //#define MICROPY_EMIT_NATIVE
 #define MICROPY_EMIT_X64            (0)
 #define MICROPY_EMIT_THUMB          (0)
 #define MICROPY_EMIT_INLINE_THUMB   (0)
+#define MICROPY_ENABLE_PYSTACK      (1)
 
 
 
 
-#define MICROPY_PY_MICROPYTHON_MEM_INFO (1)
+#define MICROPY_PY_MICROPYTHON_MEM_INFO (0)
 
 
-#define MICROPY_NLR_SETJMP          (1)   //nlr.h  MICROPY_NLR_* must match a supported arch
+// nlr.h  MICROPY_NLR_* must match a supported arch
+// define or autodetect will fail to select WASM
+#define MICROPY_NLR_SETJMP          (1)
+#define MICROPY_DYNAMIC_COMPILER    (0)
+
+#if MICROPY_NLR_SETJMP
+    // can't have MICROPY_NLR_SETJMP==MICROPY_DYNAMIC_COMPILER==0
+    #define MICROPY_NLR_OS_WINDOWS (0)
+    #define MICROPY_NLR_X86 (0)
+    #define MICROPY_NLR_X64 (0)
+#endif
+
+
 #define MICROPY_KBD_EXCEPTION       (1)
 
 
@@ -90,6 +100,11 @@
 
 #define MICROPY_HELPER_REPL         (1)
 
+#define MICROPY_PY_ALL_SPECIAL_METHODS (1)
+#define MICROPY_PY_ASYNC_AWAIT      (1)
+#define MICROPY_PY_ATTRTUPLE        (1)
+
+#define MICROPY_PY_BTREE            (0)
 #define MICROPY_PY_BUILTINS_BYTEARRAY (1)
 #define MICROPY_PY_DESCRIPTORS        (1)
 #define MICROPY_PY_BUILTINS_ENUMERATE (1)
@@ -104,11 +119,11 @@
 #define MICROPY_PY_BUILTINS_SET       (1)
 #define MICROPY_PY_BUILTINS_SLICE     (1)
 #define MICROPY_PY_BUILTINS_STR_UNICODE (1)
+#define MICROPY_PY_BUILTINS_STR_CENTER (1)
+#define MICROPY_PY_BUILTINS_STR_PARTITION (1)
+#define MICROPY_PY_BUILTINS_STR_SPLITLINES (1)
+#define MICROPY_PY_BUILTINS_SLICE_ATTRS (1)
 
-
-#define MICROPY_PY_ASYNC_AWAIT      (1)
-#define MICROPY_PY_ATTRTUPLE        (1)
-#define MICROPY_PY_BTREE            (0)
 #define MICROPY_PY_COLLECTIONS      (1)
 #define MICROPY_PY_CMATH            (1)
 //?
@@ -122,8 +137,12 @@
 #define MICROPY_PY_SYS_MAXSIZE      (1)
 #define MICROPY_PY_SYS_PLATFORM     "wasm"
 
+#define MICROPY_PY___FILE__         (1)
 
 #define MICROPY_PY_ARRAY            (1)
+#define MICROPY_PY_THREAD           (0)
+#define MICROPY_PY_THREAD_GIL       (0)
+#define MICROPY_PY_TIME             (0)
 #define MICROPY_PY_UBINASCII        (1)
 #define MICROPY_PY_UCTYPES          (1)
 #define MICROPY_PY_UERRNO           (1)
@@ -142,19 +161,18 @@
 //F
 #define MICROPY_PY_USELECT          (0) //? need #define MICROPY_EVENT_POLL_HOOK + select_select
 #define MICROPY_PY_UTIME            (1)
-#define MICROPY_PY_TIME             (0)
 #define MICROPY_PY_UTIMEQ           (1)
 #define MICROPY_PY_UZLIB            (1)
 
 #define MICROPY_PY_IO               (1)
-#define MICROPY_VFS                 (0)
 #define MICROPY_PY_IO_IOBASE            (1)
 #define MICROPY_PY_IO_RESOURCE_STREAM   (1)
 #define MICROPY_PY_IO_FILEIO            (1)
 #define MICROPY_PY_IO_BYTESIO           (1)
 #define MICROPY_PY_IO_BUFFEREDWRITER    (1)
 
-#define MICROPY_PY___FILE__         (1)
+#define MICROPY_VFS                 (0)
+
 #define MICROPY_DEBUG_PRINTERS      (0)
 #define MICROPY_MEM_STATS           (0)
 #define MICROPY_MPY_CODE_SAVE       (1)
@@ -231,6 +249,30 @@ extern const struct _mp_obj_module_t mp_module_os;
 
 #define MICROPY_PY_MACHINE_DEF
 
+
+#if MICROPY_PY_LVGL
+    extern const struct _mp_obj_module_t mp_module_utime;
+    extern const struct _mp_obj_module_t mp_module_lvgl;
+    extern const struct _mp_obj_module_t mp_module_lvindev;
+    extern const struct _mp_obj_module_t mp_module_SDL;
+
+    #include "lib/lv_bindings/lvgl/src/lv_misc/lv_gc.h"
+
+    #define MICROPY_PY_LVGL_DEF \
+        { MP_OBJ_NEW_QSTR(MP_QSTR_lvgl), (mp_obj_t)&mp_module_lvgl },\
+        { MP_OBJ_NEW_QSTR(MP_QSTR_lvindev), (mp_obj_t)&mp_module_lvindev},\
+        { MP_OBJ_NEW_QSTR(MP_QSTR_SDL), (mp_obj_t)&mp_module_SDL },
+
+    #define MPR_void_mp_lv_user_data void *mp_lv_user_data;
+    #define MPR_LVGL LV_GC_ROOTS(LV_NO_PREFIX)
+#else
+    #define MICROPY_PY_LVGL_DEF
+    #define MPR_void_mp_lv_user_data
+    #define MPR_LVGL
+    #error WTF
+#endif
+
+
 // { MP _ ROM_QSTR(MP_QSTR_umachine), MP _ ROM_PTR(&mp_module_machine) },
 
 #define MICROPY_PORT_BUILTIN_MODULES \
@@ -243,6 +285,7 @@ extern const struct _mp_obj_module_t mp_module_os;
     MICROPY_PY_UOS_DEF \
     MICROPY_PY_USELECT_DEF \
     MICROPY_PY_TERMIOS_DEF \
+    MICROPY_PY_LVGL_DEF \
     MODULES_LINKS
 
 
@@ -273,13 +316,11 @@ extern const struct _mp_obj_module_t mp_module_os;
 
 
 
-
-
 // We need to provide a declaration/definition of alloca()
 #include <alloca.h>
 
 #define MICROPY_HW_BOARD_NAME "emscripten"
-#define MICROPY_HW_MCU_NAME "asmjs"
+#define MICROPY_HW_MCU_NAME "wasm"
 
 #ifdef __linux__
 #define MICROPY_MIN_USE_STDOUT (1)
@@ -295,11 +336,9 @@ extern const struct _mp_obj_module_t mp_module_os;
 #define MPR_const_char_readline_hist const char *readline_hist[16];
 
 #define MICROPY_PORT_ROOT_POINTERS \
+ MPR_LVGL \
+ MPR_void_mp_lv_user_data \
  MPR_const_char_readline_hist
-
-
-
-
 
 
 #define FFCONF_H "lib/oofatfs/ffconf.h"

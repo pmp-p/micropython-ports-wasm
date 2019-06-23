@@ -85,7 +85,11 @@ cd wasm
 
 
 . /path/to/emsdk/emsdk_set_env.sh
+
+#for LVGL support use "emmake make LVGL=1 && . runtest.sh" instead
 emmake make && . runtest.sh
+
+
 ```
 
 now you can navigate http://127.0.0.1:8000/index.html
