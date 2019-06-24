@@ -90,11 +90,11 @@
 #define MICROPY_PY_BUILTINS_INPUT (1)
 
 
-#define MICROPY_PY_COLLECTIONS_ORDEREDDICT (0)
+#define MICROPY_PY_COLLECTIONS_ORDEREDDICT (1)
 #define MICROPY_PY_DELATTR_SETATTR  (1)
-#define MICROPY_PY_MATH_SPECIAL_FUNCTIONS (0)
-#define MICROPY_PY_MATH_FACTORIAL   (0)
-#define MICROPY_PY_SYS_GETSIZEOF    (0)
+#define MICROPY_PY_MATH_SPECIAL_FUNCTIONS (1)
+#define MICROPY_PY_MATH_FACTORIAL   (1)
+#define MICROPY_PY_SYS_GETSIZEOF    (1)
 
 
 #define MICROPY_COMP_MODULE_CONST   (1)
@@ -112,6 +112,7 @@
 #define MICROPY_PY_ATTRTUPLE        (1)
 
 #define MICROPY_PY_BTREE            (0)
+
 #define MICROPY_PY_BUILTINS_BYTEARRAY (1)
 #define MICROPY_PY_DESCRIPTORS        (1)
 #define MICROPY_PY_BUILTINS_ENUMERATE (1)
@@ -133,8 +134,10 @@
 
 #define MICROPY_PY_COLLECTIONS      (1)
 #define MICROPY_PY_CMATH            (1)
-//?
+
+//? TEST THAT THING !
 #define MICROPY_PY_FFI              (1)
+
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)
 #define MICROPY_PY_MATH             (1)
@@ -147,17 +150,21 @@
 #define MICROPY_PY___FILE__         (1)
 
 #define MICROPY_PY_ARRAY            (1)
+
 #define MICROPY_PY_THREAD           (0)
 #define MICROPY_PY_THREAD_GIL       (0)
 #define MICROPY_PY_TIME             (0)
+
 #define MICROPY_PY_UBINASCII        (1)
 #define MICROPY_PY_UCTYPES          (1)
 #define MICROPY_PY_UERRNO           (1)
 #define MICROPY_PY_UERRNO_ERRORCODE (1)
 #define MICROPY_PY_UHEAPQ           (1)
 #define MICROPY_PY_UHASHLIB         (1)
+
 //F
 #define MICROPY_PY_UHASHLIB_SHA1    (0)
+
 #define MICROPY_PY_UHASHLIB_SHA256  (1)
 #define MICROPY_PY_UJSON            (1)
 #define MICROPY_PY_UOS              (1)
@@ -165,13 +172,18 @@
 #define MICROPY_PY_URANDOM_EXTRA_FUNCS (1)
 #define MICROPY_PY_URE              (1)
 #define MICROPY_PY_URE_SUB          (1)
+
+
+//TODO: need #define MICROPY_EVENT_POLL_HOOK + select_select on io demultiplexer.
 //F
-#define MICROPY_PY_USELECT          (0) //? need #define MICROPY_EVENT_POLL_HOOK + select_select
+#define MICROPY_PY_USELECT          (0)
+
+
 #define MICROPY_PY_UTIME            (1)
 #define MICROPY_PY_UTIMEQ           (1)
 #define MICROPY_PY_UZLIB            (1)
 
-#define MICROPY_PY_IO               (1)
+#define MICROPY_PY_IO                   (1)
 #define MICROPY_PY_IO_IOBASE            (1)
 #define MICROPY_PY_IO_RESOURCE_STREAM   (1)
 #define MICROPY_PY_IO_FILEIO            (1)
