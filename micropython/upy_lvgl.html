@@ -62,20 +62,9 @@
 
     <div id="mp_js_stdout"></div>
 
-    <canvas id="canvas" width="480" height="320" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    <canvas id="canvas" width="240" height="320" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
     <p>
-    <!--
-    <input id="script-url" placeholder="Script URL" value=""/><button onclick="reloadScript(document.getElementById('script-url').value);">Run a script</button>
-
-    <p>
-    <button onclick="stdin_tx_chr(4);">Paste (Ctrl+D)</button>
-    <p>
-    <button onclick="for(var i = 0;i < lines.length;i++) { mp_js_do_str(lines[i]); }">Run basic demo</button>
-    <p>
-    <i>Simulator revision v1.1</i>
-    -->
-
 
     <!-- scripts -->
 
@@ -83,12 +72,11 @@
 
     <script defer>
 
+
+        /*Setup printing event handler*/
         /*Write text to the terminal */
-        //function sendText(text) {
         function term_impl(text) {
-            var print = new Event('print');
-            print.data = text;
-            mp_js_stdout.dispatchEvent(print);
+            term.write(text)
         }
 
         /*
@@ -97,6 +85,7 @@
             window.location.replace(url + "?env=dev&script=" + target_script);
         }
         */
+
         function processScriptArg(url){
             // read text from URL location
             var request = new XMLHttpRequest();
@@ -115,6 +104,7 @@
                 }
             }
         }
+
         Module.canvas = (function() {
             var canvas = document.getElementById('canvas');
             return canvas;
@@ -131,20 +121,13 @@
             term.open(mp_js_stdout);
             term.fit();
 
-            /*Initialize MicroPython itself*/
-            // Py_InitializeEx is handled by main.c
-            //mp_js_init(1 * 1024 * 1024);
-
-            /*Setup printing event handler*/
-            mp_js_stdout.addEventListener('print', function(e) {
-                text = e.data;
-                term.write(text);
-            }, false);
 
             /*Setup key input handler */
+            // window_prompt is the pythons.js function that will flush stdin_tx buffer toward upy core
+            window.prompt = window_prompt
+
             term.on('data', function(key, e) {
                 stdin_tx(key)
-
             });
 
 
@@ -172,8 +155,10 @@
             /*Start the main loop, asynchronously.*/
             //handle_pending();
 
-            //window.term_impl = sendText
-            window.prompt = window_prompt
+
+            // Py_InitializeEx is handled by main.c
+            //mp_js_init(1 * 1024 * 1024);
+            /*Initialize MicroPython itself*/
             pythons()
     }
 
@@ -183,10 +168,6 @@
 print("sys.path :",sys.path, "sys.argv=%r" % sys.argv)
 print()
 
-modules = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom uselect ustruct ucollections uio".split(" ")
-#mods.extend( "json os zlib time ctypes re hashlib binascii heapq array math cmath struct collections".split(" ") )
-modules.sort()
-modules.extend( "micropython embed builtins array math cmath gc ffi io hello".split(" ") )
 
 print("open-write hello module")
 with open('assets/hello.py','wb') as file:
@@ -199,7 +180,12 @@ hi()
 
 import micropython
 
-if 'dev' in sys.argv:
+if 'test' in sys.argv:
+    modules = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom uselect ustruct ucollections uio".split(" ")
+    #mods.extend( "json os zlib time ctypes re hashlib binascii heapq array math cmath struct collections".split(" ") )
+    modules.sort()
+    modules.extend( "micropython embed builtins array math cmath gc ffi io hello".split(" ") )
+
     print(b'open-read: assets', open('assets/assets.py','rb').read() )
 
     missing = []
@@ -252,12 +238,15 @@ if 'dev' in sys.argv:
     print("init_plus_one(41)==" , init_plus_one(41) )
     print("done")
 
-    micropython.qstr_info(1)
+    try:
+        micropython.qstr_info(1)
+    except:
+        print("micropython.qstr_info(1) N/A")
+
 
 print()
 print("-"*78)
 print()
-
 
 
 import lvgl as lv
@@ -269,13 +258,13 @@ print('SDL=',lv)
 SDL.init()
 
 disp_buf1 = lv.disp_buf_t()
-buf1_1 = bytes(480*10)
+buf1_1 = bytes(240*10)
 lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)
 disp_drv = lv.disp_drv_t()
 lv.disp_drv_init(disp_drv)
 disp_drv.buffer = disp_buf1
 disp_drv.flush_cb = SDL.monitor_flush
-disp_drv.hor_res = 480
+disp_drv.hor_res = 240
 disp_drv.ver_res = 320
 lv.disp_drv_register(disp_drv)
 indev_drv = lv.indev_drv_t()

@@ -148,6 +148,7 @@ function init_loop(){
     console.log("init_loop:Begin (" + Module.arguments.length+")")
     var scripts = document.getElementsByTagName('script')
 
+    var doscripts = true
     if (Module.arguments.length>1) {
 
         var argv0 = ""+Module.arguments[1]
@@ -166,12 +167,16 @@ function init_loop(){
             console.log(ab.length)
             FS.createDataFile("/",'main.py', ab, true, true);
             PyRun_VerySimpleFile('main.py')
+            doscripts = false
         } else {
             console.log("an error occured getting main.py from '"+argv0+"'")
             term_impl("Javascript : error occured getting main.py from '"+argv0+"'")
+            //TODO: global control var to skip page scripts
         }
 
-    } else {
+    }
+
+    if (doscripts) {
 
         for(var i = 0; i < scripts.length; i++){
             var script = scripts[i]
@@ -270,106 +275,10 @@ function file_exists(urlToFile, need_dot) {
     //console.log(ret)
     return ret
 }
-// ================= ulink =================================================
-window.embed = {}
-window.embed.state = {}
-window.embed.ref = []
 
-function ID(){
-     return 'js|' + Math.random().toString(36).substr(2, 9);
-}
+// ================== uplink ===============================================
 
-
-
-function embed_call_impl(callid, fn, owner, params) {
-    var rv = null;
-    try {
-        rv = fn.apply(owner,params)
-    } catch(x){
-        console.log("call failed : "+fn+"("+params+") : "+ x )
-    }
-    if ( (rv !== null) && (typeof rv === 'object')) {
-        var seen = false
-        var rvid = null;
-        for (var i=0;i<window.embed.ref.length;i++) {
-            if ( Object.is(rv, window.embed.ref[i][1]) ){
-                rvid = window.embed.ref[i][0]
-                //console.log('re-using id = ', rvid)
-                seen = true
-                break
-            }
-        }
-
-        if (!seen) {
-            rvid = ID();
-            window[rvid] = rv;
-            window.embed.ref.push( [rvid, rv ] )
-            //transmit bloat only on first access to object
-            window.embed.state[""+callid ] =  rvid +"/"+ rv
-        } else
-            window.embed.state[""+callid ] =  rvid
-    } else
-        window.embed.state[""+callid ] =""+rv
-    //console.log("embed_call_impl:" + window.embed.state )
-}
-
-function isCallable(value) {
-    if (!value) { return false; }
-    if (typeof value !== 'function' && typeof value !== 'object') { return false; }
-    if (typeof value === 'function' && !value.prototype) { return true; }
-    if (hasToStringTag) { return tryFunctionObject(value); }
-    if (isES6ClassFn(value)) { return false; }
-    var strClass = toStr.call(value);
-    return strClass === fnClass || strClass === genClass;
-}
-
-
-function embed_call(jsdata) {
-    //var jsdata = JSON.parse(jsdata);
-
-    //always
-    var callid = jsdata['id'];
-    var name = jsdata['m'];
-    try {
-        var path = name.rsplit('.')
-        var solved = []
-        solved.push( window )
-
-        while (path){
-            var elem = path.shift()
-            if (elem){
-                var leaf = solved[ solved.length -1 ][ elem ]
-                console.log( solved[ solved.length -1 ]+" -> "+ leaf)
-                solved.push( leaf )
-            } else break
-        }
-        var target = solved[ solved.length -1 ]
-        var owner = solved[ solved.length -2 ]
-
-        if (!isCallable(target)) {
-            console.log("embed_call(query="+name+") == "+target)
-            window.embed.state[""+callid ] = ""+target;
-            return;
-        }
-
-        //only if method call
-        var params = jsdata['a'];
-        var env = jsdata['k'] || {};
-
-        console.log('embed_call:'+target +' call '+callid+' launched with',params,' on object ' +owner)
-
-        setTimeout( embed_call_impl ,1, callid, target, owner, params );
-    } catch (x) {
-        console.log('malformed RPC '+jsdata+" : "+x )
-    }
-}
-
-
-function log(msg) {
-    document.getElementById('log').textContent += msg + '\n'
-}
-
-
+// separate file clink for cpython , plink for micropython , entry point is embed_call(struct_from_json)
 
 // ================= STDIN =================================================
 window.stdin_array = []
@@ -452,7 +361,7 @@ function pts_decode(text){
 
     } catch (x) {
         // found a raw C string via libc
-        console.log("C-STR:"+x+":"+text)
+        console.log("C-OUT ["+text+"]")
         flush_stdout()
         term_impl(text+"\r\n")
     }

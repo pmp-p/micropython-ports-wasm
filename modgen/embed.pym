@@ -9,6 +9,15 @@
 #include "py/lexer.h"
 #include "py/compile.h"
 
+#ifndef __CPP__
+#include <emscripten.h>
+#endif
+#include <time.h>
+#include <time.h>
+#include <dlfcn.h>
+
+struct timespec ts;
+
 extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
 #if MICROPY_PERSISTENT_CODE_SAVE
 extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
@@ -89,28 +98,31 @@ def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> voi
 def os_hook() ->void:
     void (*void_ptr)(int) = MP_STATE_PORT(PyOS_InputHook);
     if ( void_ptr != NULL ) {
-        printf("PyOS_InputHook %p\n", void_ptr);
+        printf("PyOS_InputHook %p TODO: allow py callback ptr\n", void_ptr);
     } else {
-        printf("PyOS_InputHook undef\n");
+        printf("PyOS_InputHook undef TODO: allow py callback ptr\n");
         if ( !MP_STATE_PORT(coro_call_counter)) {
             MP_STATE_PORT(PyOS_InputHook) = &coropass ;
-            //system_os_task( coroloop, CORO_TASK_ID, coro_event_queue, sizeof(coro_event_queue) / sizeof(*coro_event_queue) );
-            //system_os_post(CORO_TASK_ID, 0 ,0 );
             printf("coro task started\n");
-            //coropass(1);
-            //coropass(-1);
             coropass();
         }
     }
 
+// https://www.python.org/dev/peps/pep-0564/
+//    https://vstinner.github.io/python37-pep-564-nanoseconds.html
+def time_ns() -> int:
+      clock_getres(CLOCK_MONOTONIC, &ts);
+      //unsigned long ul = ts.tv_nsec ;
+      return mp_obj_new_int_from_uint( ts.tv_nsec );
 
+// upy
+def time_ms() -> int:
+    clock_getres(CLOCK_MONOTONIC, &ts);
+    //unsigned long ul = ts.tv_nsec * 1000000 ;
+    return mp_obj_new_int_from_uint( ts.tv_nsec * 1000000);
 
 
 // TODO: remove after tests
-
-
-
-
 
 
 def os_read() -> bytes:

@@ -39,8 +39,6 @@
 
   <body>
 
-  <h1>back soon, i need a host that support wasm mimetype for async compilation</h1>
-
     <h1>MicroPython simulator + <strike>LittlevGL</strike></h1>
     <p>
     micropython wasm-xp + <strike>LittlevGL</strike>
@@ -57,20 +55,9 @@
 
     <div id="mp_js_stdout"></div>
 
-    <canvas id="canvas" width="480" height="320" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    <canvas id="canvas" width="240" height="320" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
     <p>
-    <!--
-    <input id="script-url" placeholder="Script URL" value=""/><button onclick="reloadScript(document.getElementById('script-url').value);">Run a script</button>
-
-    <p>
-    <button onclick="stdin_tx_chr(4);">Paste (Ctrl+D)</button>
-    <p>
-    <button onclick="for(var i = 0;i < lines.length;i++) { mp_js_do_str(lines[i]); }">Run basic demo</button>
-    <p>
-    <i>Simulator revision v1.1</i>
-    -->
-
 
     <!-- scripts -->
 
@@ -95,7 +82,7 @@ hi()
 
 import micropython
 
-if 'dev' in sys.argv:
+if 'test' in sys.argv:
     print(b'open-read: assets', open('assets/assets.py','rb').read() )
 
     missing = []
@@ -148,14 +135,17 @@ if 'dev' in sys.argv:
     print("init_plus_one(41)==" , init_plus_one(41) )
     print("done")
 
-    micropython.qstr_info(1)
+    try:
+        micropython.qstr_info(1)
+    except:
+        print("micropython.qstr_info(1) N/A")
 
 print()
 print("-"*78)
 print()
 
 
-if 0:
+if 'dev' in sys.argv:
     import embed
     import hello
 
@@ -174,7 +164,8 @@ hi()
     embed.os_compile('hello.py','c.mpy');import c
 
 
-import hello
+    import c
+    print(c)
 
 
 #import asyncio

@@ -1,1 +1,1 @@
-print("assets.py")
+print("*assets.py*")

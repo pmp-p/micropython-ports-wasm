@@ -161,7 +161,7 @@ main(int argc, char *argv[]) {
     writecode(
         "boot.py",
         "import sys\n"
-        "print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
+        "if not 'dev' in sys.argv:print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)\n"
         "sys.path.clear()\n"
         "sys.path.append( '' )\n"
         "sys.path.append( 'assets' )\n"

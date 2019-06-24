@@ -1,5 +1,11 @@
 # (c) 2014-2018 Paul Sokolovsky. MIT license.
-# import uerrno
+
+# (c) 2019-2018 Paul P. MIT license.
+
+type_gen = type((lambda: (yield))())
+
+cur_task = [0, 0, 0]
+
 try:
     import uselect as select
 except:
@@ -22,9 +28,15 @@ except:
             print("TODO: a wasm select.poll() implementation is required")
             return cls.instance
 
-# import usocket as _socket
-# (c) 2014-2018 Paul Sokolovsky. MIT license.
-__EMSCRIPTEN__ = __import__('sys').platform in ('asm.js','wasm',)
+
+
+import builtins
+
+try:
+    __EMSCRIPTEN__
+except:
+    builtins.__EMSCRIPTEN__ = __import__('sys').platform in ('asm.js','wasm',)
+
 if __EMSCRIPTEN__ or 1:
     print("""
 #FIXME: time with time.time_ns()
@@ -39,8 +51,10 @@ import utimeq
 # import ucollections
 
 
-type_gen = type((lambda: (yield))())
-
+TM_RES = 1_000_000
+def T_ms(delay,mul=1):
+    global TM_RES
+    return int(delay*mul*TM_RES)
 
 class CancelledError(Exception):
     pass
@@ -61,7 +75,7 @@ class EventLoop:
 
     if __EMSCRIPTEN__:
         def time(self):
-            return int(time.time() * 1000)
+            return embed.time_ns()
     else:
         def time(self):
             return time.ticks_ms()
@@ -80,18 +94,19 @@ class EventLoop:
         self.waitq.push(time, callback, argv)
 
     def call_later(self, delay, callback, *argv):
-        self.call_at_(time.ticks_add(self.time(), int(delay * 1000)), callback, argv)
+        self.call_at_(time.ticks_add(self.time(), T_ms(delay,1000) ), callback, argv)
 
     def call_later_ms(self, delay, callback, *argv):
         if not delay:
             return self.call_soon(callback, *argv)
         #self.call_at_(time.ticks_add(self.time(), int(delay)), callback, argv)
-        self.call_at_(time.ticks_add(self.time(), delay), callback, argv)
+        self.call_at_(time.ticks_add(self.time(), T_ms(delay)), callback, argv)
 
     def wait(self, delay):
         # Default wait implementation, to be overriden in subclasses
         # with IO scheduling
-        time.sleep_ms(int(delay))
+        if not __EMSCRIPTEN__:
+            time.sleep_ms( T_ms(delay) )
 
     def run_once(self):
         global cur_task
@@ -337,6 +352,9 @@ def Task(coro, loop=_event_loop):
     _event_loop.call_soon(coro)
 
 
+
+
+
 class PollEventLoop(EventLoop):
     def __init__(self, runq_len=16, waitq_len=16):
         EventLoop.__init__(self, runq_len, waitq_len)
@@ -397,7 +415,6 @@ class PollEventLoop(EventLoop):
 
 
 
-cur_task = [0, 0, 0]
 
 register(PollEventLoop)
 

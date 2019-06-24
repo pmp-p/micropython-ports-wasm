@@ -5,29 +5,29 @@
 <meta name=viewport content='width=device-width,initial-scale=1'>
 
 <script type="text/µpython">
-print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)
-print("sys.path :",sys.path, "sys.argv=%r" % sys.argv)
-print()
+if not 'dev' in sys.argv:
+    print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)
+    print("sys.path :",sys.path, "sys.argv=%r" % sys.argv)
+    print()
 
-modules = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom ustruct ucollections uio".split(" ")
-modules.sort()
-modules.extend( "micropython embed builtins array math cmath gc ffi io".split(" ") )
+    modules = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom ustruct ucollections uio".split(" ")
+    modules.sort()
+    modules.extend( "micropython embed builtins array math cmath gc ffi io".split(" ") )
 
+    modules.append("uselect")
+    modules.append("hello")
 
-modules.append("uselect")
-modules.append("hello")
-
-print("open-write hello module")
-with open('hello.py','wb') as file:
-    file.write('''
+    print("open-write hello module")
+    with open('hello.py','wb') as file:
+        file.write('''
 
 print("i am hello module",__import__(__name__))
 
 '''.encode())
 
-import micropython
+    import micropython
 
-if not 'dev' in sys.argv:
+
     print(b'open-read: assets', open('assets/assets.py','rb').read() )
 
     missing = []
@@ -62,31 +62,38 @@ if not 'dev' in sys.argv:
     print( b.decode('utf-8') )
 
 
-print("\nC-api:")
-import embed
-for d in dir(embed):
-    print( d )
+    print("\nC-api:")
+    import embed
+    for d in dir(embed):
+        print( d )
 
-print("\nFFI:")
-import ffi
-for d in dir(ffi):
-    print( d )
+    print("\nFFI:")
+    import ffi
+    for d in dir(ffi):
+        print( d )
 
-lib = ffi.open('lib/libtest.wasm')
-print( lib )
-init_test  = lib.func("v", "init_test", "")
-init_plus_one = lib.func("i","init_plus_one","i")
-print( init_test )
-init_test()
-print("init_plus_one(41)==" , init_plus_one(41) )
-print("done")
+    lib = ffi.open('lib/libtest.wasm')
+    print( lib )
+    init_test  = lib.func("v", "init_test", "")
+    init_plus_one = lib.func("i","init_plus_one","i")
+    print( init_test )
+    init_test()
+    print("init_plus_one(41)==" , init_plus_one(41) )
+    print("done")
+
+    try:
+        micropython.qstr_info(1)
+    except:
+        print("micropython.qstr_info(1) N/A")
 
 
 print()
 print("="*78)
 print()
 
-#micropython.qstr_info(1)
+
+import asyncio
+asyncio.get_event_loop()
 </script>
 
 </head>
@@ -96,14 +103,14 @@ print()
     <span id=test></span>
     <br/>
     <textarea id="stdout" cols=132></textarea>
-    <canvas width="250" height="250" id="canvas">Your browser doesn't support Canvas</canvas>
+    <canvas width="320" height="240" id="canvas">Your browser doesn't support Canvas</canvas>
 
 <script src="pythons.js"></script>
 
 <script>
 
 function term_impl(text){
-    stdout.value += text
+    stdout.value += text.replace('\r\n','\n').replace('\n\n','\n')
 }
 
 window.onload = function(){
