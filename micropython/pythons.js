@@ -119,7 +119,7 @@ function write_file(dirname, filename, arraybuffer) {
 //async
 function postRun(){
     console.log("postRun: Begin")
-    setTimeout(init_loop,1)
+    setTimeout(init_loop,500)
     console.log("postRun: End")
 }
 
@@ -134,7 +134,11 @@ function PyRun_SimpleString(text){
     var cs = allocate(intArrayFromString(text), 'i8', ALLOC_STACK);
     //console.log(script.text)
     Module._PyRun_SimpleString(cs)
-    Module._free(cs)
+    try {
+        Module._free(cs)
+    } catch (x) {
+            console.log('_free(): do not forget to turn off debugging')
+    }
 }
 
 
@@ -149,7 +153,7 @@ function init_loop(){
         var argv0 = ""+Module.arguments[1]
         if (1)
             if (argv0.startswith('http')) {
-                argv0 = CORS_BROOKER+argv0
+                argv0 = CORS_BROKER+argv0
             }
         else console.log("CORS PATCH OFF")
         console.log('running with sys.argv', argv0)
@@ -176,7 +180,7 @@ function init_loop(){
             }
         }
     }
-    setTimeout(Module._repl_init, 500);
+    setTimeout(Module._repl_init, 1);
     console.log("init_loop:End")
 
 
@@ -275,8 +279,7 @@ function ID(){
      return 'js|' + Math.random().toString(36).substr(2, 9);
 }
 
-document.getElementById('test').textContent = "THIS IS A TEST BLOCK\n"
-document.title="THIS IS A TEST TITLE"
+
 
 function embed_call_impl(callid, fn, owner, params) {
     var rv = null;
@@ -408,14 +411,16 @@ function stdin_tx_chr(chr){
 
 window.stdout_array = []
 
+function flush_stdout(){
+    var uint8array = new Uint8Array(window.stdout_array)
+    var string = new TextDecoder().decode( uint8array )
+    term_impl(string)
+    window.stdout_array=[]
+}
+
 
 function stdout_process(cc) {
-    function flush_stdout(){
-        var uint8array = new Uint8Array(window.stdout_array)
-        var string = new TextDecoder().decode( uint8array )
-        term_impl(string)
-        window.stdout_array=[]
-    }
+
     window.stdout_array.push(cc)
 
     if (window.stdin_raw) {
@@ -451,7 +456,6 @@ function pts_decode(text){
         flush_stdout()
         term_impl(text+"\r\n")
     }
-
 }
 
 // ========================== startup hooks ======================================
@@ -496,9 +500,9 @@ async function pythons(argc, argv){
 }
 
 
-if ( undef("CORS_BROOKER") ){
-    window.CORS_BROOKER = "https://cors-anywhere.herokuapp.com/"
-    console.log("using default brooker CORS_BROOKER="+CORS_BROOKER)
+if ( undef("CORS_BROKER") ){
+    window.CORS_BROKER = "https://cors-anywhere.herokuapp.com/"
+    console.log("using default brooker CORS_BROKER="+CORS_BROKER)
 }
 
 

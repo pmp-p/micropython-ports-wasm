@@ -4,25 +4,6 @@
 <meta charset="utf-8">
 <meta name=viewport content='width=device-width,initial-scale=1'>
 
-<script >
-
-function term_impl(text){
-    window.text_area.value += text
-}
-
-window.onload = function(){
-    var textarea = document.getElementById('output');
-        textarea.rows=25 ;
-        textarea.style.height = "640px";
-    window.text_area = textarea
-    pythons()
- }
-
-</script>
-
-<script src="pythons.js" defer></script>
-
-
 <script type="text/µpython">
 print(sys.implementation.name,'%s.%s.%s' % sys.implementation.version, sys.version, sys.platform)
 print("sys.path :",sys.path, "sys.argv=%r" % sys.argv)
@@ -75,11 +56,10 @@ if not 'dev' in sys.argv:
     import frozen_mpy
 
 
-    print("\n#FIXME: utf-8 :")
+    print("\n#utf-8 :")
     b= b'\xc3\xa9\xc3\xa8\xc3\xa0\xc3\xb9\xc3\xa7\xe2\x82\xac\xc2\xa9'
     print('%r' % b )
     print( b.decode('utf-8') )
-    print("end failed utf-8\n")
 
 
 print("\nC-api:")
@@ -106,15 +86,34 @@ print()
 print("="*78)
 print()
 
-micropython.qstr_info(1)
+#micropython.qstr_info(1)
 </script>
 
 </head>
 
 
 <body>
-    <textarea id="output" cols=132></textarea>
+    <span id=test></span>
+    <br/>
+    <textarea id="stdout" cols=132></textarea>
     <canvas width="250" height="250" id="canvas">Your browser doesn't support Canvas</canvas>
+
+<script src="pythons.js"></script>
+
+<script>
+
+function term_impl(text){
+    stdout.value += text
+}
+
+window.onload = function(){
+    stdout.rows=25 ;
+    stdout.style.height = "640px";
+    pythons()
+}
+
+</script>
+
 </body>
 </html>
 
