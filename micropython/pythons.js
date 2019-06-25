@@ -297,7 +297,7 @@ function window_prompt(){
 
 if (0) { // SLOW
     function stdin_tx(key){
-        window.stdin = window.stdin + key
+        window.stdin += key
 
         if (!window.stdin_raw) {
             console.log("key:"+key);
@@ -312,7 +312,7 @@ if (0) { // SLOW
 
 } else {
     function stdin_tx(key){
-        window.stdin = window.stdin + key
+        window.stdin += key
     }
 
     function stdin_poll(){
@@ -325,6 +325,7 @@ if (0) { // SLOW
 
         if (!window.stdin.length)
             return
+
         var utf8 = unescape(encodeURIComponent(window.stdin));
         for(var i = 0; i < utf8.length; i++) {
             window.stdin_array.push( utf8.charCodeAt(i) );
@@ -381,7 +382,9 @@ if (1) {
     window.stdout_process = stdout_process_utf8
     window.flush_stdout = flush_stdout_utf8
 
-} else {
+}
+/*
+ else {
 
     function stdout_process_ascii(cc) {
         window.stdout_array.push( String.fromCharCode(cc) )
@@ -397,6 +400,7 @@ if (1) {
     window.stdout_process = stdout_process_ascii
     window.flush_stdout = flush_stdout_ascii
 }
+*/
 
 // this is a demultiplexer for stdout and os (DOM/js ...) control
 function pts_decode(text){

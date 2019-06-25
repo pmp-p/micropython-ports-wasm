@@ -15,8 +15,9 @@ include ../../py/mkenv.mk
 QSTR_DEFS = qstrdefsport.h
 
 ifdef EMSCRIPTEN
+	CPPFLAGS=-I$(EM_CACHE)/asmjs/ports-builds/sdl2/include
 	CC = emcc
-	CPP = clang -E -isystem $(EMSCRIPTEN)/system/include/libc -cxx-isystem $(EMSCRIPTEN)/system/include/libcxx
+	CPP = clang -E --sysroot $(EMSCRIPTEN)/system  -isystem $(EMSCRIPTEN)/system/include/libc -cxx-isystem $(EMSCRIPTEN)/system/include/libcxx $(CPPFLAGS)
 else
 	ifdef CLANG
 		CC=clang
@@ -168,10 +169,12 @@ check:
 	$(ECHO) EMSDK_NODE=$(EMSDK_NODE)
 	$(ECHO) EMSCRIPTEN_TOOLS=$(EMSCRIPTEN_TOOLS)	
 	$(ECHO) EM_CONFIG=$(EM_CONFIG)		
-	$(ECHO) EM_CACHE=$(EM_CACHE)	
 	$(ECHO) EMMAKEN_COMPILER=$(EMMAKEN_COMPILER)
 	$(ECHO) EMMAKEN_CFLAGS=$(EMMAKEN_CFLAGS)
+	$(ECHO) EM_CACHE=$(EM_CACHE)	
+	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(ECHO) "Using [$(CPP)] as prepro"
+
 	
 interpreter:
 	$(ECHO) "Building static executable $@"
