@@ -110,7 +110,8 @@ asyncio.get_event_loop()
 <script>
 
 function term_impl(text){
-    stdout.value += text.replace('\r\n','\n').replace('\n\n','\n')
+//FIXME: only replace eol
+    stdout.value += text.replace('\r\n','').replace('\n','')
 }
 
 window.onload = function(){

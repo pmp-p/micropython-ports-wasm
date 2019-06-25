@@ -111,16 +111,18 @@ def os_hook() ->void:
 // https://www.python.org/dev/peps/pep-0564/
 //    https://vstinner.github.io/python37-pep-564-nanoseconds.html
 def time_ns() -> int:
-      clock_getres(CLOCK_MONOTONIC, &ts);
+      clock_gettime(CLOCK_MONOTONIC, &ts);
       //unsigned long ul = ts.tv_nsec ;
       return mp_obj_new_int_from_uint( ts.tv_nsec );
 
 // upy
 def time_ms() -> int:
-    clock_getres(CLOCK_MONOTONIC, &ts);
+    clock_gettime(CLOCK_MONOTONIC, &ts);
     //unsigned long ul = ts.tv_nsec * 1000000 ;
     return mp_obj_new_int_from_uint( ts.tv_nsec * 1000000);
 
+def ticks_add(ticks : int=0, delta : int=0)->int:
+    return mp_obj_new_int_from_uint( ticks + delta );
 
 // TODO: remove after tests
 

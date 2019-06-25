@@ -1,6 +1,6 @@
 # (c) 2014-2018 Paul Sokolovsky. MIT license.
 
-# (c) 2019-2018 Paul P. MIT license.
+# (c) 2019- Paul P. MIT license.
 
 type_gen = type((lambda: (yield))())
 
@@ -51,10 +51,14 @@ import utimeq
 # import ucollections
 
 
-TM_RES = 1_000_000
-def T_ms(delay,mul=1):
+TM_RES = 1 #_000_000
+
+def T_ms(delay,mul=1, add_ticks=0):
     global TM_RES
-    return int(delay*mul*TM_RES)
+    r = int(delay)*mul*TM_RES
+    r += int(add_ticks)
+    return r
+
 
 class CancelledError(Exception):
     pass
@@ -74,10 +78,10 @@ class EventLoop:
         self.cur_task = None
 
     if __EMSCRIPTEN__:
-        def time(self):
-            return embed.time_ns()
+        def time_ms(self):
+            return int(time.time()*1000)
     else:
-        def time(self):
+        def time_ms(self):
             return time.ticks_ms()
 
     def create_task(self, coro):
@@ -90,34 +94,39 @@ class EventLoop:
         if not isinstance(callback, type_gen):
             self.runq.append(argv)
 
-    def call_at_(self, time, callback, argv=()):
-        self.waitq.push(time, callback, argv)
-
     def call_later(self, delay, callback, *argv):
-        self.call_at_(time.ticks_add(self.time(), T_ms(delay,1000) ), callback, argv)
+        self.call_at_( T_ms(self.time_ms(),add_ticks=delay*1000) , callback, argv)
 
     def call_later_ms(self, delay, callback, *argv):
         if not delay:
             return self.call_soon(callback, *argv)
-        #self.call_at_(time.ticks_add(self.time(), int(delay)), callback, argv)
-        self.call_at_(time.ticks_add(self.time(), T_ms(delay)), callback, argv)
+        #self.call_at_(time.ticks_add(self.time_ms(), int(delay)), callback, argv)
+        self.call_at_( T_ms(self.time_ms(),add_ticks=delay), callback, argv)
+
+    def call_at_(self, time, callback, argv=()):
+        self.waitq.push(time, callback, argv)
 
     def wait(self, delay):
         # Default wait implementation, to be overriden in subclasses
         # with IO scheduling
         if not __EMSCRIPTEN__:
-            time.sleep_ms( T_ms(delay) )
+            time.sleep_ms( delay )
 
     def run_once(self):
         global cur_task
-        tnow = self.time()
+        tnow = self.time_ms()
+
+        # Expire entries in waitq and move them to runq
+        print('waitq', len(self.waitq) )
         while len(self.waitq):
-            t = self.waitq.peektime()
-            delay = time.ticks_diff(t, tnow)
+            delay = T_ms( self.waitq.peektime(), add_ticks = -tnow )
+            print('  delay',delay)
             if delay > 0:
                 break
             self.waitq.pop(cur_task)
             self.call_soon(cur_task[1], *cur_task[2])
+
+        print('runq',len(self.runq))
 
         # Process runq
         while len(self.runq):
@@ -138,6 +147,7 @@ class EventLoop:
                     ret = next(cb)
                 else:
                     ret = cb.send(*argv)
+
                 if isinstance(ret, SysCall1):
                     argv = ret.arg
                     if isinstance(ret, SleepMs):
@@ -158,22 +168,24 @@ class EventLoop:
                         return argv
                     else:
                         assert False, "Unknown syscall yielded: %r (of type %r)" % (ret, type(ret))
+
                 elif isinstance(ret, type_gen):
                     self.call_soon(ret)
                 elif isinstance(ret, int):
                     # Delay
                     delay = ret
-                elif isinstance(ret, float):
-                    # Delay
-                    delay = int(ret)
                 elif ret is None:
                     # Just reschedule
                     pass
                 elif ret is False:
                     # Don't reschedule
                     continue
+                elif isinstance(ret, float):
+                    # Delay
+                    delay = int(ret)
                 else:
                     assert False, "Unsupported coroutine yield value: %r (of type %r)" % (ret, type(ret))
+
             except StopIteration as e:
                 continue
             except CancelledError as e:
@@ -186,22 +198,22 @@ class EventLoop:
             else:
                 self.call_soon(cb)
 
+        # Wait until next waitq task or I/O availability
+        delay = 0
+        if not len(self.runq):
+            delay = -1
+            if self.waitq:
+                pt = self.waitq.peektime()
+                tms = -self.time_ms()
+                delay = T_ms( pt, add_ticks = tms )
+                if delay < 0:
+                    delay = 0
+        return delay
+
     def run_forever(self):
         global cur_task
         while True:
-            # Expire entries in waitq and move them to runq
-            self.run_once(cur_task)
-            # Wait until next waitq task or I/O availability
-            delay = 0
-            if not len(self.runq):
-                delay = -1
-                if self.waitq:
-                    tnow = self.time()
-                    t = self.waitq.peektime()
-                    delay = time.ticks_diff(t, tnow)
-                    if delay < 0:
-                        delay = 0
-            self.wait(delay)
+            self.wait( self.run_once(cur_task) )
 
 
     def run_until_complete(self, coro):

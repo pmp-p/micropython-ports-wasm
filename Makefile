@@ -1,21 +1,31 @@
-include ../../py/mkenv.mk
-
 BASENAME=micropython
 PROG=$(BASENAME).html
 LIBMICROPYTHON = lib$(BASENAME).a
 FROZEN_MPY_DIR = modules
 FROZEN_DIR = flash
-
 # clang has slightly different options to GCC
 CLANG = 1
-EMSCRIPTEN = 1
 CROSS = 0
+
+
+include ../../py/mkenv.mk
+
 
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
 
-CC = emcc
-CPP = gcc -E
+ifdef EMSCRIPTEN
+	CC = emcc
+	CPP = clang -E -isystem $(EMSCRIPTEN)/system/include/libc -cxx-isystem $(EMSCRIPTEN)/system/include/libcxx
+else
+	ifdef CLANG
+		CC=clang
+		CPP=clang -E
+	else
+		CC = gcc
+		CPP = gcc -E
+	endif
+endif
 
 ifdef LVGL
 	LVOPTS = -DMICROPY_PY_LVGL=1
@@ -27,9 +37,6 @@ endif
 
 # include py core make definitions
 include ../../py/py.mk
-
-#CC = emcc
-#CPP = gcc -E
 
 CLANG = 1
 SIZE = echo
@@ -155,6 +162,17 @@ WASM_FLAGS=-s BINARYEN_ASYNC_COMPILATION=1 -s WASM=1
 LINK_FLAGS=-s MAIN_MODULE=1
 THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
 
+check:
+	$(ECHO) EMSDK=$(EMSDK)
+	$(ECHO) EMSCRIPTEN=$(EMSCRIPTEN)	
+	$(ECHO) EMSDK_NODE=$(EMSDK_NODE)
+	$(ECHO) EMSCRIPTEN_TOOLS=$(EMSCRIPTEN_TOOLS)	
+	$(ECHO) EM_CONFIG=$(EM_CONFIG)		
+	$(ECHO) EM_CACHE=$(EM_CACHE)	
+	$(ECHO) EMMAKEN_COMPILER=$(EMMAKEN_COMPILER)
+	$(ECHO) EMMAKEN_CFLAGS=$(EMMAKEN_CFLAGS)
+	$(ECHO) "Using [$(CPP)] as prepro"
+	
 interpreter:
 	$(ECHO) "Building static executable $@"
 	$(CC) $(CFLAGS) -g -o build/main.o main.c

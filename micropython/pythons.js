@@ -169,8 +169,8 @@ function init_loop(){
             PyRun_VerySimpleFile('main.py')
             doscripts = false
         } else {
-            console.log("an error occured getting main.py from '"+argv0+"'")
-            term_impl("Javascript : error occured getting main.py from '"+argv0+"'")
+            console.log("error getting main.py from '"+argv0+"'")
+            term_impl("Javascript : error getting main.py from '"+argv0+"'\r\n")
             //TODO: global control var to skip page scripts
         }
 
@@ -295,18 +295,44 @@ function window_prompt(){
     return null
 }
 
-function stdin_tx(key){
-    window.stdin = window.stdin + key
+if (1) { // SLOW
+    function stdin_tx(key){
+        window.stdin = window.stdin + key
 
-    if (!window.stdin_raw) {
-        console.log("key:"+key);
-        return ;
+        if (!window.stdin_raw) {
+            console.log("key:"+key);
+            return ;
+        }
+        var utf8 = unescape(encodeURIComponent(key));
+        for(var i = 0; i < utf8.length; i++) {
+            window.stdin_array.push( utf8.charCodeAt(i) );
+        }
     }
-    var utf8 = unescape(encodeURIComponent(key));
-    for(var i = 0; i < utf8.length; i++) {
-        window.stdin_array.push( utf8.charCodeAt(i) );
+    window.stdin_tx =stdin_tx
+
+} else {
+    function stdin_tx(key){
+        window.stdin = window.stdin + key
     }
+
+    function stdin_poll(){
+        if (!window.stdin_raw)
+            return
+        if (!window.stdin.length)
+            return
+        var utf8 = unescape(encodeURIComponent(window.stdin));
+        for(var i = 0; i < utf8.length; i++) {
+            window.stdin_array.push( utf8.charCodeAt(i) );
+        }
+        window.stdin = ""
+    }
+    setInterval( stdin_poll , 60)
+    window.stdin_tx =stdin_tx
 }
+
+
+
+
 
 function stdin_tx_chr(chr){
     console.log("stdin:control charkey:"+chr);

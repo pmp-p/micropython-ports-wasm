@@ -71,18 +71,10 @@ modules = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom u
 modules.sort()
 modules.extend( "micropython embed builtins array math cmath gc ffi io hello".split(" ") )
 
-print("open-write hello module")
-with open('assets/hello.py','wb') as file:
-    file.write('''#
-def hi():
-    print("i am module %s" % __import__(__name__))
-hi()
-#
-'''.encode())
 
 import micropython
 
-if 'test' in sys.argv:
+if not 'dev' in sys.argv:
     print(b'open-read: assets', open('assets/assets.py','rb').read() )
 
     missing = []
@@ -140,12 +132,21 @@ if 'test' in sys.argv:
     except:
         print("micropython.qstr_info(1) N/A")
 
-print()
-print("-"*78)
-print()
+    print()
+    print("-"*78)
+    print()
 
 
-if 'dev' in sys.argv:
+    print("open-write hello module")
+    with open('assets/hello.py','wb') as file:
+        file.write('''#
+    def hi():
+        print("i am module %s" % __import__(__name__))
+    hi()
+    #
+    '''.encode())
+
+
     import embed
     import hello
 
@@ -161,17 +162,37 @@ hi()
 
     dir(sys.modules['hello'])
 
-    embed.os_compile('hello.py','c.mpy');import c
-
+    embed.os_compile('hello.py','c.mpy')
 
     import c
     print(c)
 
+print("-"*78)
 
-#import asyncio
-#asyncio.get_event_loop()
+import embed
+import asyncio
+loop = asyncio.get_event_loop()
 
-#from tlink import *
+#try:raise Exception()
+#except Exception as e:sys.print_execption(e) #113
+
+async def tictac():
+    tictac = False
+    while True:
+        tictac = not tictac
+        if tictac:
+            print('tic')
+        else:
+            print('tac')
+        await asyncio.sleep(2)
+
+
+loop.create_task( tictac() )
+
+loop.run_once()
+
+loop
+
 
 #imp.load_module('ulink')
 
