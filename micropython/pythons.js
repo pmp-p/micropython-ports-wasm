@@ -295,7 +295,7 @@ function window_prompt(){
     return null
 }
 
-if (1) { // SLOW
+if (0) { // SLOW
     function stdin_tx(key){
         window.stdin = window.stdin + key
 
@@ -316,8 +316,13 @@ if (1) { // SLOW
     }
 
     function stdin_poll(){
+        //pending draw ?
+        if (stdout_blit)
+            flush_stdout();
+
         if (!window.stdin_raw)
             return
+
         if (!window.stdin.length)
             return
         var utf8 = unescape(encodeURIComponent(window.stdin));
@@ -326,7 +331,7 @@ if (1) { // SLOW
         }
         window.stdin = ""
     }
-    setInterval( stdin_poll , 60)
+    setInterval( stdin_poll , 16)
     window.stdin_tx =stdin_tx
 }
 
@@ -344,28 +349,54 @@ function stdin_tx_chr(chr){
 // TODO: add a dupterm for stderr, and display error in color in xterm if not in stdin_raw mode
 
 
+window.stdout_blit = false
 window.stdout_array = []
 
-function flush_stdout(){
-    var uint8array = new Uint8Array(window.stdout_array)
-    var string = new TextDecoder().decode( uint8array )
-    term_impl(string)
-    window.stdout_array=[]
-}
 
-
-function stdout_process(cc) {
-
-    window.stdout_array.push(cc)
-
-    if (window.stdin_raw) {
-        if (cc<128)
-            flush_stdout()
-        return
+if (1) {
+    function flush_stdout_utf8(){
+        var uint8array = new Uint8Array(window.stdout_array)
+        var string = new TextDecoder().decode( uint8array )
+        term_impl(string)
+        window.stdout_array=[]
+        stdout_blit = false
     }
-    if (cc==10) flush_stdout()
-}
 
+    function stdout_process_utf8(cc) {
+        window.stdout_array.push(cc)
+
+        if (window.stdin_raw) {
+            if (cc<128)
+                stdout_blit = true
+            return
+        }
+
+        if (cc==10) {
+            stdout_blit = true
+            return
+        }
+        //no blit on non raw mode until crlf
+    }
+
+    window.stdout_process = stdout_process_utf8
+    window.flush_stdout = flush_stdout_utf8
+
+} else {
+
+    function stdout_process_ascii(cc) {
+        window.stdout_array.push( String.fromCharCode(cc) )
+        stdout_blit = true
+    }
+
+    function flush_stdout_ascii(){
+        term_impl(window.stdout_array.join("") )
+        window.stdout_array=[]
+        stdout_blit = false
+    }
+
+    window.stdout_process = stdout_process_ascii
+    window.flush_stdout = flush_stdout_ascii
+}
 
 // this is a demultiplexer for stdout and os (DOM/js ...) control
 function pts_decode(text){

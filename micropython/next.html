@@ -137,25 +137,21 @@ if not 'dev' in sys.argv:
     print()
 
 
+    code ="""#
+def hi():
+    print("i am module %s" % __import__(__name__))
+#
+hi()
+#
+"""
+
     print("open-write hello module")
     with open('assets/hello.py','wb') as file:
-        file.write('''#
-    def hi():
-        print("i am module %s" % __import__(__name__))
-    hi()
-    #
-    '''.encode())
-
+        file.write(code.encode())
 
     import embed
     import hello
 
-    code ="""
-def hi():
-    print("i am module %s" % __import__(__name__))
-
-hi()
-"""
     print("================================")
     runc(code, embed.vars( hello ))
     print("================================")
@@ -206,13 +202,6 @@ loop
 
     <script>
 
-        /*Write text to the terminal */
-        //function sendText(text) {
-        function term_impl(text) {
-            var print = new Event('print');
-            print.data = text;
-            mp_js_stdout.dispatchEvent(print);
-        }
 
         /*
         function reloadScript(target_script) {
@@ -287,20 +276,18 @@ loop
             term.open(mp_js_stdout);
             term.fit();
 
+
             /*Initialize MicroPython itself*/
             // Py_InitializeEx is handled by main.c
             //mp_js_init(1 * 1024 * 1024);
 
-            /*Setup printing event handler*/
-            mp_js_stdout.addEventListener('print', function(e) {
-                text = e.data;
-                term.write(text);
-            }, false);
+            /*Write text to the terminal */
+            window.term_impl = function (text) { term.write(text) }
 
             /*Setup key input handler */
             term.on('data', function(key, e) {
-                stdin_tx(key)
-
+                window.stdin += key
+                //term.write(key)
             });
 
 

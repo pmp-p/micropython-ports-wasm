@@ -33,16 +33,18 @@ py_iter_one(void){
     }
 
     if (!repl_started) return;
+    while (1) {
+        int rx = EM_ASM_INT({
+            if (window.stdin_array.length)
+                return window.stdin_array.shift();
+            return 0;
+        });
 
-    int rx = EM_ASM_INT({
-if (window.stdin_array.length)
-    return window.stdin_array.shift();
-    return 0;
-});
-    if (rx) {
-        if (rx>127)
-            fprintf(stderr, "FIXME:stdin-utf8:%u\n", rx );
-        pyexec_event_repl_process_char(rx);
+        if (rx) {
+            if (rx>127)
+                fprintf(stderr, "FIXME:stdin-utf8:%u\n", rx );
+            pyexec_event_repl_process_char(rx);
+        } else break;
     }
 
 }
