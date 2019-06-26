@@ -238,6 +238,10 @@ function hack_open(url, cachefile){
     try {
         if (url[0]==":")
             url = url.substr(1)
+        else {
+            if (url.includes('/wyz.fr/'))
+                url = CORS_BROKER + url
+        }
 
         var ab = awfull_get(url)
         var ret = ab.length

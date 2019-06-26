@@ -1,10 +1,24 @@
 # (c) 2014-2018 Paul Sokolovsky. MIT license.
 
 # (c) 2019- Paul P. MIT license.
+import sys
 
 type_gen = type((lambda: (yield))())
 
 cur_task = [0, 0, 0]
+
+auto = None
+
+def __auto__():
+    global _event_loop, auto
+    if auto :
+        try:
+            _event_loop.run_once()
+        except Exception as e:
+            auto = None
+            sys.print_exception(e)
+            print("asyncio, panic stopping auto loop",file=sys.stderr)
+    return None
 
 try:
     import uselect as select
@@ -60,6 +74,11 @@ def T_ms(delay,mul=1, add_ticks=0):
     return r
 
 
+def iscoroutine(f):
+    global type_gen
+    return isinstance(f, type_gen)
+
+
 class CancelledError(Exception):
     pass
 
@@ -76,6 +95,8 @@ class EventLoop:
         # in the event loop (sub-coroutines executed transparently by
         # yield from/await, event loop "doesn't see" them).
         self.cur_task = None
+        self.scheduler = []
+
 
     if __EMSCRIPTEN__:
         def time_ms(self):
@@ -86,8 +107,13 @@ class EventLoop:
 
     def create_task(self, coro):
         # CPython 3.4.2
-        self.call_later_ms(0, coro)
         # CPython asyncio incompatibility: we don't return Task object
+        if iscoroutine(coro):
+            self.call_later_ms(0, coro)
+            return
+        # CPython asyncio incompatibility: we assume non generator object as scheduled functions pointers
+        self.scheduler.append(coro)
+
 
     def call_soon(self, callback, *argv):
         self.runq.append(callback)
@@ -115,18 +141,30 @@ class EventLoop:
     def run_once(self):
         global cur_task
         tnow = self.time_ms()
+        for task in self.scheduler:
+            try:
+                task()
+            except Exception as e:
+                sys.print_exception(e)
+                try:
+                    print(tnow,':',"task", task.__name__, "removed from scheduler")
+                except:
+                    print(tnow,':',"task", task, "removed from scheduler")
+                self.scheduler.remove(task)
+                #list as changed and give a chance to read error
+                return
 
         # Expire entries in waitq and move them to runq
-        print('waitq', len(self.waitq) )
+        # print('waitq', len(self.waitq) )
         while len(self.waitq):
             delay = T_ms( self.waitq.peektime(), add_ticks = -tnow )
-            print('  delay',delay)
+            # print('  delay',delay)
             if delay > 0:
                 break
             self.waitq.pop(cur_task)
             self.call_soon(cur_task[1], *cur_task[2])
 
-        print('runq',len(self.runq))
+        # print('runq',len(self.runq))
 
         # Process runq
         while len(self.runq):
@@ -344,8 +382,9 @@ def wait_for(coro, timeout):
 
 
 def coroutine(f):
+    import sys
+    print("asyncio.coroutine is deprecated for 3.10",file=sys.stderr)
     return f
-
 
 #
 # The functions below are deprecated in asyncio, and provided only

@@ -281,6 +281,11 @@ loop
             // Py_InitializeEx is handled by main.c
             //mp_js_init(1 * 1024 * 1024);
 
+            /*Setup key input handler */
+            // window_prompt is the pythons.js function that will flush stdin_tx buffer toward upy core
+            window.prompt = window_prompt
+
+
             /*Write text to the terminal */
             window.term_impl = function (text) { term.write(text) }
 
@@ -289,6 +294,7 @@ loop
                 window.stdin += key
                 //term.write(key)
             });
+
 
 
             /* Run custom script if passed */
@@ -309,14 +315,9 @@ loop
                 the_mp_handle_pending();
                 setTimeout(handle_pending, 50); // should call lv_task_handler()
             }
+
+            /*Initialize MicroPython itself*/
             /*Initialize the REPL.*/
-            //mp_js_init_repl();
-
-            /*Start the main loop, asynchronously.*/
-            //handle_pending();
-
-            //window.term_impl = sendText
-            window.prompt = window_prompt
             pythons()
     }
 

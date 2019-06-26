@@ -10,13 +10,12 @@ def new_module(module):
     try:
         m = __import__(module)
     except Exception as e :
-        sys.print_execption(e)
+        sys.print_exception(e)
     finally:
         import sys
         sys.path.clear()
         sys.path.extend(save)
-        print(sys.path, m)
-        #TODO: os.remove / unlink
+        print("#TODO: os.remove / unlink empty mod")
     return m
 
 def load_module(module, *argv):

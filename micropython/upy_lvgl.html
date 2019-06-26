@@ -52,7 +52,7 @@
     <br>
     You can type your own Python code into the prompt in the usual way.
     <br>
-    For examples, see the README for the MicroPython binding.
+    to run samples : select the python line while holding left mouse button and paste it in interpreter with middle click, then press enter key to execute.
 
     <pre id="url"></pre>
 
@@ -72,12 +72,6 @@
 
     <script defer>
 
-
-        /*Setup printing event handler*/
-        /*Write text to the terminal */
-        function term_impl(text) {
-            term.write(text)
-        }
 
         /*
         function reloadScript(target_script) {
@@ -115,19 +109,33 @@
         window.onload = function() {
 
             Terminal.applyAddon(fit);
-            term = new Terminal();
-            mp_js_stdout = document.getElementById('mp_js_stdout');
-            mp_js_stdout.value = "";
-            term.open(mp_js_stdout);
-            term.fit();
 
+            var mp_js_stdout = document.getElementById('mp_js_stdout');
+                mp_js_stdout.value = "";
+
+            var term = new Terminal({
+                    cols : 132,
+                    rows : 33,
+                    tabStopWidth : 8,
+                    cursorBlink : true,
+                    cursorStyle : 'block',
+                    applicationCursor : true,
+                });
+                term.open(mp_js_stdout);
+                term.fit();
+
+
+            /*Write text to the terminal */
+            window.term_impl = function (text) { term.write(text) }
 
             /*Setup key input handler */
             // window_prompt is the pythons.js function that will flush stdin_tx buffer toward upy core
             window.prompt = window_prompt
 
+            /*Setup key input handler */
             term.on('data', function(key, e) {
-                stdin_tx(key)
+                window.stdin += key
+                //term.write(key)
             });
 
 
@@ -248,8 +256,7 @@ print()
 print("-"*78)
 print()
 
-
-import lvgl as lv
+sample1 = """import lvgl as lv
 print('lv=',lv)
 lv.init()
 
@@ -279,13 +286,71 @@ btn.align(lv.scr_act(), lv.ALIGN.CENTER, 0, 0)
 label = lv.label(btn)
 label.set_text('Button')
 
+def on_counter_btn(*argv):
+    print('pouet', len(argv), argv)
+
+btn.set_event_cb(on_counter_btn)
+
 #/* Load the screen */
 lv.scr_load(scr)
-for x in range(3):SDL.step(1)
-print("lvgl loop now turned off, please wait for N/I yet proper asyncio native loop")
+"""
+
+
+def run_code(code):
+    m = runc(code)
+    asyncio.auto = 1
+    return 'running...'
+
+#FIXME run samples in their own namespaces
+
+def run_from(url, module=globals(),patch=''):
+    global __compiled__
+    url = url.replace('lvgl:','https://raw.githubusercontent.com/littlevgl/lv_binding_micropython/dev-6.0/examples/')
+    file = url.rsplit('/',1)[-1]
+    print(url,'as',file)
+    print('='*40)
+    __compiled__ = 0
+    with open(url,'rb') as code:
+        code = [ code.read().decode(),"\n\n",patch,"__compiled__=1" ]
+        m = runc(''.join(code), globals(), file)
+        if __compiled__:
+            asyncio.auto = 1
+        else:
+            print("Compilation or interpretation not complete, not running lvgl loop")
+    print('='*40)
+
+
+if 'dev' in sys.argv:
+    runc(sample1)
+else:
+    print("""
+
+# 1 : Simple Button
+-------------------
+run_code(sample1)
+run_from("https://wyz.fr/paste/9Aj/raw")
+
+# 2  : Complex demos, or run script from an url
+------------------------------------------------
+run_from('lvgl:example1.py')
+#nope run_from('assets/lvgl_ae.py')
+#nope run_from("lvgl:chart_anim_example.py")
+#nope run_from("lvgl:advanced_demo.py")
+
+""")
+print("-"*78)
+
+async def run_aloop():
+    while 1:
+        SDL.run_once()
+        await asyncio.sleep_ms(16)
+
+def run_loop():
+    SDL.run_once()
 
 import asyncio
-asyncio.get_event_loop()
+asyncio.get_event_loop().create_task( run_loop )
+
 
 
 </script>

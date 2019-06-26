@@ -28,6 +28,7 @@
 
 #define FROZEN_MPY_DIR              "modules"
 
+
 #define MICROPY_MODULE_FROZEN       (1)
 #define MICROPY_MODULE_FROZEN_MPY   (1)
 #define MICROPY_MODULE_FROZEN_STR   (1)
@@ -65,11 +66,6 @@
 #define MICROPY_ENABLE_PYSTACK      (1)
 
 
-
-
-#define MICROPY_PY_MICROPYTHON_MEM_INFO (0)
-
-
 // nlr.h  MICROPY_NLR_* must match a supported arch
 // define or autodetect will fail to select WASM
 #define MICROPY_NLR_SETJMP          (1)
@@ -80,6 +76,21 @@
     #define MICROPY_NLR_OS_WINDOWS (0)
     #define MICROPY_NLR_X86 (0)
     #define MICROPY_NLR_X64 (0)
+#endif
+
+// MEMORY
+#define MICROPY_PY_MICROPYTHON_MEM_INFO   (1)
+#define MICROPY_ENABLE_GC           (1)
+#define MICROPY_GC_ALLOC_THRESHOLD  (1)
+
+#if MICROPY_PY_LVGL
+#define MICROPY_MEM_STATS           (0)
+#else
+#define MICROPY_MEM_STATS           (1)
+#endif
+
+#if MICROPY_MEM_STATS
+#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)
 #endif
 
 
@@ -98,7 +109,6 @@
 #define MICROPY_PY_DELATTR_SETATTR  (1)
 #define MICROPY_PY_MATH_SPECIAL_FUNCTIONS (1)
 #define MICROPY_PY_MATH_FACTORIAL   (1)
-#define MICROPY_PY_SYS_GETSIZEOF    (1)
 
 
 #define MICROPY_COMP_MODULE_CONST   (1)
@@ -106,12 +116,15 @@
 #define MICROPY_COMP_DOUBLE_TUPLE_ASSIGN (1)
 #define MICROPY_COMP_TRIPLE_TUPLE_ASSIGN (1)
 
-#define MICROPY_ENABLE_GC           (1)
 #define MICROPY_ENABLE_SOURCE_LINE  (1)
 
 #define MICROPY_HELPER_REPL         (1)
 
+#define MICROPY_PY___FILE__         (1)
+
 #define MICROPY_PY_ALL_SPECIAL_METHODS (1)
+
+#define MICROPY_PY_ARRAY            (1)
 #define MICROPY_PY_ASYNC_AWAIT      (1)
 #define MICROPY_PY_ATTRTUPLE        (1)
 
@@ -147,13 +160,10 @@
 #define MICROPY_PY_MATH             (1)
 #define MICROPY_PY_STRUCT           (1)
 #define MICROPY_PY_SYS              (1)
+#define MICROPY_PY_SYS_GETSIZEOF    (1)
 #define MICROPY_PY_SYS_MODULES      (1)
 #define MICROPY_PY_SYS_MAXSIZE      (1)
 #define MICROPY_PY_SYS_PLATFORM     "wasm"
-
-#define MICROPY_PY___FILE__         (1)
-
-#define MICROPY_PY_ARRAY            (1)
 
 #define MICROPY_PY_THREAD           (0)
 #define MICROPY_PY_THREAD_GIL       (0)
@@ -197,9 +207,7 @@
 #define MICROPY_VFS                 (0)
 
 #define MICROPY_DEBUG_PRINTERS      (0)
-#define MICROPY_MEM_STATS           (0)
 #define MICROPY_MPY_CODE_SAVE       (1)
-#define MICROPY_GC_ALLOC_THRESHOLD  (1)
 #define MICROPY_REPL_EVENT_DRIVEN   (1)
 #define MICROPY_ENABLE_DOC_STRING   (0)
 
