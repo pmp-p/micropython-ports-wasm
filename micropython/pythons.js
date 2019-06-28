@@ -1,5 +1,9 @@
 "use strict";
 
+// will hold embed I/O , stdin and stdout buffers.
+
+window.plink = {}
+
 
 function undef(e,o){
     if (typeof o === 'undefined' || o === null)
@@ -27,6 +31,17 @@ String.prototype.rsplit = function(sep, maxsplit) {
 String.prototype.endswith = String.prototype.endsWith
 String.prototype.startswith = String.prototype.startsWith
 
+function register(fn,fn_dn){
+    if ( undef(fn_dn) )
+        fn_dn = fn.name;
+    //console.log('  |-- added ' + fn_dn );
+    window[fn_dn]=fn;
+}
+
+//cyclic dep
+window.register = register
+register(undef)
+//register(module_load)
 
 function setdefault(n,v,o){
     if (o == null)
@@ -37,10 +52,11 @@ function setdefault(n,v,o){
         console.log('  |-- ['+n+'] set to ['+ o[n]+']' );
         return true;
     }
-    return false;
+    return false
 }
 
-setdefault('JSDIR','');
+setdefault('JSDIR','')
+
 
 function include(filename, filetype){
     if (filetype===null ||typeof filetype === 'undefined')
@@ -79,7 +95,9 @@ function include(filename, filetype){
         //fileref.src = window.URL.createObjectURL( window.EMScript );
         //document.body.appendChild(fileref);
 }
-window.include = include;
+register(include)
+
+
 
 function _until(fn_solver){
     return async function fwrapper(){
@@ -89,6 +107,7 @@ function _until(fn_solver){
             {};
     }
 }
+register(_until)
 
 
 
@@ -285,6 +304,14 @@ function file_exists(urlToFile, need_dot) {
 // separate file clink for cpython , plink for micropython , entry point is embed_call(struct_from_json)
 
 // ================= STDIN =================================================
+var pts = {}
+   pts.i = {}
+   pts.i.line = ""
+   pts.i.raw = true
+
+   pts.o = {}
+
+plink.pts = pts
 window.stdin_array = []
 window.stdin = ""
 window.stdin_raw = true
@@ -299,46 +326,29 @@ function window_prompt(){
     return null
 }
 
-if (0) { // SLOW
-    function stdin_tx(key){
-        window.stdin += key
-
-        if (!window.stdin_raw) {
-            console.log("key:"+key);
-            return ;
-        }
-        var utf8 = unescape(encodeURIComponent(key));
-        for(var i = 0; i < utf8.length; i++) {
-            window.stdin_array.push( utf8.charCodeAt(i) );
-        }
-    }
-    window.stdin_tx =stdin_tx
-
-} else {
-    function stdin_tx(key){
-        window.stdin += key
-    }
-
-    function stdin_poll(){
-        //pending draw ?
-        if (stdout_blit)
-            flush_stdout();
-
-        if (!window.stdin_raw)
-            return
-
-        if (!window.stdin.length)
-            return
-
-        var utf8 = unescape(encodeURIComponent(window.stdin));
-        for(var i = 0; i < utf8.length; i++) {
-            window.stdin_array.push( utf8.charCodeAt(i) );
-        }
-        window.stdin = ""
-    }
-    setInterval( stdin_poll , 16)
-    window.stdin_tx =stdin_tx
+function stdin_tx(key){
+    window.stdin += key
 }
+
+function stdin_poll(){
+    //pending draw ?
+    if (stdout_blit)
+        flush_stdout();
+
+    if (!window.stdin_raw)
+        return
+
+    if (!window.stdin.length)
+        return
+
+    var utf8 = unescape(encodeURIComponent(window.stdin));
+    for(var i = 0; i < utf8.length; i++) {
+        window.stdin_array.push( utf8.charCodeAt(i) );
+    }
+    window.stdin = ""
+}
+setInterval( stdin_poll , 16)
+window.stdin_tx =stdin_tx
 
 
 
@@ -428,7 +438,12 @@ function pts_decode(text){
         // found a raw C string via libc
         console.log("C-OUT ["+text+"]")
         flush_stdout()
-        term_impl(text+"\r\n")
+        try {
+            posix.syslog(text)
+        } catch (y) {
+            term_impl(text+"\r\n")
+        }
+
     }
 }
 
@@ -442,32 +457,27 @@ window.Module = {
 }
 
 
-
 async function pythons(argc, argv){
     var scripts = document.getElementsByTagName('script')
-    /*
-    for ?0=xxxxx&1=xxxx argv style
-    var argv = []
-    for (var i=0;i<10;i++) {
-        var arg = new URL(window.location.href).searchParams.get(i);
-        if (arg) {
-            console.log("argv["+i+"]=",arg)
-            argv.push(arg)
-        }
-        else break
-    }
-    if (argv.length>0) {
-        console.log('running with sys.argv',argv)
-        //Module.arguments = argv
-        include("micropython.js")
-        return;
-    }
-    */
+
     for(var i = 0; i < scripts.length; i++){
         var script = scripts[i]
         if(script.type == "text/µpython"){
-            console.log("starting upython")
-            include("micropython.js")
+
+            var emterpretURL = "micropython.binary"
+            var emterpretXHR = new XMLHttpRequest;
+                emterpretXHR.open("GET", emterpretURL, !0),
+                emterpretXHR.responseType = "arraybuffer",
+                emterpretXHR.onload = function() {
+                    if (200 === emterpretXHR.status || 0 === emterpretXHR.status) {
+                        Module.emterpreterFile = emterpretXHR.response
+                        console.log("Starting upython via emterpreter")
+                    } else {
+                        console.log("Starting upython synchronously : " + emterpretXHR.status )
+                    }
+                    include("micropython.js")
+                }
+                emterpretXHR.send(null)
             break
         }
     }

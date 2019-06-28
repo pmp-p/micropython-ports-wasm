@@ -4,17 +4,20 @@
 //
 // you *must* take care of return type yourself, glue code can only return None for you.
 
+#ifndef __CPP__
+#include <emscripten.h>
+#endif
+
 #include "py/emitglue.h"
 #include "py/parse.h"
 #include "py/lexer.h"
 #include "py/compile.h"
 
-#ifndef __CPP__
-#include <emscripten.h>
-#endif
 #include <time.h>
 #include <time.h>
 #include <dlfcn.h>
+
+#include "py/smallint.h"
 
 struct timespec ts;
 
@@ -91,6 +94,8 @@ def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> voi
                                                false);
 
     mp_raw_code_save_file(rc, mpy_file);
+    #else
+    fprintf(stderr,"os_compile: MICROPY_PERSISTENT_CODE_SAVE not enabled\n");
     #endif
 
 
@@ -123,6 +128,14 @@ def time_ms() -> int:
 
 def ticks_add(ticks : int=0, delta : int=0)->int:
     return mp_obj_new_int_from_uint( ticks + delta );
+
+
+def sleep_ms(ms : int =0) -> void :
+    emscripten_sleep_with_yield( ms );
+
+def ticks_period() -> int:
+    return mp_obj_new_int_from_uint( MICROPY_PY_UTIME_TICKS_PERIOD );
+
 
 // TODO: remove after tests
 

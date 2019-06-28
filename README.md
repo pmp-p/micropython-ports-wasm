@@ -66,7 +66,8 @@ cd micropython
 # cd lv_micropython
 # git checkout dev-6.0
 # git submodule update --recursive --init
-
+# if you want to use asyncio with lvgl just add the patch https://patch-diff.githubusercontent.com/raw/littlevgl/lv_binding_micropython/pull/30.diff
+# that allows you to service with SDL.run_once()
 
 #build host tools
 make -C mpy-cross
@@ -86,7 +87,8 @@ cd wasm
 
 . /path/to/emsdk/emsdk_set_env.sh
 
-#for LVGL support use "emmake make LVGL=1 USER_C_MODULES=cmod && . runtest.sh" instead
+# for LVGL support use "./rebuild.sh LVGL=1" instead
+# test will be run automatically.
 emmake make USER_C_MODULES=cmod && . runtest.sh
 
 

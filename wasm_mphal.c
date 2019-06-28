@@ -16,25 +16,44 @@
     #define EMSCRIPTEN_KEEPALIVE
 #endif
 
-
 #include "upython.h"
 
 
 #include <time.h>
 
-// use nanosec timer from emscripten_now_res
+
+struct timespec ts;
+#define EPOCH_US 0
+#if EPOCH_US
+static unsigned long epoch_us = 0;
+#endif
 
 mp_uint_t mp_hal_ticks_ms(void) {
-    struct timespec ts;
-    clock_getres(CLOCK_MONOTONIC, &ts);
-    return ts.tv_nsec * 1000000;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    unsigned long now_us = ts.tv_sec * 1000000 + ts.tv_nsec / 1000 ;
+#if EPOCH_US
+    if (!epoch_us)
+        epoch_us = now_us -1000;
+    return (mp_uint_t)( (now_us - epoch_us) / 1000 ) ;
+#else
+    return  (mp_uint_t)(now_us / 1000);
+#endif
+
 }
 
 mp_uint_t mp_hal_ticks_us(void) {
-    struct timespec ts;
-    clock_getres(CLOCK_MONOTONIC, &ts);
-    return ts.tv_nsec * 1000;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    unsigned long now_us = ts.tv_sec * 1000000 + ts.tv_nsec / 1000 ;
+#if EPOCH_US
+    if (!epoch_us)
+        epoch_us = now_us-1;
+    return (mp_uint_t)(now_us - epoch_us);
+#else
+    return  (mp_uint_t)now_us;
+#endif
 }
+
+
 
 
 // Receive single character

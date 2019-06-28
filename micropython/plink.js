@@ -1,10 +1,29 @@
-document.getElementById('test').textContent = "THIS IS A TEST BLOCK\n"
-document.title="THIS IS A TEST TITLE"
+"use strict";
+
+document.getElementById('test').textContent = "THIS IS THE I/O TEST BLOCK\n"
+document.title="THIS IS A EMPTY TEST TITLE"
 
 // ================= (c/up)link =================================================
-window.embed = {}
-window.embed.state = {}
-window.embed.ref = []
+window.posix = {}
+
+posix.pts = 0
+posix.opentty = function ( term , termp, winp ){
+    posix.pts+=1
+    term.id = posix.pts
+    term.callback = function callback(data){
+        stdin += data
+        return false //no echo
+    }
+
+
+}
+
+
+plink.embed = {}
+plink.embed.state = {}
+plink.embed.ref = []
+
+
 
 function ID(){
      return 'js|' + Math.random().toString(36).substr(2, 9);
@@ -22,9 +41,9 @@ function embed_call_impl(callid, fn, owner, params) {
     if ( (rv !== null) && (typeof rv === 'object')) {
         var seen = false
         var rvid = null;
-        for (var i=0;i<window.embed.ref.length;i++) {
-            if ( Object.is(rv, window.embed.ref[i][1]) ){
-                rvid = window.embed.ref[i][0]
+        for (var i=0;i<plink.embed.ref.length;i++) {
+            if ( Object.is(rv, plink.embed.ref[i][1]) ){
+                rvid = plink.embed.ref[i][0]
                 //console.log('re-using id = ', rvid)
                 seen = true
                 break
@@ -34,14 +53,14 @@ function embed_call_impl(callid, fn, owner, params) {
         if (!seen) {
             rvid = ID();
             window[rvid] = rv;
-            window.embed.ref.push( [rvid, rv ] )
+            plink.embed.ref.push( [rvid, rv ] )
             //transmit bloat only on first access to object
-            window.embed.state[""+callid ] =  rvid +"/"+ rv
+            plink.embed.state[""+callid ] =  rvid +"/"+ rv
         } else
-            window.embed.state[""+callid ] =  rvid
+            plink.embed.state[""+callid ] =  rvid
     } else
-        window.embed.state[""+callid ] =""+rv
-    //console.log("embed_call_impl:" + window.embed.state )
+        plink.embed.state[""+callid ] =""+rv
+    //console.log("embed_call_impl:" + plink.embed.state )
 }
 
 function isCallable(value) {
@@ -79,7 +98,7 @@ function embed_call(jsdata) {
 
         if (!isCallable(target)) {
             console.log("embed_call(query="+name+") == "+target)
-            window.embed.state[""+callid ] = ""+target;
+            plink.embed.state[""+callid ] = ""+target;
             return;
         }
 

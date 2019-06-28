@@ -28,6 +28,10 @@ else
 	endif
 endif
 
+ifdef ASYNC
+	CFLAGS += -D__EMTERPRETER__=1
+endif
+
 ifdef LVGL
 	LVOPTS = -DMICROPY_PY_LVGL=1
 	CFLAGS += $(LVOPTS)
@@ -128,7 +132,8 @@ include ../../py/mkrules.mk
 
 clean:
 	$(RM) -rf $(BUILD) $(CLEAN_EXTRA) $(LIBMICROPYTHON)
-
+	$(shell rm $(BASENAME)/$(BASENAME).* || echo echo test data cleaned up)
+		
 LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 
 #one day, maybe go via a *embeddable* static lib first  ?
@@ -159,7 +164,14 @@ COPT += -Oz -g0 -s FORCE_FILESYSTEM=1
 COPT += -s LZ4=0 --memory-init-file 0
 COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 
+
 WASM_FLAGS=-s BINARYEN_ASYNC_COMPILATION=1 -s WASM=1
+
+ifdef ASYNC
+	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"' 
+endif
+
+
 LINK_FLAGS=-s MAIN_MODULE=1
 THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
 
@@ -173,6 +185,7 @@ check:
 	$(ECHO) EMMAKEN_CFLAGS=$(EMMAKEN_CFLAGS)
 	$(ECHO) EM_CACHE=$(EM_CACHE)	
 	$(ECHO) CPPFLAGS=$(CPPFLAGS)
+	$(shell env|grep ^EM)
 	$(ECHO) "Using [$(CPP)] as prepro"
 
 	
@@ -186,7 +199,7 @@ interpreter:
 
 $(PROG): libs
 	$(ECHO) "Building static executable $@"
-	$(CC) $(CFLAGS) -g -o build/main.o main.c
+	$(CC) $(CFLAGS) -g0 -o build/main.o main.c
 	$(Q)$(CC) $(INC) $(COPT) $(WASM_FLAGS) $(LINK_FLAGS) $(THR_FLAGS) \
  -o $@ main.c $(LIBMICROPYTHON) \
  --preload-file assets@/assets --preload-file micropython/lib@/lib

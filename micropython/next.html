@@ -156,12 +156,14 @@ hi()
     runc(code, embed.vars( hello ))
     print("================================")
 
-    dir(sys.modules['hello'])
-
-    embed.os_compile('hello.py','c.mpy')
-
-    import c
-    print(c)
+    #dir(sys.modules['hello'])
+    try:
+        embed.os_compile('assets/hello.py','c.mpy')
+        import c
+        print(c)
+    except:
+        print("MICROPY_EMIT_NATIVE+MICROPY_PERSISTENT_CODE_SAVE")
+        print("    https://github.com/micropython/micropython/pull/4753")
 
 print("-"*78)
 

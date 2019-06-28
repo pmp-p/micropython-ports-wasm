@@ -46,7 +46,7 @@ py_iter_one(void){
             pyexec_event_repl_process_char(rx);
         } else break;
     }
-
+    PyRun_SimpleString("__import__('asyncio').__auto__()");
 }
 
 /* =====================================================================================
@@ -59,14 +59,21 @@ py_iter_one(void){
 // VERY BAD
 int hack_open(const char *url) {
     fprintf(stderr,"204:hack_open[%s]\n", url);
-    if (url[0]==':') {
+
+    if (strlen(url)>1 && url[0]==':') {
         fprintf(stderr,"  -> same host[%s]\n", url);
         int fidx = EM_ASM_INT({return hack_open(UTF8ToString($0)); }, url );
         char fname[256];
         snprintf(fname, sizeof(fname), "cache_%d", fidx);
         return fileno( fopen(fname,"r") );
     }
-
+    if ( (strlen(url)>6) && (url[4]==':' || url[5]==':') ) {
+        fprintf(stderr,"  -> remote host[%s]\n", url);
+        int fidx = EM_ASM_INT({return hack_open(UTF8ToString($0)); }, url );
+        char fname[256];
+        snprintf(fname, sizeof(fname), "cache_%d", fidx);
+        return fileno( fopen(fname,"r") );
+    }
     return 0;
 }
 
@@ -144,7 +151,7 @@ main(int argc, char *argv[]) {
     //setenv("MICROPYPATH","/data/data/u.root.upy/assets",0);
     setenv("MICROPYPATH","/",1);
 
-    //printf("Py_InitializeEx\n");
+    fprintf(stdout,"Py_InitializeEx(0)\n");
     Py_InitializeEx(0);
 
     for (int i=0; i<argc; i++) {

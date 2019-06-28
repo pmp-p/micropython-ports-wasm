@@ -69,16 +69,9 @@
     <!-- scripts -->
 
     <script src="pythons.js"></script>
+    <script src="plink.js"></script>
 
     <script defer>
-
-
-        /*
-        function reloadScript(target_script) {
-            var url = [location.protocol, '//', location.host, location.pathname].join('');
-            window.location.replace(url + "?env=dev&script=" + target_script);
-        }
-        */
 
         function processScriptArg(url){
             // read text from URL location
@@ -158,14 +151,8 @@
                 setTimeout(handle_pending, 50); // should call lv_task_handler()
             }
             /*Initialize the REPL.*/
-            //mp_js_init_repl();
-
             /*Start the main loop, asynchronously.*/
-            //handle_pending();
-
-
             // Py_InitializeEx is handled by main.c
-            //mp_js_init(1 * 1024 * 1024);
             /*Initialize MicroPython itself*/
             pythons()
     }
@@ -173,84 +160,7 @@
 </script>
 
 <script type="text/µpython">
-print("sys.path :",sys.path, "sys.argv=%r" % sys.argv)
-print()
-
-
-print("open-write hello module")
-with open('assets/hello.py','wb') as file:
-    file.write('''#
-def hi():
-    print("i am module %s" % __import__(__name__))
-hi()
-#
-'''.encode())
-
 import micropython
-
-if 'test' in sys.argv:
-    modules = "ujson uos uzlib utime uctypes ure uhashlib ubinascii uheapq urandom uselect ustruct ucollections uio".split(" ")
-    #mods.extend( "json os zlib time ctypes re hashlib binascii heapq array math cmath struct collections".split(" ") )
-    modules.sort()
-    modules.extend( "micropython embed builtins array math cmath gc ffi io hello".split(" ") )
-
-    print(b'open-read: assets', open('assets/assets.py','rb').read() )
-
-    missing = []
-    for module in modules:
-        try:
-            print( module, ':', __import__(module) )
-        except Exception as e:
-            missing.append( '%s : %r' % (module, e)  )
-    print()
-    while len(missing):
-        print(missing.pop())
-    print()
-
-
-    import utime as time
-    import micropython
-
-
-    print("time = {}\n".format( time.time() ) )
-
-    print("import frozen_str")
-    import frozen_str
-
-    print("\nimport frozen_mpy")
-    import frozen_mpy
-
-
-    print("\n#FIXME: utf-8 :")
-    b= b'\xc3\xa9\xc3\xa8\xc3\xa0\xc3\xb9\xc3\xa7\xe2\x82\xac\xc2\xa9'
-    print('%r' % b )
-    print( b.decode('utf-8') )
-    print("end fixed utf-8!!\n")
-
-    print("\nC-api:")
-    import embed
-    for d in dir(embed):
-        print( d )
-
-    print("\nFFI:")
-    import ffi
-    for d in dir(ffi):
-        print( d )
-
-    lib = ffi.open('lib/libtest.wasm')
-    print( lib )
-    init_test  = lib.func("v", "init_test", "")
-    init_plus_one = lib.func("i","init_plus_one","i")
-    print( init_test )
-    init_test()
-    print("init_plus_one(41)==" , init_plus_one(41) )
-    print("done")
-
-    try:
-        micropython.qstr_info(1)
-    except:
-        print("micropython.qstr_info(1) N/A")
-
 
 print()
 print("-"*78)
@@ -315,15 +225,32 @@ def run_from(url, module=globals(),patch=''):
         m = runc(''.join(code), globals(), file)
         if __compiled__:
             asyncio.auto = 1
+            print("Compilation ok")
         else:
             print("Compilation or interpretation not complete, not running lvgl loop")
     print('='*40)
 
+argv = None
+import lvgl as lv
+import SDL
+import asyncio
+
+# no need for async generator
+def run_loop():
+    SDL.run_once()
+
+
 
 if 'dev' in sys.argv:
-    runc(sample1)
+    run_code(sample1)
 else:
-    print("""
+    argv = None
+    for argv in sys.argv:
+        if argv.startswith('script='):
+            argv = argv.split('=',1)[-1]
+            break
+    else:
+        print("""
 
 # 1 : Simple Button
 -------------------
@@ -333,24 +260,18 @@ run_from("https://wyz.fr/paste/9Aj/raw")
 # 2  : Complex demos, or run script from an url
 ------------------------------------------------
 run_from('lvgl:example1.py')
-#nope run_from('assets/lvgl_ae.py')
-#nope run_from("lvgl:chart_anim_example.py")
-#nope run_from("lvgl:advanced_demo.py")
+#nope run_from('lvgl:example2.py')
+run_from("lvgl:chart_anim_example.py")
+run_from("lvgl:advanced_demo.py")
 
 """)
+
+    if argv:
+        run_from(argv)
+
+
 print("-"*78)
-
-async def run_aloop():
-    while 1:
-        SDL.run_once()
-        await asyncio.sleep_ms(16)
-
-def run_loop():
-    SDL.run_once()
-
-import asyncio
 asyncio.get_event_loop().create_task( run_loop )
-
 
 
 </script>

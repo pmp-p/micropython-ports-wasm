@@ -42,18 +42,24 @@
 #include <stdio.h>
 
 STATIC mp_obj_t mod_time_time(void) {
-#if MICROPY_PY_BUILTINS_FLOAT
     struct timeval tv;
     gettimeofday(&tv, NULL);
+
+#if MICROPY_PY_BUILTINS_FLOAT
     mp_float_t val = tv.tv_sec + (mp_float_t)tv.tv_usec / 1000000;
     return mp_obj_new_float(val);
 #else
-    return mp_obj_new_int((mp_int_t)time(NULL));
+    return mp_obj_new_int_from_uint( tv.tv_sec );
 #endif
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_obj, mod_time_time);
 
-
+STATIC mp_obj_t mod_time_time_ns(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return mp_obj_new_int_from_uint( ts.tv_nsec );
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_time_ns_obj, mod_time_time_ns);
 
 STATIC
 mp_obj_t mod_time_sleep(mp_obj_t arg) {
@@ -123,7 +129,13 @@ STATIC const mp_rom_map_elem_t mp_module_time_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sleep_ms), MP_ROM_PTR(&mod_time_sleep_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_sleep_us), MP_ROM_PTR(&mod_time_sleep_us_obj) },
     { MP_ROM_QSTR(MP_QSTR_time), MP_ROM_PTR(&mod_time_time_obj) },
+    { MP_ROM_QSTR(MP_QSTR_time_ns), MP_ROM_PTR(&mod_time_time_ns_obj) },
     { MP_ROM_QSTR(MP_QSTR_localtime), MP_ROM_PTR(&mod_time_localtime_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&mp_utime_ticks_ms_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ticks_us), MP_ROM_PTR(&mp_utime_ticks_us_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ticks_cpu), MP_ROM_PTR(&mp_utime_ticks_cpu_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ticks_add), MP_ROM_PTR(&mp_utime_ticks_add_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ticks_diff), MP_ROM_PTR(&mp_utime_ticks_diff_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_module_time_globals, mp_module_time_globals_table);
