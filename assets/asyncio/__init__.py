@@ -33,8 +33,10 @@ except:
             def unregister(self,*argv):
                 print("register",argv)
 
-            def ipoll(self,delay,v):
-                print("ipoll",default,v)
+            def ipoll(*self):
+                #print("ipoll",self)
+                return ()
+
 
         instance = fake_poll()
         @classmethod
@@ -65,13 +67,6 @@ import utimeq
 # import ucollections
 
 
-TM_RES = 1 #_000_000
-
-def T_ms(delay,mul=1, add_ticks=0):
-    global TM_RES
-    r = int(delay)*mul*TM_RES
-    r += int(add_ticks)
-    return r
 
 
 def iscoroutine(f):
@@ -86,7 +81,6 @@ class CancelledError(Exception):
 class TimeoutError(CancelledError):
     pass
 
-
 class EventLoop:
     def __init__(self, runq_len=16, waitq_len=16):
         self.runq = []  # ucollections.deque((), runq_len, True)
@@ -98,12 +92,8 @@ class EventLoop:
         self.scheduler = []
 
 
-    if __EMSCRIPTEN__:
-        def time_ms(self):
-            return int(time.time()*1000)
-    else:
-        def time_ms(self):
-            return time.ticks_ms()
+    def time_ms(self):
+        return time.ticks_ms()
 
     def create_task(self, coro):
         # CPython 3.4.2
@@ -121,13 +111,13 @@ class EventLoop:
             self.runq.append(argv)
 
     def call_later(self, delay, callback, *argv):
-        self.call_at_( T_ms(self.time_ms(),add_ticks=delay*1000) , callback, argv)
+        self.call_at_( time.ticks_add( self.time_ms(), int(delay*1000) ) , callback, argv)
 
     def call_later_ms(self, delay, callback, *argv):
         if not delay:
             return self.call_soon(callback, *argv)
-        #self.call_at_(time.ticks_add(self.time_ms(), int(delay)), callback, argv)
-        self.call_at_( T_ms(self.time_ms(),add_ticks=delay), callback, argv)
+        self.call_at_(time.ticks_add(self.time_ms(), int(delay)), callback, argv)
+
 
     def call_at_(self, time, callback, argv=()):
         self.waitq.push(time, callback, argv)
@@ -157,8 +147,8 @@ class EventLoop:
         # Expire entries in waitq and move them to runq
         # print('waitq', len(self.waitq) )
         while len(self.waitq):
-            delay = T_ms( self.waitq.peektime(), add_ticks = -tnow )
-            # print('  delay',delay)
+            delay = time.ticks_diff(self.waitq.peektime(), tnow)
+
             if delay > 0:
                 break
             self.waitq.pop(cur_task)
@@ -176,7 +166,8 @@ class EventLoop:
                 try:
                     cb(*argv)
                     continue
-                except TypeError:print(cb,argv)
+                except TypeError:
+                    print("170:run_once",cb,argv)
 
             self.cur_task = cb
             delay = 0
@@ -241,11 +232,10 @@ class EventLoop:
         if not len(self.runq):
             delay = -1
             if self.waitq:
-                pt = self.waitq.peektime()
-                tms = -self.time_ms()
-                delay = T_ms( pt, add_ticks = tms )
+                delay = time.ticks_diff(self.waitq.peektime(), self.time_ms())
                 if delay < 0:
                     delay = 0
+        self.wait(delay)
         return delay
 
     def run_forever(self):

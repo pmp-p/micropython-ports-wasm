@@ -182,14 +182,16 @@ async def tictac():
             print('tic')
         else:
             print('tac')
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
 
 
 loop.create_task( tictac() )
 
-loop.run_once()
+#loop.run_once()
+#loop
 
-loop
+asyncio.auto =1
+
 
 
 #imp.load_module('ulink')
