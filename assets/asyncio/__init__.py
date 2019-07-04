@@ -20,10 +20,12 @@ def __auto__():
             print("asyncio, panic stopping auto loop",file=sys.stderr)
     return None
 
+import builtins
+
 try:
     import uselect as select
 except:
-
+    print("TODO: a select.poll() implementation is required for", sys.platform)
     class select:
         class fake_poll:
 
@@ -41,19 +43,14 @@ except:
         instance = fake_poll()
         @classmethod
         def poll(cls):
-            print("TODO: a wasm select.poll() implementation is required")
             return cls.instance
-
-
-
-import builtins
 
 try:
     __EMSCRIPTEN__
 except:
-    builtins.__EMSCRIPTEN__ = __import__('sys').platform in ('asm.js','wasm',)
+    builtins.__EMSCRIPTEN__ = sys.platform in ('asm.js','wasm',)
 
-if __EMSCRIPTEN__ or 1:
+if __EMSCRIPTEN__:
     print("""
 #FIXME: time with time.time_ns()
     https://www.python.org/dev/peps/pep-0564/
@@ -61,12 +58,13 @@ if __EMSCRIPTEN__ or 1:
 """)
     import embed
 
+else:
+    import uselect as select
+
 import utime as time
 import utimeq
 
 # import ucollections
-
-
 
 
 def iscoroutine(f):

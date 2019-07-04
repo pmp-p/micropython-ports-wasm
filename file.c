@@ -161,7 +161,7 @@ STATIC const mp_arg_t file_open_args[] = {
 #define FILE_OPEN_NUM_ARGS MP_ARRAY_SIZE(file_open_args)
 
 // FIXME:
-extern int hack_open(const char *url);
+extern int wasm_file_open(const char *url);
 
 STATIC mp_obj_t fdfile_open(const mp_obj_type_t *type, mp_arg_val_t *args) {
     mp_obj_fdfile_t *o = m_new_obj(mp_obj_fdfile_t);
@@ -210,7 +210,7 @@ STATIC mp_obj_t fdfile_open(const mp_obj_type_t *type, mp_arg_val_t *args) {
     int fd=0;
 
     if (can_online)
-        fd = hack_open( fname );
+        fd = wasm_file_open( fname );
 
     if (!fd)
         fd = open(fname, mode_x | mode_rw, 0644);

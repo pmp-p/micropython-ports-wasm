@@ -55,30 +55,12 @@ py_iter_one(void){
 
 */
 
+#include "wasm_file_api.c"
 
-// VERY BAD
-int hack_open(const char *url) {
-    fprintf(stderr,"204:hack_open[%s]\n", url);
-
-    if (strlen(url)>1 && url[0]==':') {
-        fprintf(stderr,"  -> same host[%s]\n", url);
-        int fidx = EM_ASM_INT({return hack_open(UTF8ToString($0)); }, url );
-        char fname[256];
-        snprintf(fname, sizeof(fname), "cache_%d", fidx);
-        return fileno( fopen(fname,"r") );
-    }
-    if ( (strlen(url)>6) && (url[4]==':' || url[5]==':') ) {
-        fprintf(stderr,"  -> remote host[%s]\n", url);
-        int fidx = EM_ASM_INT({return hack_open(UTF8ToString($0)); }, url );
-        char fname[256];
-        snprintf(fname, sizeof(fname), "cache_%d", fidx);
-        return fileno( fopen(fname,"r") );
-    }
-    return 0;
-}
 
 // BAD ENOUGH
-mp_import_stat_t hack_modules(const char *modname) {
+mp_import_stat_t
+hack_modules(const char *modname) {
     if( access( modname, F_OK ) != -1 ) {
         struct stat stats;
         stat(modname, &stats);
@@ -87,11 +69,12 @@ mp_import_stat_t hack_modules(const char *modname) {
         return MP_IMPORT_STAT_FILE;
     }
     //FIXME: directory vs files ?
-    int found = EM_ASM_INT({return file_exists(UTF8ToString($0), true); }, modname ) ;
-    if ( found ) {
-        int dl = EM_ASM_INT({return hack_open(UTF8ToString($0),UTF8ToString($0)); }, modname );
+    int found = EM_ASM_INT({return wasm_file_exists(UTF8ToString($0), true); }, modname ) ;
+
+    if ( found>0 ) {
+        int dl = EM_ASM_INT({return wasm_file_open(UTF8ToString($0),UTF8ToString($0)); }, modname );
         fprintf(stderr,"hack_modules: dl %s size=%d ", modname, dl);
-        if (dl)
+        if (dl>=0)
             return MP_IMPORT_STAT_FILE;
     }
     fprintf(stderr,"404:hack_modules '%s' (%d)\n", modname, found);

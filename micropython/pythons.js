@@ -219,6 +219,7 @@ function awfull_get(url) {
         var percentComplete = oEvent.loaded / oEvent.total;
       } else {
             // Unable to compute progress information since the total size is unknown
+          // on binary XHR
       }
     }
 
@@ -253,7 +254,7 @@ function awfull_get(url) {
     return oReq.response
 }
 
-function hack_open(url, cachefile){
+function wasm_file_open(url, cachefile){
     try {
         if (url[0]==":")
             url = url.substr(1)
@@ -273,26 +274,26 @@ function hack_open(url, cachefile){
         FS.createDataFile("/", cachefile, ab, true, true);
         return ret
     } catch (x) {
-        console.log("hack_open :"+x)
-        return 0
+        console.log("wasm_file_open :"+x)
+        return -1
     }
 }
 
 
-function file_exists(urlToFile, need_dot) {
+function wasm_file_exists(urlToFile, need_dot) {
     if (need_dot) {
         need_dot = urlToFile.split('.').pop()
         if (need_dot==urlToFile) {
-            //console.log("file_exists not-a-file :"+urlToFile)
-            return 0
+            //console.log("wasm_file_exists not-a-file :"+urlToFile)
+            return -1
         }
-        //console.log("file_exists ? :"+urlToFile)
+        //console.log("wasm_file_exists ? :"+urlToFile)
     }
 
     var xhr = new XMLHttpRequest()
     xhr.open('HEAD', urlToFile, false)
     xhr.send()
-    var ret=0
+    var ret=-1
     if (xhr.status == 200 )
         ret=1
     //console.log(ret)
@@ -502,7 +503,7 @@ async function _get(url,trigger){
 }
 
 async function dlopen_lzma(lib,size_hint) {
-    if ( file_exists("lib/lib"+lib +".js") ){
+    if ( wasm_file_exists("lib/lib"+lib +".js") ){
         console.log(" =========== CAN RAW EVAL ========== ")
     }
     var lzma_file = "lib"+lib+".js.lzma"

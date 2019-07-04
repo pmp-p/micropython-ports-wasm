@@ -59,9 +59,6 @@
 
     <p>
 
-    <!-- scripts -->
-
-
 <script type="text/µpython">
 print("sys.path :",sys.path, "sys.argv=%r" % sys.argv)
 print()
@@ -156,23 +153,18 @@ hi()
     runc(code, embed.vars( hello ))
     print("================================")
 
-    #dir(sys.modules['hello'])
-    try:
-        embed.os_compile('assets/hello.py','c.mpy')
-        import c
-        print(c)
-    except:
-        print("MICROPY_EMIT_NATIVE+MICROPY_PERSISTENT_CODE_SAVE")
-        print("    https://github.com/micropython/micropython/pull/4753")
+    embed.os_compile('assets/hello.py','c.mpy')
+    import c
 
 print("-"*78)
 
 import embed
+
 import asyncio
 loop = asyncio.get_event_loop()
 
 #try:raise Exception()
-#except Exception as e:sys.print_execption(e) #113
+#except Exception as e:sys.print_exception(e) #113
 
 async def tictac():
     tictac = False
@@ -206,31 +198,6 @@ asyncio.auto =1
 
     <script>
 
-
-        /*
-        function reloadScript(target_script) {
-            var url = [location.protocol, '//', location.host, location.pathname].join('');
-            window.location.replace(url + "?env=dev&script=" + target_script);
-        }
-        */
-        function processScriptArg(url){
-            // read text from URL location
-            var request = new XMLHttpRequest();
-            console.log("GET " + url);
-            request.open('GET', url, true);
-            request.send(null);
-            request.onreadystatechange = function () {
-                if (request.readyState === 4 && request.status === 200) {
-                    var type = request.getResponseHeader('Content-Type');
-                    if (type.indexOf("text") !== 1) {
-                        console.log(request.reponseText);
-                        if(request.responseText === undefined)
-                            return;
-                        mp_js_do_str(request.responseText);
-                    }
-                }
-            }
-        }
         Module.canvas = (function() {
             var canvas = document.getElementById('canvas');
             return canvas;
@@ -280,7 +247,6 @@ asyncio.auto =1
             term.open(mp_js_stdout);
             term.fit();
 
-
             /*Initialize MicroPython itself*/
             // Py_InitializeEx is handled by main.c
             //mp_js_init(1 * 1024 * 1024);
@@ -296,29 +262,9 @@ asyncio.auto =1
             /*Setup key input handler */
             term.on('data', function(key, e) {
                 window.stdin += key
+                //local echo
                 //term.write(key)
             });
-
-
-
-            /* Run custom script if passed */
-            var custom = undefined;
-            try {
-                custom = new URL(window.location.href).searchParams.get("script");
-            } catch (e) {
-                console.log(e + ": URL seems to be unsupported");
-            }
-            console.log("Custom script: " + custom);
-            if(custom !== undefined && custom !== null)
-                processScriptArg(custom);
-
-            /*Setup lv_task_handler loop*/
-            //var the_mp_handle_pending = Module.cwrap('mp_handle_pending', null);
-
-            function handle_pending() {
-                the_mp_handle_pending();
-                setTimeout(handle_pending, 50); // should call lv_task_handler()
-            }
 
             /*Initialize MicroPython itself*/
             /*Initialize the REPL.*/
