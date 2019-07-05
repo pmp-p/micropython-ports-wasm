@@ -134,6 +134,8 @@ if not 'dev' in sys.argv:
     print()
 
 
+if 1:
+
     code ="""#
 def hi():
     print("i am module %s" % __import__(__name__))
@@ -142,13 +144,15 @@ hi()
 #
 """
 
-    print("open-write hello module")
+    print("open-write hello module size=",len(code))
     with open('assets/hello.py','wb') as file:
         file.write(code.encode())
 
-    import embed
+
     import hello
 
+
+    import embed
     print("================================")
     runc(code, embed.vars( hello ))
     print("================================")
@@ -156,37 +160,37 @@ hi()
     embed.os_compile('assets/hello.py','c.mpy')
     import c
 
-print("-"*78)
+else:
+    print("-"*78)
 
-import embed
+    import embed
 
-import asyncio
-loop = asyncio.get_event_loop()
+    import asyncio
+    loop = asyncio.get_event_loop()
 
-#try:raise Exception()
-#except Exception as e:sys.print_exception(e) #113
+    #try:raise Exception()
+    #except Exception as e:sys.print_exception(e) #113
 
-async def tictac():
-    tictac = False
-    while True:
-        tictac = not tictac
-        if tictac:
-            print('tic')
-        else:
-            print('tac')
-        await asyncio.sleep(1)
-
-
-loop.create_task( tictac() )
-
-#loop.run_once()
-#loop
-
-asyncio.auto =1
+    async def tictac():
+        tictac = False
+        while True:
+            tictac = not tictac
+            if tictac:
+                print('tic')
+            else:
+                print('tac')
+            await asyncio.sleep(1)
 
 
 
-#imp.load_module('ulink')
+    #loop.create_task( tictac() )
+    #loop.run_once()
+
+    #asyncio.auto =1
+
+
+
+    #imp.load_module('ulink')
 
 </script>
 <br/>
@@ -202,40 +206,6 @@ asyncio.auto =1
             var canvas = document.getElementById('canvas');
             return canvas;
         })();
-        var lines = [
-            "import lvgl as lv",
-            "lv.init()",
-            "import SDL",
-            "SDL.init()",
-
-            /* Register SDL display driver. */
-            "disp_buf1 = lv.disp_buf_t()",
-            "buf1_1 = bytes(480*10)",
-            "lv.disp_buf_init(disp_buf1,buf1_1, None, len(buf1_1)//4)",
-            "disp_drv = lv.disp_drv_t()",
-            "lv.disp_drv_init(disp_drv)",
-            "disp_drv.buffer = disp_buf1",
-            "disp_drv.flush_cb = SDL.monitor_flush",
-            "disp_drv.hor_res = 480",
-            "disp_drv.ver_res = 320",
-            "lv.disp_drv_register(disp_drv)",
-            /*Regsiter SDL mouse driver*/
-            "indev_drv = lv.indev_drv_t()",
-            "lv.indev_drv_init(indev_drv)",
-            "indev_drv.type = lv.INDEV_TYPE.POINTER;",
-            "indev_drv.read_cb = SDL.mouse_read;",
-            "lv.indev_drv_register(indev_drv);",
-            /* Create a screen with a button and a label */
-            "scr = lv.obj()",
-            "btn = lv.btn(scr)",
-            "btn.align(lv.scr_act(), lv.ALIGN.CENTER, 0, 0)",
-            "label = lv.label(btn)",
-            "label.set_text('Button')",
-            /* Load the screen */
-            "lv.scr_load(scr)"
-        ];
-
-
 
         /*Initialization function*/
         window.onload = function() {

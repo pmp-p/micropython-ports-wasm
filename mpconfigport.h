@@ -21,7 +21,6 @@
 #define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_DOUBLE)
 //just in case of long urls and a local cache ?
 #define MICROPY_ALLOC_PATH_MAX      (1024)
-#define MICROPY_ALLOC_PARSE_CHUNK_INIT (16)
 #define MICROPY_BUILTIN_METHOD_CHECK_SELF_ARG (0)
 #define MICROPY_CAN_OVERRIDE_BUILTINS (1)
 
@@ -56,8 +55,11 @@
 //#define MICROPY_EMIT_MACHINE_CODE (1)
 
 #define MICROPY_HAS_FILE_READER (1)
-#define MICROPY_READER_POSIX (0)
 #define MICROPY_HELPER_LEXER_UNIX (1)
+
+#define MICROPY_READER_POSIX (0)
+#define MICROPY_VFS_POSIX    (0)
+
 
 #define MICROPY_EMIT_WASM (1)
 //#define MICROPY_EMIT_INLINE_ASM (1)
@@ -84,6 +86,10 @@
 #define MICROPY_PY_MICROPYTHON_MEM_INFO   (1)
 #define MICROPY_ENABLE_GC           (1)
 #define MICROPY_GC_ALLOC_THRESHOLD  (1)
+
+//like ESP/UNIX
+#define MICROPY_ALLOC_PARSE_CHUNK_INIT (64)
+
 
 #if MICROPY_PY_LVGL
 #define MICROPY_MEM_STATS           (0)
@@ -212,7 +218,7 @@
 #define MICROPY_DEBUG_PRINTERS      (0)
 #define MICROPY_MPY_CODE_SAVE       (1)
 #define MICROPY_REPL_EVENT_DRIVEN   (1)
-#define MICROPY_ENABLE_DOC_STRING   (0)
+#define MICROPY_ENABLE_DOC_STRING   (1)
 
 
 //asyncio implemented

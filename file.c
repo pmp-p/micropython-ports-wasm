@@ -303,7 +303,6 @@ MP_DEFINE_CONST_FUN_OBJ_KW(mp_builtin_open_obj, 1, mp_builtin_open);
 EMSCRIPTEN_KEEPALIVE mp_obj_t
 mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
     // TODO: analyze buffering args and instantiate appropriate type
-    #pragma message "finally there"
     mp_arg_val_t arg_vals[FILE_OPEN_NUM_ARGS];
     mp_arg_parse_all(n_args, args, kwargs, FILE_OPEN_NUM_ARGS, file_open_args, arg_vals);
     return fdfile_open(&mp_type_textio, arg_vals);
@@ -312,4 +311,6 @@ mp_builtin_open_obj(size_t n_args, const mp_obj_t *args, mp_map_t *kwargs) {
 const mp_obj_fdfile_t mp_sys_stdin_obj  = { .base = {&mp_type_textio}, .fd = STDIN_FILENO };
 const mp_obj_fdfile_t mp_sys_stdout_obj = { .base = {&mp_type_textio}, .fd = STDOUT_FILENO };
 const mp_obj_fdfile_t mp_sys_stderr_obj = { .base = {&mp_type_textio}, .fd = STDERR_FILENO };
+#else
+#pragma message "should have MICROPY_PY_IO && !MICROPY_VFS"
 #endif // MICROPY_PY_IO && !MICROPY_VFS

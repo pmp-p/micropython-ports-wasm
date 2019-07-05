@@ -46,7 +46,7 @@ py_iter_one(void){
             pyexec_event_repl_process_char(rx);
         } else break;
     }
-    PyRun_SimpleString("__import__('asyncio').__auto__()");
+    //PyRun_SimpleString("__import__('asyncio').__auto__()");
 }
 
 /* =====================================================================================
@@ -73,9 +73,15 @@ hack_modules(const char *modname) {
 
     if ( found>0 ) {
         int dl = EM_ASM_INT({return wasm_file_open(UTF8ToString($0),UTF8ToString($0)); }, modname );
-        fprintf(stderr,"hack_modules: dl %s size=%d ", modname, dl);
-        if (dl>=0)
+
+        if (found==1) {
+            fprintf(stderr,"hack_modules: DL FILE %s size=%d ", modname, dl);
             return MP_IMPORT_STAT_FILE;
+        }
+        if (found==2) {
+            fprintf(stderr,"hack_modules: IS DIR %s size=%d ", modname, dl);
+            return MP_IMPORT_STAT_DIR;
+        }
     }
     fprintf(stderr,"404:hack_modules '%s' (%d)\n", modname, found);
     return MP_IMPORT_STAT_NO_EXIST;

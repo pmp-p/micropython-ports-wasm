@@ -20,12 +20,24 @@ def __auto__():
             print("asyncio, panic stopping auto loop",file=sys.stderr)
     return None
 
-import builtins
-
 try:
     import uselect as select
 except:
     print("TODO: a select.poll() implementation is required for", sys.platform)
+
+try:
+    __EMSCRIPTEN__
+except:
+    __import__('builtins').__EMSCRIPTEN__ = sys.platform in ('asm.js','wasm',)
+
+if __EMSCRIPTEN__:
+    print("""
+#FIXME: asyncio with time.time_ns() PEP 564
+""")
+#    https://www.python.org/dev/peps/pep-0564/
+#    https://vstinner.github.io/python37-pep-564-nanoseconds.html
+
+    import embed
     class select:
         class fake_poll:
 
@@ -44,22 +56,6 @@ except:
         @classmethod
         def poll(cls):
             return cls.instance
-
-try:
-    __EMSCRIPTEN__
-except:
-    builtins.__EMSCRIPTEN__ = sys.platform in ('asm.js','wasm',)
-
-if __EMSCRIPTEN__:
-    print("""
-#FIXME: time with time.time_ns()
-    https://www.python.org/dev/peps/pep-0564/
-    https://vstinner.github.io/python37-pep-564-nanoseconds.html
-""")
-    import embed
-
-else:
-    import uselect as select
 
 import utime as time
 import utimeq
