@@ -14,10 +14,20 @@ if not 'dev' in sys.argv:
     modules.sort()
     modules.extend( "micropython embed builtins array math cmath gc ffi io".split(" ") )
 
-    modules.append("uselect")
+
     modules.append("hello")
 
-    print("open-write hello module")
+    #this one will fail
+    modules.append("uselect")
+
+
+    def test_header(text):
+        print("\n"*4)
+        print(text)
+        print("="*30)
+
+    test_header("Test file write (MEMFS-volatile)")
+    print("open-write hello.py module")
     with open('hello.py','wb') as file:
         file.write('''
 
@@ -25,10 +35,11 @@ print("i am hello module",__import__(__name__))
 
 '''.encode())
 
-    import micropython
 
 
-    print(b'open-read: assets', open('assets/assets.py','rb').read() )
+    test_header("Test some modules")
+
+
 
     missing = []
     for module in modules:
@@ -42,12 +53,22 @@ print("i am hello module",__import__(__name__))
         print(missing.pop())
     print()
 
+    test_header("Test read a file")
+
+    print(b'open-read: assets', open('assets/asset.py','rb').read() )
+
 
     import utime as time
-    import micropython
+
+
+    test_header('Test time and format')
 
 
     print("time = {}\n".format( time.time() ) )
+
+
+
+    test_header('Test frozen_*')
 
     print("import frozen_str")
     import frozen_str
@@ -56,18 +77,21 @@ print("i am hello module",__import__(__name__))
     import frozen_mpy
 
 
-    print("\n#utf-8 :")
+    test_header("Test utf-8 output")
+
     b= b'\xc3\xa9\xc3\xa8\xc3\xa0\xc3\xb9\xc3\xa7\xe2\x82\xac\xc2\xa9'
     print('%r' % b )
     print( b.decode('utf-8') )
 
 
-    print("\nC-api:")
+
+    test_header("Test C-api:")
     import embed
     for d in dir(embed):
         print( d )
 
-    print("\nFFI:")
+    test_header('Test FFI')
+
     import ffi
     for d in dir(ffi):
         print( d )
@@ -81,6 +105,9 @@ print("i am hello module",__import__(__name__))
     print("init_plus_one(41)==" , init_plus_one(41) )
     print("done")
 
+
+
+    import micropython
     try:
         micropython.qstr_info(1)
     except:

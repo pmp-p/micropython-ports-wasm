@@ -14,19 +14,35 @@ include ../../py/mkenv.mk
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
 
+PORTS=$(EM_CACHE)/asmjs/ports-builds
+
+# actually for lvgl
+CPPFLAGS=-I$(PORTS)/sdl2/include
+
+ifdef WASM_FILE_API
+	CPPFLAGS += -DWASM_FILE_API=1 
+endif
+
 ifdef EMSCRIPTEN
-	CPPFLAGS=-I$(EM_CACHE)/asmjs/ports-builds/sdl2/include
 	CC = emcc
-	CPP = clang -E --sysroot $(EMSCRIPTEN)/system  -isystem $(EMSCRIPTEN)/system/include/libc -cxx-isystem $(EMSCRIPTEN)/system/include/libcxx $(CPPFLAGS)
+	CPP = clang -E -D__CPP__ -D__EMSCRIPTEN__
+	CPP += --sysroot $(EMSCRIPTEN)/system
+	CPP += -isystem $(EMSCRIPTEN)/system/include/libc
+	CPP += -isystem $(EMSCRIPTEN)/system/include/libcxx
+	CPP += $(CPPFLAGS)
+	# Act like 'emcc'
+	CPP += -U__i386 -U__i386 -Ui386 -U__SSE -U__SSE_MATH -U__SSE2 -U__SSE2_MATH -U__MMX__ -U__SSE__ -U__SSE_MATH__ -U__SSE2__ -U__SSE2_MATH__
 else
 	ifdef CLANG
 		CC=clang
-		CPP=clang -E
+		CPP=clang -E -D__CPP__
 	else
 		CC = gcc
-		CPP = gcc -E
+		CPP = gcc -E -D__CPP__
 	endif
 endif
+
+
 
 ifdef ASYNC
 	CFLAGS += -D__EMTERPRETER__=1
@@ -165,7 +181,7 @@ COPT += -s LZ4=0 --memory-init-file 0
 COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 
 
-WASM_FLAGS=-s BINARYEN_ASYNC_COMPILATION=1 -s WASM=1
+WASM_FLAGS=-s BINARYEN_ASYNC_COMPILATION=1 -s WASM=1 -s BINARYEN_TRAP_MODE=\"clamp\"
 
 ifdef ASYNC
 	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"' 

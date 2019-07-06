@@ -46,7 +46,7 @@ py_iter_one(void){
             pyexec_event_repl_process_char(rx);
         } else break;
     }
-    //PyRun_SimpleString("__import__('asyncio').__auto__()");
+    PyRun_SimpleString("__import__('asyncio').__auto__()");
 }
 
 /* =====================================================================================
@@ -140,11 +140,11 @@ main(int argc, char *argv[]) {
     //setenv("MICROPYPATH","/data/data/u.root.upy/assets",0);
     setenv("MICROPYPATH","/",1);
 
-    fprintf(stdout,"Py_InitializeEx(0)\n");
+    fprintf(stdout,"Py_InitializeEx(0)\r\n");
     Py_InitializeEx(0);
 
     for (int i=0; i<argc; i++) {
-        fprintf(stderr,"Micropython-wasm argv[%d]='%s'\n",i,argv[i]);
+        fprintf(stderr,"Micropython-wasm argv[%d]='%s'\r\n",i,argv[i]);
         if (i>1)  // skip silly "./this.program" and sys.executable
             mp_obj_list_append(mp_sys_argv, MP_OBJ_NEW_QSTR(qstr_from_str(argv[i])));
     }
@@ -152,9 +152,9 @@ main(int argc, char *argv[]) {
     //chdir("/data/data/u.root.upy/assets");
     chdir("/");
 
-    fprintf(stderr," =================================================\n");
+    fprintf(stderr," =================================================\r\n");
     PyArg_ParseTuple(nullptr,"%s\n","argv1");
-    fprintf(stderr," =================================================\n");
+    fprintf(stderr," =================================================\r\n");
 
     writecode(
         "boot.py",

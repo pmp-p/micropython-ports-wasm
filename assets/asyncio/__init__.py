@@ -235,7 +235,7 @@ class EventLoop:
     def run_forever(self):
         global cur_task
         while True:
-            self.wait( self.run_once(cur_task) )
+            self.wait( self.run_once() )
 
 
     def run_until_complete(self, coro):

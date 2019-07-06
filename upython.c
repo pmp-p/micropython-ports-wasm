@@ -127,7 +127,7 @@ mp_import_stat_t mp_import_stat(const char *path) {
 
 
 #if !MICROPY_READER_POSIX && MICROPY_EMIT_WASM
-
+/*
 mp_lexer_t *
 mp_lexer_new_from_file_wasm(const char *filename, char *cbuf) {
     FILE *file = fopen(filename,"r");
@@ -153,7 +153,7 @@ mp_lexer_new_from_file_wasm(const char *filename, char *cbuf) {
     fprintf(stderr, "======================\n%s\n===================\n" ,  cbuf);
     return lex;
 }
-
+*/
 mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
@@ -176,7 +176,7 @@ mp_lexer_new_from_file(const char *filename) {
         return NULL;
     }
     mp_lexer_t* lex = mp_lexer_new_from_str_len(qstr_from_str(filename), cbuf, strlen(cbuf), 0);
-    fprintf(stderr, "===== EXPECT FAILURE =====\n%s\n===== EXPECT FAILURE ========\n" ,  cbuf);
+    //fprintf(stderr, "===== EXPECT FAILURE =====\n%s\n===== EXPECT FAILURE ========\n" ,  cbuf);
     free(cbuf); // <- remove that and emcc -shared will break
     return lex;
 }

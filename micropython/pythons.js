@@ -254,6 +254,9 @@ function awfull_get(url) {
     return oReq.response
 }
 
+
+
+
 function wasm_file_open(url, cachefile){
     var dirpath = ""
     if ( url == cachefile ) {
@@ -295,6 +298,7 @@ function wasm_file_open(url, cachefile){
         if (url[0]==":")
             url = url.substr(1)
         else {
+            // [TODO:do some tests there for your CORS integration]
             if (url.includes('/wyz.fr/'))
                 url = CORS_BROKER + url
         }
@@ -315,10 +319,12 @@ function wasm_file_open(url, cachefile){
     }
 }
 
-
 window.USE_DIR_INDEX = "/index.html"
 
 function wasm_file_exists(url, need_dot) {
+    // need_dot reminds we can't check for directory on webserver
+    // but we can check for a know file (probaby with a dot) under it
+    // -1 not found , 1 is a file on server , 2 is a directory
 
     function url_exists(url,code) {
         var xhr = new XMLHttpRequest()
@@ -346,17 +352,17 @@ function wasm_file_exists(url, need_dot) {
 
             // package search
             found = url_exists( url + '/__init__.py' , 2 )
-            console.log("wasm_([dir]/file)_exists ? :"+url+ ' --> ' + '/__init__.py => '+found)
+            //console.log("wasm_([dir]/file)_exists ? :"+url+ ' --> ' + '/__init__.py => '+found)
             if (found>0) return found
 
             //namespace search
             found = url_exists( url + USE_DIR_INDEX , 2 )
-            console.log("wasm_([dir]/file)_exists ? :"+url+ ' --> ' + USE_DIR_INDEX+" => "+found)
+            //console.log("wasm_([dir]/file)_exists ? :"+url+ ' --> ' + USE_DIR_INDEX+" => "+found)
             if (found>0) return found
         }
 
         // if name has no dot then it was a folder check
-        console.log("wasm_(dir/[file])_exists ? :"+url)
+        //console.log("wasm_(dir/[file])_exists ? :"+url)
         need_dot = url.split('.').pop()
         if (need_dot==url) {
             console.log("wasm_file_exists not-a-file :"+url)

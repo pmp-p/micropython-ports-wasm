@@ -173,6 +173,14 @@
 #define MICROPY_PY_SYS_MAXSIZE      (1)
 #define MICROPY_PY_SYS_PLATFORM     "wasm"
 
+// IO is cooked and multiplexed via mp_hal_stdout_tx_strn in file.c
+// so do not modify those
+// https://github.com/python/cpython/blob/v3.7.3/Python/bltinmodule.c#L1849-L1932
+#define MICROPY_PY_SYS_STDIO_BUFFER (1)
+#define MICROPY_PY_SYS_STDFILES     (1)
+#define MICROPY_PY_IO               (1)
+#define MICROPY_PY_OS_DUPTERM       (1)
+
 #define MICROPY_PY_THREAD           (0)
 #define MICROPY_PY_THREAD_GIL       (0)
 #define MICROPY_PY_TIME             (0)
@@ -206,7 +214,7 @@
 #define MICROPY_PY_UTIMEQ           (1)
 #define MICROPY_PY_UZLIB            (1)
 
-#define MICROPY_PY_IO                   (1)
+//#define MICROPY_PY_IO                   (1) => 0 I/O
 #define MICROPY_PY_IO_IOBASE            (1)
 #define MICROPY_PY_IO_RESOURCE_STREAM   (1)
 #define MICROPY_PY_IO_FILEIO            (1)

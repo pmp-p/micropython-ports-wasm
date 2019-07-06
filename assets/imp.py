@@ -1,3 +1,4 @@
+
 def new_module(module):
     import sys
     save = list(sys.path)
@@ -30,7 +31,8 @@ def load_module(module, *argv):
         globals()[mroot] = m
         return m
 
-print(""" This can provide a workaround for :
+if not 'dev' in __import__('sys').argv:
+    print(""" This can provide a workaround for :
     https://github.com/pmp-p/micropython-ports-wasm/issues/5
 use imp.load_module(modulename) to load modules from /assets/*.py
 """)
