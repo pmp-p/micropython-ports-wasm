@@ -1,14 +1,3 @@
-#if __EMSCRIPTEN__
-    // obviously compiling
-    // i still think that is a mistake to merge/mix C flags and "make" options, and also compiler/prepro
-    // https://github.com/micropython/micropython/blob/67689bfd7e28df8d4fa23c8f25065aeb0b9d9658/py/mkrules.mk#L56
-    // https://github.com/micropython/micropython/issues/4453
-#else
-    // prepro
-    #define __CPP__ 1
-#endif
-
-
 #include <stdint.h>
 
 #define MODULES_H "modules.h"

@@ -10,6 +10,7 @@ CROSS = 0
 
 include ../../py/mkenv.mk
 
+EM_CACHE ?= ~/.emscripten_cache
 
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
@@ -200,6 +201,7 @@ check:
 	$(ECHO) EMMAKEN_COMPILER=$(EMMAKEN_COMPILER)
 	$(ECHO) EMMAKEN_CFLAGS=$(EMMAKEN_CFLAGS)
 	$(ECHO) EM_CACHE=$(EM_CACHE)	
+	$(ECHO) EM_CONFIG=$(EM_CONFIG)	
 	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(shell env|grep ^EM)
 	$(ECHO) "Using [$(CPP)] as prepro"

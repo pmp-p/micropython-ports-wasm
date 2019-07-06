@@ -32,7 +32,7 @@ def load_module(module, *argv):
         return m
 
 if not 'dev' in __import__('sys').argv:
-    print(""" This can provide a workaround for :
-    https://github.com/pmp-p/micropython-ports-wasm/issues/5
+    print(""" This can provide a workaround for :\r
+    https://github.com/pmp-p/micropython-ports-wasm/issues/5\r
 use imp.load_module(modulename) to load modules from /assets/*.py
 """)
