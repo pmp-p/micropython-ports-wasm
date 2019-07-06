@@ -10,7 +10,7 @@ CROSS = 0
 
 include ../../py/mkenv.mk
 
-EM_CACHE ?= ~/.emscripten_cache
+EM_CACHE ?= $(HOME)/.emscripten_cache
 
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
