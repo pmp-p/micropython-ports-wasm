@@ -128,7 +128,7 @@ class CallPath(dict):
         self.__fqn = fqn
         self.__name = fqn.rsplit(".", 1)[-1]
         self.__host = host
-
+        self.__solved = None
 
         #empty call stack
         self.__cs = []
@@ -223,21 +223,33 @@ class CallPath(dict):
         # horrors like "await window.document.getElementById('test').textContent.length" are long enough already.
         if len(cs):
             solvepath, argv, kw = cs.pop(0)
-            if DBG:print(self.__fqn,'about to solve', solvepath,argv,kw)
             cid = self.proxy.act(solvepath, argv, kw )
+            if DBG:print(self.__fqn,'__solver about to wait_answer(%s)'%cid, solvepath,argv,kw)
             solved, unsolved = await self.proxy.wait_answer(cid, unsolved, solvepath)
 #FIXME:         #timeout: raise ? or disconnect event ?
 #FIXME: strip solved part on fqn and continue in callstack
             if not len(unsolved):
                 return solved
         else:
-            if DBG:print('__solver about to solve',unsolved)
-            return await self.proxy.get( unsolved , None )
+            if DBG:print('__solver about to get(%s)' % unsolved)
+
+            if __UPY__:
+                self.__solved = await self.proxy.get( unsolved , None )
+                return self.__solved
+            else:
+                return await self.proxy.get( unsolved , None )
 
         return 'future-async-unsolved[%s->%s]' % (cid,unsolved)
 
-    def __await__(self):
-        return self.__solver().__await__()
+    if __UPY__:
+        def __iter__(self):
+            global DBG
+            DBG=1
+            yield from self.__solver()
+            return self.__solved
+    else:
+        def __await__(self):
+            return self.__solver().__await__()
 
     def __call__(self, *argv, **kw):
         if DBG:
@@ -275,7 +287,9 @@ class CallPath(dict):
 
         #return ":async-pe-get:%s" % self.__fqn
 
+#======================================================================================
 
+import asyncio
 import embed
 import ubinascii
 class SyncProxy(Proxy):
@@ -285,10 +299,14 @@ class SyncProxy(Proxy):
         self.caller_id = 0
         self.tmout = 300
         self.cache = {}
-        self.q_return = {}
+        self.q_return = asyncio.io.q # {}
         self.q_reply = []
         self.q_sync = []
         self.q_async = []
+
+    def new_call(self):
+        self.caller_id += 1
+        return str(self.caller_id)
 
     def set(self, cp,argv,cs=None):
         if cs is not None:
@@ -314,9 +332,60 @@ class SyncProxy(Proxy):
             print('82: set',cp,argv)
         argv = argv.replace('"','\\\"')
         self.q_sync.append( f'{cp} = JSON.parse(`{dumps(argv)}`)' )
-        self.caller_id+=1
-        jscmd = ubinascii.hexlify( CallPath.proxy.q_sync.pop(0) ).decode()
-        embed.os_write('{"dom-x":{"id":%d,"m":"//S:%s"}}' % (self.caller_id, jscmd) )
+        cid = self.new_call()
+
+        #IO
+        self.io('S', CallPath.proxy.q_sync )
+
+    def io(self, cid, m, q):
+        while len(q):
+            jscmd = ubinascii.hexlify( q.pop(0) ).decode()
+            embed.os_write('{"dom-%s":{"id":"%s","m":"//S:%s"}}' % (cid, cid, jscmd) )
+
+
+    async def get(self, cp,argv,**kw):
+        cid = self.new_call()
+        print('async_js_get(%s)'%cid,cp,argv)
+
+        #self.q_async.append( {"id": cid, 'm':cp } )
+
+        #IO
+        embed.os_write('{"dom-%s":{"id":"%s","m":"%s"}}' % (cid, cid, cp) )
+        #test
+
+        while True:
+            if self.q_return:
+                print("AGET",self.q_return)
+                if cid in self.q_return:
+                    return self.q_return.pop(cid)
+            await asyncio.sleep_ms(1)
+
+    def act(self, cp,c_argv,c_kw,**kw):
+        cid = self.new_call()
+        self.q_async.append( {"m": cp, "a": c_argv, "k": c_kw, "id": cid} )
+        return cid
+
+
+    async def wait_answer(self,cid, fqn, solvepath):
+        #cid = str(self.caller_id)
+        if DBG:print('\tas id %s' % cid)
+        unsolved = fqn[len(solvepath)+1:]
+        tmout = self.tmout
+        if DBG and unsolved:
+            print('\twill remain', unsolved )
+        solved = None
+
+        while tmout>0:
+            if cid in self.q_return:
+                oid, solved = self.unref(cid)
+                if len(unsolved):
+                    solved = await self.get( "%s.%s" % ( oid, unsolved ) , None )
+                    unsolved = ''
+                    break
+                break
+            await asyncio.sleep_ms(1)
+            tmout -= 1
+        return solved, unsolved
 
 
 

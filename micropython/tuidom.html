@@ -37,9 +37,9 @@
 
   <body>
 
-    <h1>MicroPython TEXT UI</h1>
+    <h1>MicroPython TEXT+DOM UI</h1>
     <p>
-    micropython wasm-xp + femtoui
+    micropython wasm-xp + femtoui + asyncio DOM link
     <br>
     You can type your own Python code into the prompt in the usual way.
     <br>
@@ -118,8 +118,8 @@ with uses('xpy.femtoui') as crt:
 
 
     loop.create_task( clock() )
-    loop.create_task( scroll_banner() )
-    loop.create_task( scroll_test() )
+
+
     loop.create_task( crt.taskMgr() )
 del crt
 
@@ -129,10 +129,23 @@ import imp
 ulink = __import__('ulink')
 window = ulink.window
 
+
+
+async def __main__():
+    await asyncio.sleep(1)
+
+    if 'dev' in sys.argv:
+        doc = window.document
+        print( await doc.title )
+
+
+    if not 'dev' in sys.argv:
+        loop.create_task( scroll_banner() )
+        loop.create_task( scroll_test() )
+
+
+loop.create_task(__main__())
 asyncio.auto =1
-
-
-
 
 </script>
 <br/>

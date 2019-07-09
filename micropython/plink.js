@@ -177,7 +177,7 @@ function embed_call(jsdata) {
         var owner = solved[ solved.length -2 ]
 
         if (!isCallable(target)) {
-            console.log("embed_call(query="+name+") == "+target)
+            console.log("embed_call(id=" + callid + ", query="+name+") == " + target)
             plink.embed.state[""+callid ] = ""+target;
             return;
         }
