@@ -6,6 +6,8 @@
 #include "lib/utils/pyexec.h"
 #include "py/mphal.h"
 
+#define IS_FILE 1
+#define IS_STR 0
 
 #ifdef __EMSCRIPTEN__
     #include "emscripten.h"
@@ -18,6 +20,7 @@ EMSCRIPTEN_KEEPALIVE void PyRun_SimpleString(const char * code);
 EMSCRIPTEN_KEEPALIVE void PyRun_SimpleFile(FILE *fp, const char *filename);
 EMSCRIPTEN_KEEPALIVE void PyRun_VerySimpleFile(const char *filename);
 
+int do_code(const char *src,  int is_file);
 
 #define PATHLIST_SEP_CHAR ':'
 

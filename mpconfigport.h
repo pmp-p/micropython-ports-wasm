@@ -14,12 +14,10 @@
 #define MICROPY_CAN_OVERRIDE_BUILTINS (1)
 
 
-#define FROZEN_MPY_DIR              "modules"
+// #define FROZEN_MPY_DIR              "modules"
 
+#define MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE (1)
 
-#define MICROPY_MODULE_FROZEN       (1)
-#define MICROPY_MODULE_FROZEN_MPY   (1)
-#define MICROPY_MODULE_FROZEN_STR   (1)
 #define MICROPY_MODULE_WEAK_LINKS   (0)
 
 #define MICROPY_MODULE_GETATTR (1)
@@ -29,7 +27,7 @@
 #define MICROPY_QSTR_EXTRA_POOL     mp_qstr_frozen_const_pool
 
 #define MICROPY_PY_BUILTINS_FROZENSET (1)
-#define MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE (1)
+
 #define MICROPY_LONGINT_IMPL_MPZ    (2)
 #define MICROPY_LONGINT_IMPL        (MICROPY_LONGINT_IMPL_MPZ)
 #define MPZ_DIG_SIZE                (16)
@@ -38,7 +36,7 @@
 #define MICROPY_ENABLE_COMPILER     (1)
 #define MICROPY_ENABLE_EXTERNAL_IMPORT (1)
 #define MICROPY_PY_BUILTINS_COMPILE (1)
-
+#define MICROPY_PY_SYS_EXC_INFO     (0) // <============================ NON STANDARD PY2
 #define MICROPY_PERSISTENT_CODE_LOAD (1)
 #define MICROPY_PERSISTENT_CODE_SAVE (1)
 //#define MICROPY_EMIT_MACHINE_CODE (1)
@@ -130,7 +128,7 @@
 #define MICROPY_PY_BUILTINS_BYTEARRAY (1)
 #define MICROPY_PY_DESCRIPTORS        (1)
 #define MICROPY_PY_BUILTINS_ENUMERATE (1)
-#define MICROPY_PY_BUILTINS_EXECFILE  (1)
+#define MICROPY_PY_BUILTINS_EXECFILE  (1) // <============================ NON STANDARD PY2
 #define MICROPY_PY_BUILTINS_FILTER    (1)
 //#define MICROPY_PY_BUILTINS_FLOAT     (1) because MICROPY_FLOAT_IMPL_DOUBLE
 #define MICROPY_PY_BUILTINS_HELP_MODULES (0)
@@ -150,7 +148,7 @@
 #define MICROPY_PY_CMATH            (1)
 
 //? TEST THAT THING !
-#define MICROPY_PY_FFI              (1)
+#define MICROPY_PY_FFI              (1) // <================================ NON STANDARD NOT CPY
 
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)
@@ -240,7 +238,8 @@ typedef unsigned mp_uint_t; // must be pointer size
 
 typedef long mp_off_t;
 
-#define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn_cooked(str, len)
+// #define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn_cooked(str, len)
+#define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn(str, len)
 
 
 extern const struct _mp_obj_module_t mp_module_time;

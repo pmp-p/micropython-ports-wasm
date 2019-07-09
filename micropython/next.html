@@ -30,9 +30,9 @@
             vertical-align: middle;
         };
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.13.2/xterm.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.13.2/xterm.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.13.2/addons/fit/fit.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.4/xterm.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.4/xterm.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.4/addons/fit/fit.min.js"></script>
   </head>
 
 
@@ -231,8 +231,11 @@ else:
 
             /*Setup key input handler */
             term.on('data', function(key, e) {
-                window.stdin += key
-                //local echo
+                if ( xterm_helper(term, key) ) {
+                    if (key.charCodeAt(0) <=27)
+                        console.log("KBD : "+key.charCodeAt(0)+ " len= "+key.length)
+                    window.stdin += key
+                }
                 //term.write(key)
             });
 

@@ -33,12 +33,14 @@ else
         echo Building ...
 
         $PYTHON -u -B -m modgen
-        $PYTHON -u -B -m fstrings_helper micropython/link.cpy > assets/ulink.py
+        $PYTHON -u -B -m fstrings_helper micropython/link.cpy > micropython/ulink.py
 
         if emmake make \
  USER_C_MODULES=cmod \
- CFLAGS_EXTRA=-DMODULE_EXAMPLE_ENABLED=1 \
+ CFLAGS_EXTRA="-DMODULE_EXAMPLE_ENABLED=1 -s USE_SDL=2" \
  WASM_FILE_API=1 \
+ FROZEN_MPY_DIR=modules \
+ FROZEN_DIR=flash \
  "$@"
         then
             . runtest.sh

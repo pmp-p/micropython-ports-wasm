@@ -138,8 +138,9 @@ function write_file(dirname, filename, arraybuffer) {
 //async
 function postRun(){
     console.log("postRun: Begin")
-    setTimeout(init_loop,500)
+    setTimeout(init_repl,100)
     console.log("postRun: End")
+
 }
 
 function PyRun_VerySimpleFile(text){
@@ -149,33 +150,33 @@ function PyRun_VerySimpleFile(text){
     Module._free(cs)
 }
 
+//async
 function PyRun_SimpleString(text){
-    var cs = allocate(intArrayFromString(text), 'i8', ALLOC_STACK);
-    //console.log(script.text)
-    Module._PyRun_SimpleString(cs)
-    try {
-        Module._free(cs)
-    } catch (x) {
-            console.log('_free(): do not forget to turn off debugging')
+  //  await
+    if ( getValue( plink.shm, 'i8') ) {
+        console.log("shm locked, retrying in 1ms")
+        setTimeout(PyRun_SimpleString, 1, text )
+        return //
     }
+    stringToUTF8( text, plink.shm, 16384 )
 }
 
 
 
-function init_loop(){
+function init_repl(){
 
-    console.log("init_loop:Begin (" + Module.arguments.length+")")
+    console.log("init_repl:Begin (" + Module.arguments.length+")")
     var scripts = document.getElementsByTagName('script')
 
     var doscripts = true
     if (Module.arguments.length>1) {
 
         var argv0 = ""+Module.arguments[1]
-        if (1)
-            if (argv0.startswith('http')) {
-                argv0 = CORS_BROKER+argv0
-            }
+        if (argv0.startswith('http'))
+            if (window.urls.cors)
+                argv0 = window.urls.cors(argv0)
         else console.log("CORS PATCH OFF")
+
         console.log('running with sys.argv', argv0)
 
         window.currentTransferSize = 0
@@ -204,175 +205,20 @@ function init_loop(){
             }
         }
     }
-    setTimeout(Module._repl_init, 1);
-    console.log("init_loop:End")
+    //setTimeout(Module._repl_init, 1);
+    window.plink.shm = Module._repl_init()
+    console.log("shared memory ptr : " + window.plink.shm )
+
+    // roughly 1000/60
+    setInterval( stdin_poll , 16)
+
+    console.log("init_repl:End")
 
 
 }
 
 // ============================== FILE I/O (sync => bad) =================================
-
-
-function awfull_get(url) {
-    function updateProgress (oEvent) {
-      if (oEvent.lengthComputable) {
-        var percentComplete = oEvent.loaded / oEvent.total;
-      } else {
-            // Unable to compute progress information since the total size is unknown
-          // on binary XHR
-      }
-    }
-
-    function transferFailed(evt) {
-      console.log("callfs: An error occurred while transferring the file '"+window.currentTransfer+"'");
-    }
-
-    function transferCanceled(evt) {
-      console.log("callfs: transfer '"+window.currentTransfer+"' has been canceled by the user.");
-    }
-
-    var oReq = new XMLHttpRequest();
-
-    function transferComplete(evt) {
-        if (oReq.status==404){
-            console.log("callfs: File not found : "+ url );
-            window.currentTransferSize = -1 ;
-
-        } else {
-            window.currentTransferSize = oReq.response.length;
-            console.log("callfs: Transfer is complete saving : "+window.currentTransferSize);
-        }
-    }
-
-    oReq.overrideMimeType("text/plain; charset=x-user-defined");
-    oReq.addEventListener("progress", updateProgress);
-    oReq.addEventListener("load", transferComplete);
-    oReq.addEventListener("error", transferFailed);
-    oReq.addEventListener("abort", transferCanceled);
-    oReq.open("GET",url ,false);
-    oReq.send();
-    return oReq.response
-}
-
-
-
-
-function wasm_file_open(url, cachefile){
-    var dirpath = ""
-    if ( url == cachefile ) {
-        //we need to build the target path, it could be a module import.
-
-        //transform to relative path to /
-        while (cachefile.startswith("/"))
-            cachefile = cachefile.substring(1)
-
-        while (url.startswith("/"))
-            url = url.substring(1)
-
-        // is it still a path with at least a one char folder ?
-        if (cachefile.indexOf('/')>0) {
-            var path = cachefile.split('/')
-
-            // last elem is the filename
-            while (path.length>1) {
-                var current_folder = path.shift()
-                try {
-                    FS.createFolder(dirpath, current_folder, true, true)
-                    //FS.createPath('/', dirname, true, true)
-                } catch (err) {
-                    if (err.code !== 'EEXIST') throw err
-                }
-                dirpath = dirpath + "/" + current_folder
-            }
-            console.log("+dir: "+dirpath+" +file: " + path.shift())
-        } else {
-            // this is a root folder, abort
-            if (url.indexOf(".") <1 )
-                return -1
-        }
-        cachefile = "/" + url
-        console.log("in /  +" + cachefile)
-    }
-
-    try {
-        if (url[0]==":")
-            url = url.substr(1)
-        else {
-            // [TODO:do some tests there for your CORS integration]
-            if (url.includes('/wyz.fr/'))
-                url = CORS_BROKER + url
-        }
-
-        var ab = awfull_get(url)
-        var ret = ab.length
-
-        window.urls.index += 1
-        if (!cachefile){
-            cachefile = "cache_"+window.urls.index
-            ret = window.urls.index
-        }
-        FS.createDataFile("/", cachefile, ab, true, true);
-        return ret
-    } catch (x) {
-        console.log("wasm_file_open :"+x)
-        return -1
-    }
-}
-
-window.USE_DIR_INDEX = "/index.html"
-
-function wasm_file_exists(url, need_dot) {
-    // need_dot reminds we can't check for directory on webserver
-    // but we can check for a know file (probaby with a dot) under it
-    // -1 not found , 1 is a file on server , 2 is a directory
-
-    function url_exists(url,code) {
-        var xhr = new XMLHttpRequest()
-        xhr.open('HEAD', url, false)
-        xhr.send()
-        if (xhr.status == 200 )
-            return code
-        return -1
-    }
-
-    // we know those are all MEMFS local files.
-    // and yes it's the same folder name as in another OS apps
-    if (url.startswith('assets/'))
-        return -1
-
-    if (url.endswith('.mpy'))
-        return -1
-
-    // are we possibly doing folder checking ?
-    if (need_dot) {
-        // .mpy is blacklisted for now
-        // so if it's not .py then it's a folder check.
-        if (!url.endswith('.py')) {
-            var found = -1
-
-            // package search
-            found = url_exists( url + '/__init__.py' , 2 )
-            //console.log("wasm_([dir]/file)_exists ? :"+url+ ' --> ' + '/__init__.py => '+found)
-            if (found>0) return found
-
-            //namespace search
-            found = url_exists( url + USE_DIR_INDEX , 2 )
-            //console.log("wasm_([dir]/file)_exists ? :"+url+ ' --> ' + USE_DIR_INDEX+" => "+found)
-            if (found>0) return found
-        }
-
-        // if name has no dot then it was a folder check
-        //console.log("wasm_(dir/[file])_exists ? :"+url)
-        need_dot = url.split('.').pop()
-        if (need_dot==url) {
-            console.log("wasm_file_exists not-a-file :"+url)
-            return -1
-        }
-    }
-
-    // default is a file search
-    return url_exists(url, 1)
-}
+include("asmjs_file_api.js")
 
 // ================== uplink ===============================================
 
@@ -385,6 +231,7 @@ var pts = {}
    pts.i.raw = true
 
    pts.o = {}
+
 
 plink.pts = pts
 window.stdin_array = []
@@ -410,6 +257,10 @@ function stdin_poll(){
     if (stdout_blit)
         flush_stdout();
 
+    //pending io/rpc ?
+    if (plink.io)
+        plink.io()
+
     if (!window.stdin_raw)
         return
 
@@ -422,17 +273,9 @@ function stdin_poll(){
     }
     window.stdin = ""
 }
-setInterval( stdin_poll , 16)
+
 window.stdin_tx =stdin_tx
 
-
-
-
-
-function stdin_tx_chr(chr){
-    console.log("stdin:control charkey:"+chr);
-    window.stdin_array.push( chr );
-}
 
 // ================ STDOUT =================================================
 
@@ -443,53 +286,44 @@ window.stdout_blit = false
 window.stdout_array = []
 
 
-if (1) {
-    function flush_stdout_utf8(){
-        var uint8array = new Uint8Array(window.stdout_array)
-        var string = new TextDecoder().decode( uint8array )
-        term_impl(string)
-        window.stdout_array=[]
-        stdout_blit = false
-    }
+function flush_stdout_utf8(){
+    var uint8array = new Uint8Array(window.stdout_array)
+    var string = new TextDecoder().decode( uint8array )
+    term_impl(string)
+    window.stdout_array=[]
+    stdout_blit = false
+}
 
-    function stdout_process_utf8(cc) {
-        window.stdout_array.push(cc)
 
-        if (window.stdin_raw) {
-            if (cc<128)
-                stdout_blit = true
-            return
-        }
+function stdout_process1_utf8(cc) {
+    window.stdout_array.push(cc)
 
-        if (cc==10) {
+    if (window.stdin_raw) {
+        if (cc<128)
             stdout_blit = true
-            return
-        }
-        //no blit on non raw mode until crlf
+        return
     }
 
-    window.stdout_process = stdout_process_utf8
-    window.flush_stdout = flush_stdout_utf8
-
-}
-/*
- else {
-
-    function stdout_process_ascii(cc) {
-        window.stdout_array.push( String.fromCharCode(cc) )
+    if (cc==10) {
         stdout_blit = true
+        return
     }
-
-    function flush_stdout_ascii(){
-        term_impl(window.stdout_array.join("") )
-        window.stdout_array=[]
-        stdout_blit = false
-    }
-
-    window.stdout_process = stdout_process_ascii
-    window.flush_stdout = flush_stdout_ascii
+    //no blit on non raw mode until crlf
 }
-*/
+
+// TODO: find a javascript guru to optim array processing
+function stdout_process_utf8(cc) {
+    if (  Array.isArray(cc) ) {
+        while (cc.length>0)
+            stdout_process1_utf8(cc.shift())
+    } else
+        stdout_process1_utf8(cc)
+}
+
+window.stdout_process = stdout_process_utf8
+window.flush_stdout = flush_stdout_utf8
+
+
 
 // this is a demultiplexer for stdout and os (DOM/js ...) control
 function pts_decode(text){
@@ -502,12 +336,9 @@ function pts_decode(text){
                 stdout_process( jsdata[key] )
                 continue
             }
-            if (key=="id") {
-                embed_call(jsdata)
-                continue
-            }
-            console.log("muliplexer noise : "+ key+ " = " + jsdata[key] )
+            embed_call(jsdata[key])
         }
+
 
     } catch (x) {
         // found a raw C string via libc
@@ -522,6 +353,34 @@ function pts_decode(text){
     }
 }
 
+// Ctrl+L is mandatory ! need xterm.js 3.14+
+function xterm_helper(term, key) {
+    function ESC(data) {
+        return String.fromCharCode(27)+data
+    }
+    if ( key.charCodeAt(0)==12 ) {
+        var cy = 0+term.buffer.cursorY
+        if ( cy > 0) {
+            if (cy <= term.rows) {
+                term.write( ESC("[B") )
+                term.write( ESC("[J") )
+                term.write( ESC("[A") )
+            }
+
+            term.write( ESC("[A") )
+            term.write( ESC("[K") )
+            term.write( ESC("[1J"))
+
+            for (var i=1;i<cy;i++) {
+                term.write( ESC("[A") )
+                term.write( ESC("[M") )
+            }
+            term.write( ESC("[M") )
+        }
+        return false
+    }
+    return true
+}
 // ========================== startup hooks ======================================
 
 window.Module = {

@@ -46,7 +46,6 @@ Py_InitializeEx(int param) {
 
     mp_init();
 
-    repl_line = (char *)malloc(REPL_INPUT_SIZE);
     mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
 
     char *home = getenv("HOME");
@@ -112,16 +111,16 @@ void gc_collect(void) {
 }
 
 
-#define IS_FILE 1
-#define IS_STR 0
+
 
 #if !MICROPY_VFS
 // FIXME:
-extern mp_import_stat_t hack_modules(const char *modname);
+extern mp_import_stat_t
+wasm_find_module(const char *modname);
 
 mp_import_stat_t mp_import_stat(const char *path) {
     fprintf(stderr,"stat(%s) : ", path);
-    return hack_modules(path);
+    return wasm_find_module(path);
 }
 #endif
 
@@ -194,7 +193,7 @@ mp_lexer_t *mp_lexer_new_from_fd(qstr filename, int fd, bool close_fd) {
 extern mp_lexer_t *mp_lexer_new_from_file(const char *filename);
 #endif
 
-void
+int
 do_code(const char *src,  int is_file) {
     mp_lexer_t *lex;
     mp_parse_input_kind_t input_kind = MP_PARSE_FILE_INPUT;
@@ -206,7 +205,7 @@ do_code(const char *src,  int is_file) {
 
     if (lex == NULL) {
         printf("152:malloc: lexer %s\n",src);
-        return;
+        return 0;
     }
 
     qstr source_name = lex->source_name;
@@ -223,9 +222,11 @@ do_code(const char *src,  int is_file) {
         mp_obj_t module_fun = mp_compile(&parse_tree, source_name, MP_EMIT_OPT_NONE, true);
         mp_call_function_0(module_fun);
         nlr_pop();
+        return 1;
     } else {
         // uncaught exception
         mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+        return 0;
     }
 }
 
@@ -266,7 +267,8 @@ __fatal_error(const char *msg) {
 }
 
 #ifndef NDEBUG
-void MP_WEAK __assert_func(const char *file, int line, const char *func, const char *expr) {
+void MP_WEAK
+__assert_func(const char *file, int line, const char *func, const char *expr) {
     printf("Assertion '%s' failed, at file %s:%d\n", expr, file, line);
     __fatal_error("Assertion failed");
 }
@@ -288,7 +290,8 @@ typedef struct _mp_reader_posix_t {
     byte buf[20];
 } mp_reader_posix_t;
 
-STATIC mp_uint_t mp_reader_posix_readbyte(void *data) {
+STATIC mp_uint_t
+mp_reader_posix_readbyte(void *data) {
     mp_reader_posix_t *reader = (mp_reader_posix_t*)data;
     if (reader->pos >= reader->len) {
         if (reader->len == 0) {
@@ -306,7 +309,8 @@ STATIC mp_uint_t mp_reader_posix_readbyte(void *data) {
     return reader->buf[reader->pos++];
 }
 
-STATIC void mp_reader_posix_close(void *data) {
+STATIC void
+mp_reader_posix_close(void *data) {
     mp_reader_posix_t *reader = (mp_reader_posix_t*)data;
     if (reader->close_fd) {
         close(reader->fd);
@@ -314,7 +318,8 @@ STATIC void mp_reader_posix_close(void *data) {
     m_del_obj(mp_reader_posix_t, reader);
 }
 
-void mp_reader_new_file_from_fd(mp_reader_t *reader, int fd, bool close_fd) {
+void
+mp_reader_new_file_from_fd(mp_reader_t *reader, int fd, bool close_fd) {
     mp_reader_posix_t *rp = m_new_obj(mp_reader_posix_t);
     rp->close_fd = close_fd;
     rp->fd = fd;
@@ -332,7 +337,8 @@ void mp_reader_new_file_from_fd(mp_reader_t *reader, int fd, bool close_fd) {
     reader->close = mp_reader_posix_close;
 }
 
-void mp_reader_new_file(mp_reader_t *reader, const char *filename) {
+void
+mp_reader_new_file(mp_reader_t *reader, const char *filename) {
     int fd = open(filename, O_RDONLY, 0644);
     if (fd < 0) {
         mp_raise_OSError(errno);

@@ -11,10 +11,11 @@ else:
 
 
 class Proxy:
-
-    get = None
-    act = None
-    set = None
+    @classmethod
+    def ni(cls,*argv,**kw):print(cls,'N/I',argv,kw)
+    get = ni
+    act = ni
+    set = ni
     tmout = 300
     cfg = {"get": {}, "set": {}, "act": {}}
 
@@ -172,7 +173,7 @@ class CallPath(dict):
             self[name]=value
             return
 
-        print('setattr',name,value)
+        #print('setattr',name,value)
         fqn = "%s.%s" % (self.__fqn, name)
         if DBG:
             print("105:cp->pe", fqn, ":=", value, self.__cs)
@@ -194,7 +195,7 @@ class CallPath(dict):
 
     def _cp_setup(self, key, v):
         if v is None:
-            print("86:cp-set None ????", key, v)
+            if DBG:print("86:cp-set None ????", key, v)
             return
 
         if not isinstance(v, self.__class__):
@@ -274,12 +275,56 @@ class CallPath(dict):
 
         #return ":async-pe-get:%s" % self.__fqn
 
-#CallPath.set_proxy(JSProxy())
+
+import embed
+import ubinascii
+class SyncProxy(Proxy):
+
+
+    def __init__(self):
+        self.caller_id = 0
+        self.tmout = 300
+        self.cache = {}
+        self.q_return = {}
+        self.q_reply = []
+        self.q_sync = []
+        self.q_async = []
+
+    def set(self, cp,argv,cs=None):
+        if cs is not None:
+            if len(cs)>1:
+                raise Exception('please simplify assign via (await %s(...)).%s = %r' % (cs[0][0], name,argv))
+            value = argv
+            solvepath, argv, kw = cs.pop(0)
+            unsolved = cp[len(solvepath)+1:]
+
+            jsdata = f"JSON.parse(`{dumps(argv)}`)"
+            target = solvepath.rsplit('.',1)[0]
+            assign = f'JSON.parse(`{dumps(value)}`)'
+            doit = f"{solvepath}.apply({target},{jsdata}).{unsolved} = {assign}"
+            if DBG:print("74:",doit)
+            return self.q_sync.append(doit)
+
+        if cp.count('|'):
+            cp  = cp.split('.')
+            cp[0] = f'window["{cp[0]}"]'
+            cp = '.'.join( cp )
+
+        if DBG:
+            print('82: set',cp,argv)
+        argv = argv.replace('"','\\\"')
+        self.q_sync.append( f'{cp} = JSON.parse(`{dumps(argv)}`)' )
+        self.caller_id+=1
+        jscmd = ubinascii.hexlify( CallPath.proxy.q_sync.pop(0) ).decode()
+        embed.os_write('{"dom-x":{"id":%d,"m":"//S:%s"}}' % (self.caller_id, jscmd) )
+
+
+
+CallPath.set_proxy(SyncProxy())
 
 window = CallPath().__setup__(None, 'window', tip="[ object Window]")
 
-testo = obj()
-#window.document.title = 'pouet'
+
 
 
 

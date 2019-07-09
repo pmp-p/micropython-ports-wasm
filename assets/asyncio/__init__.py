@@ -1,6 +1,6 @@
 # (c) 2014-2018 Paul Sokolovsky. MIT license.
-
 # (c) 2019- Paul P. MIT license.
+
 import sys
 
 type_gen = type((lambda: (yield))())
@@ -8,6 +8,9 @@ type_gen = type((lambda: (yield))())
 cur_task = [0, 0, 0]
 
 auto = None
+failure = False
+io_error = False
+
 
 def __auto__():
     global _event_loop, auto
@@ -56,6 +59,9 @@ if __EMSCRIPTEN__:
         @classmethod
         def poll(cls):
             return cls.instance
+
+    # on emscripten browser runs the loop both for IO and tasks
+    from .io import step
 
 import utime as time
 import utimeq

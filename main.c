@@ -24,15 +24,26 @@
 extern char *repl_line;
 
 static int repl_started = 0;
+static int KPANIC = 0;
+
 
 void
 py_iter_one(void){
-    if (repl_line[0]){
-        PyRun_SimpleString(repl_line);
-        repl_line[0]=0;
-    }
-
     if (!repl_started) return;
+
+    // io demux will be done here too via io_loop(json_state)
+    if (!KPANIC)
+       if (repl_line[0]){
+            //fprintf(stderr,"IO %lu [%s]\n", strlen(repl_line), repl_line);
+            if (!do_code(repl_line, IS_STR)) {
+                fprintf(stderr,"kernel panic %lu [%s]\n", strlen(repl_line), repl_line);
+                KPANIC = 1;
+            }
+            repl_line[0]=0;
+        }
+
+    // should give a way here to discard repl input
+
     while (1) {
         int rx = EM_ASM_INT({
             if (window.stdin_array.length)
@@ -41,51 +52,31 @@ py_iter_one(void){
         });
 
         if (rx) {
+            if (rx==12) {
+                //clear screen
+                fprintf(stderr,"IO(12): Form Feed ");
+                PyRun_SimpleString("#\n");
+            }
+
             if (rx>127)
                 fprintf(stderr, "FIXME:stdin-utf8:%u\n", rx );
             pyexec_event_repl_process_char(rx);
         } else break;
     }
-    PyRun_SimpleString("__import__('asyncio').__auto__()");
+    // call asyncio auto stepping
+    if (!KPANIC)
+        PyRun_SimpleString("asyncio.step()");
 }
 
 /* =====================================================================================
     bad sync experiment with file access trying to help on
-    https://github.com/littlevgl/lvgl/issues/792
+        https://github.com/littlevgl/lvgl/issues/792
 
+    status: better than nothing.
 */
 
 #include "wasm_file_api.c"
-
-
-// BAD ENOUGH
-mp_import_stat_t
-hack_modules(const char *modname) {
-    if( access( modname, F_OK ) != -1 ) {
-        struct stat stats;
-        stat(modname, &stats);
-        if (S_ISDIR(stats.st_mode))
-            return MP_IMPORT_STAT_DIR;
-        return MP_IMPORT_STAT_FILE;
-    }
-    //FIXME: directory vs files ?
-    int found = EM_ASM_INT({return wasm_file_exists(UTF8ToString($0), true); }, modname ) ;
-
-    if ( found>0 ) {
-        int dl = EM_ASM_INT({return wasm_file_open(UTF8ToString($0),UTF8ToString($0)); }, modname );
-
-        if (found==1) {
-            fprintf(stderr,"hack_modules: DL FILE %s size=%d ", modname, dl);
-            return MP_IMPORT_STAT_FILE;
-        }
-        if (found==2) {
-            fprintf(stderr,"hack_modules: IS DIR %s size=%d ", modname, dl);
-            return MP_IMPORT_STAT_DIR;
-        }
-    }
-    fprintf(stderr,"404:hack_modules '%s' (%d)\n", modname, found);
-    return MP_IMPORT_STAT_NO_EXIST;
-}
+#include "wasm_import_api.c"
 
 //=====================================================================================
 
@@ -95,11 +86,12 @@ hack_modules(const char *modname) {
 EMSCRIPTEN_KEEPALIVE void
 repl(const char *code) {
     int stl = strlen(code);
-    if (stl>REPL_INPUT_SIZE){
-        stl=REPL_INPUT_SIZE;
-        fprintf( stderr, "REPL Buffer overflow: %i > %i", stl, REPL_INPUT_SIZE);
+    if (stl>REPL_INPUT_MAX){
+        stl=REPL_INPUT_MAX;
+        fprintf( stderr, "REPL Buffer overflow: %i > %i", stl, REPL_INPUT_MAX);
     }
     strncpy(repl_line, code, stl);
+    repl_line[stl]=0;
 }
 
 EMSCRIPTEN_KEEPALIVE void
@@ -117,11 +109,16 @@ await_dlopen(const char *def){
 }
 
 
-EMSCRIPTEN_KEEPALIVE void
+EMSCRIPTEN_KEEPALIVE char*
 repl_init(){
-    if (repl_started) return;
-    pyexec_event_repl_init();
-    repl_started=1;
+    if (!repl_started) {
+        repl_line = (char *)malloc(REPL_INPUT_SIZE);
+        // this is for null end str !!!!!
+        repl_line[0]=0;
+        pyexec_event_repl_init();
+        repl_started=1;
+    }
+    return &repl_line[0];
 }
 
 int
@@ -149,7 +146,7 @@ main(int argc, char *argv[]) {
             mp_obj_list_append(mp_sys_argv, MP_OBJ_NEW_QSTR(qstr_from_str(argv[i])));
     }
 
-    //chdir("/data/data/u.root.upy/assets");
+    //chdir("/data/data/u.root.upy");
     chdir("/");
 
     fprintf(stderr," =================================================\r\n");
@@ -175,8 +172,10 @@ main(int argc, char *argv[]) {
         "    with open(file,'r') as code:\n"
         "       runc(code.read()+patch, module, file)\n"
         "    print('='*40)\n"
-        "runf('assets/imp.py')\n"
-        "imp = __import__(__name__)\n"
+        "import asyncio\n"
+        "import imp\n"
+//        "runf('assets/imp.py')\n"
+//        "imp = __import__(__name__)\n"
     );
 
     PyRun_VerySimpleFile("/boot.py");

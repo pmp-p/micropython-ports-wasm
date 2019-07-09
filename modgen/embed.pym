@@ -58,7 +58,7 @@ STATIC void coropass(void) {
 
 
 def os_write( data : const_char_p = "{}" ) -> void :
-    fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
+    #fprintf( stderr, "embed.os_write(%lu)\n", strlen(data) );
     fprintf( stdout , "%s\n" , data );
 
 def os_stderr( data : const_char_p = "" ) -> void :

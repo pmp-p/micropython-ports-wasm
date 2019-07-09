@@ -1,8 +1,12 @@
+PORTS=$(EM_CACHE)/asmjs/ports-builds
+#FROZEN_MPY_DIR ?= modules
+#FROZEN_DIR ?= flash
+
+
 BASENAME=micropython
 PROG=$(BASENAME).html
 LIBMICROPYTHON = lib$(BASENAME).a
-FROZEN_MPY_DIR = modules
-FROZEN_DIR = flash
+
 # clang has slightly different options to GCC
 CLANG = 1
 CROSS = 0
@@ -15,22 +19,19 @@ EM_CACHE ?= $(HOME)/.emscripten_cache
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
 
-PORTS=$(EM_CACHE)/asmjs/ports-builds
 
-# actually for lvgl
-CPPFLAGS=-I$(PORTS)/sdl2/include
-
-ifdef WASM_FILE_API
-	CPPFLAGS += -DWASM_FILE_API=1 
-endif
 
 ifdef EMSCRIPTEN
+	ifdef ASYNC
+		CFLAGS += -D__EMTERPRETER__=1
+	endif
+	ifdef WASM_FILE_API
+		CFLAGS += -DWASM_FILE_API=1
+	endif
 	CC = emcc
 	CPP = clang -E -D__CPP__ -D__EMSCRIPTEN__
-	CPP += --sysroot $(EMSCRIPTEN)/system
-	CPP += -isystem $(EMSCRIPTEN)/system/include/libc
-	CPP += -isystem $(EMSCRIPTEN)/system/include/libcxx
-	CPP += $(CPPFLAGS)
+	CPP += --sysroot $(EMSCRIPTEN)/system	
+	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 	# Act like 'emcc'
 	CPP += -U__i386 -U__i386 -Ui386 -U__SSE -U__SSE_MATH -U__SSE2 -U__SSE2_MATH -U__MMX__ -U__SSE__ -U__SSE_MATH__ -U__SSE2__ -U__SSE2_MATH__
 else
@@ -45,9 +46,6 @@ endif
 
 
 
-ifdef ASYNC
-	CFLAGS += -D__EMTERPRETER__=1
-endif
 
 ifdef LVGL
 	LVOPTS = -DMICROPY_PY_LVGL=1
@@ -81,11 +79,23 @@ else
 CFLAGS += -O3 -DNDEBUG
 endif
 
+ifneq ($(FROZEN_DIR),)
+# To use frozen source modules, put your .py files in a subdirectory (eg scripts/)
+# and then invoke make with FROZEN_DIR=scripts (be sure to build from scratch).
+CFLAGS += -DMICROPY_MODULE_FROZEN_STR
+endif
+
+ifneq ($(FROZEN_MPY_DIR),)
+# To use frozen bytecode, put your .py files in a subdirectory (eg frozen/) and
+# then invoke make with FROZEN_MPY_DIR=frozen (be sure to build from scratch).
 # //for qstr.c
-CFLAGS +=-DMICROPY_QSTR_EXTRA_POOL=mp_qstr_frozen_const_pool
+
+CFLAGS += -DMICROPY_QSTR_EXTRA_POOL=mp_qstr_frozen_const_pool
+CFLAGS += -DMICROPY_MODULE_FROZEN_MPY
+endif
 
 # //for build/genhdr/qstr.i.last
-QSTR_GEN_EXTRA_CFLAGS=-DMICROPY_QSTR_EXTRA_POOL=mp_qstr_frozen_const_pool
+# QSTR_GEN_EXTRA_CFLAGS=-DMICROPY_QSTR_EXTRA_POOL=mp_qstr_frozen_const_pool
 
 MPY_CROSS_FLAGS += -mcache-lookup-bc
 
@@ -193,6 +203,7 @@ LINK_FLAGS=-s MAIN_MODULE=1
 THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
 
 check:
+	PREPRO = $(addprefix -isystem, $(shell $(CC) -s USE_SDL=2 -I/tmp -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 	$(ECHO) EMSDK=$(EMSDK)
 	$(ECHO) EMSCRIPTEN=$(EMSCRIPTEN)	
 	$(ECHO) EMSDK_NODE=$(EMSDK_NODE)
@@ -204,7 +215,8 @@ check:
 	$(ECHO) EM_CONFIG=$(EM_CONFIG)	
 	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(shell env|grep ^EM)
-	$(ECHO) "Using [$(CPP)] as prepro"
+#	$(ECHO) "Using [$(CPP)] as prepro"
+	$(ECHO) "[$(PREPRO)]"
 
 	
 interpreter:

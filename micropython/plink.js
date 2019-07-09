@@ -3,6 +3,46 @@
 document.getElementById('test').textContent = "THIS IS THE I/O TEST BLOCK\n"
 document.title="THIS IS A EMPTY TEST TITLE"
 
+
+if (typeof SharedArrayBuffer !== 'function'
+    || typeof Atomics !== 'object') {
+    document.getElementById('log').textContent = 'This browser does not support SharedArrayBuffers!'
+}
+
+
+// const worker = new Worker('worker.js');
+
+// We display output for the worker
+/*
+worker.addEventListener('message', function (event) {
+    document.getElementById('output').textContent = event.data;
+});
+
+// Set up the shared memory
+const sharedBuffer = new SharedArrayBuffer(1 * Int32Array.BYTES_PER_ELEMENT);
+const sharedArray = new Int32Array(sharedBuffer);
+
+// Set up the lock
+Lock.initialize(sharedArray, 0);
+const lock = new Lock(sharedArray, 0);
+lock.lock();
+
+try {
+    // Try new API (clone)
+    worker.postMessage({sharedBuffer});
+} catch (e) {
+    // Fall back to old API (transfer)
+    worker.postMessage({sharedBuffer}, [sharedBuffer]);
+}
+
+document.getElementById('unlock').addEventListener('click', event => {
+    event.preventDefault();
+    lock.unlock();
+});
+
+*/
+
+
 // ================= (c/up)link =================================================
 window.posix = {}
 
@@ -74,12 +114,52 @@ function isCallable(value) {
 }
 
 
-function embed_call(jsdata) {
-    //var jsdata = JSON.parse(jsdata);
 
+
+
+
+
+
+
+
+
+function unhex_utf8(s) {
+    var ary = []
+    for ( var i=0; i<s.length; i+=2 ) {
+        ary.push( parseInt(s.substr(i,2),16) )
+    }
+    return new TextDecoder().decode( new Uint8Array(ary) )
+}
+
+
+function io_sync(payload) {
+    try {
+        eval(payload)
+    } catch (x) {
+        console.log("IOSYNC EVAL ERROR: " +payload+' =>'+x)
+    }
+}
+
+
+function io_dispatch(payload) {
+
+    if (payload.startsWith("//S:"))
+        return io_sync( unhex_utf8( payload.substr(4) ) )
+
+    if (payload.startsWith("//A:"))
+        return io_async( unhex_utf8( payload.substr(4) ) )
+}
+
+function embed_call(jsdata) {
     //always
     var callid = jsdata['id'];
-    var name = jsdata['m'];
+
+    var name = jsdata['m']
+
+
+    if (name.startsWith("//"))
+        return io_dispatch( name )
+
     try {
         var path = name.rsplit('.')
         var solved = []
@@ -118,3 +198,40 @@ function embed_call(jsdata) {
 function log(msg) {
     document.getElementById('log').textContent += msg + '\n'
 }
+
+
+// TODO: replace by a strcopy to repl buffer
+
+plink.io = function() {
+    // fill repl buffer, calling PyRun_SimpleString would crash on chromium
+    const rpcdata = "asyncio.step('''"+ JSON.stringify(plink.embed.state) +"''')\n"
+    stringToUTF8( rpcdata, plink.shm, 16384 )
+    plink.embed.state = {}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
