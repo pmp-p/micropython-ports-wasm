@@ -26,9 +26,17 @@ def test(HandlerClass=BaseHTTPRequestHandler, ServerClass=ThreadingHTTPServer, p
 
 
         if ssl:
-            httpd.socket = ssl.wrap_socket (httpd.socket, keyfile='key.pem', certfile='server.pem', server_side=True)
+            try:
+                httpd.socket = ssl.wrap_socket (httpd.socket, keyfile='key.pem', certfile='server.pem', server_side=True)
+            except Exception as e:
+                print("can't start ssl",e)
+                print("maybe 'openssl req -new -x509 -keyout key.pem -out server.pem -days 3650 -nodes'")
+                ssl=False
 
-        serve_message = "Serving HTTP on {host} port {port} (http://{host}:{port}/) ..."
+        if ssl:
+            serve_message = "Serving HTTPS on {host} port {port} (https://{host}:{port}/) ..."
+        else:
+            serve_message = "Serving HTTP on {host} port {port} (http://{host}:{port}/) ..."
         print(serve_message.format(host=sa[0], port=sa[1]))
         try:
             httpd.serve_forever()
