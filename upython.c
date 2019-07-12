@@ -126,33 +126,7 @@ mp_import_stat_t mp_import_stat(const char *path) {
 
 
 #if !MICROPY_READER_POSIX && MICROPY_EMIT_WASM
-/*
-mp_lexer_t *
-mp_lexer_new_from_file_wasm(const char *filename, char *cbuf) {
-    FILE *file = fopen(filename,"r");
-    if (!file) {
-        printf("404: fopen(%s)\n", filename);
-        fprintf(stderr, "404: fopen(%s)\n", filename);
-        return NULL;
-    }
-    fseeko(file, 0, SEEK_END);
-    off_t size_of_file = ftello(file);
-    fprintf(stderr, "mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
-    fseeko(file, 0, SEEK_SET);
 
-    fread(cbuf, size_of_file, 1, file);
-    cbuf[size_of_file]=0;
-    fclose(file);
-
-    if (cbuf == NULL) {
-        fprintf(stderr, "READ ERROR: mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
-        return NULL;
-    }
-    mp_lexer_t* lex = mp_lexer_new_from_str_len(qstr_from_str(filename), cbuf, strlen(cbuf), 0);
-    fprintf(stderr, "======================\n%s\n===================\n" ,  cbuf);
-    return lex;
-}
-*/
 mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
     FILE *file = fopen(filename,"r");
@@ -161,10 +135,10 @@ mp_lexer_new_from_file(const char *filename) {
         fprintf(stderr, "404: fopen(%s)\n", filename);
         return NULL;
     }
-    fseeko(file, 0, SEEK_END);
-    off_t size_of_file = ftello(file);
+    fseek(file, 0, SEEK_END);
+    long long size_of_file = ftell(file);
     fprintf(stderr, "mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
-    fseeko(file, 0, SEEK_SET);
+    fseek(file, 0, SEEK_SET);
 
     char * cbuf = malloc(size_of_file+1);
     fread(cbuf, size_of_file, 1, file);

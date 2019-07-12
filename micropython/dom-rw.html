@@ -1,0 +1,142 @@
+<html><head><script type="text/µpython">#sync
+print("Hello World 1")
+
+</script>
+<meta charset="utf-8">
+<meta name=viewport content='width=device-width,initial-scale=1'>
+
+    <style>
+        body {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0;
+            margin: 0;
+            text-align: center;
+        }
+        a { white-space: nowrap; }
+        table {
+            display: inline-block;
+        }
+        #mp_js_stdout {
+            display: inline-block;
+            max-width: 90%;
+            height: 80%;
+            max-height: 600px;
+            vertical-align: middle;
+        }
+        #canvas {
+            border: 4px black solid;
+            border-radius: 4px;
+            vertical-align: middle;
+        };
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.4/xterm.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.4/xterm.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.4/addons/fit/fit.min.js"></script>
+  </head>
+
+  <body>
+
+    <h1>MicroPython TEXT+DOM UI</h1>
+    <p>
+    micropython wasm-xp + femtoui + asyncio DOM link
+    <br>
+    You can type your own Python code into the prompt in the usual way.
+    <br>
+
+    <pre id="url"></pre>
+
+    <pre id="status"></pre>
+
+    <pre id="test"></pre>
+
+    <pre id="log"></pre>
+
+    <div id="mp_js_stdout"></div>
+
+    <canvas id="canvas" width="240" height="320" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+
+    <p>
+
+
+<script language="µpython" src="demos/dom-rw.py"></script>
+
+<script type="text/µpython" async>#
+def __main__(argc,argv):
+    tic = 5
+    while tic:
+        await asyncio.sleep(1)
+        print("async count down", tic)
+        tic-=1
+    print("Hello World 2 (was async)")
+asyncio.run()
+</script>
+
+
+<br/>
+  </body>
+
+    <script src="pythons.js"></script>
+
+    <script src="plink.js"></script>
+
+    <script defer>
+        Module.canvas = canvas;
+
+        function PYTHONSTARTUP() {
+            window.urls.cors = function (url){
+                if (url.includes('/wyz.fr/'))
+                    return CORS_BROKER + url
+                return url
+            }
+
+        }
+
+        /*Initialization function*/
+        window.onload = function() {
+
+            Terminal.applyAddon(fit);
+            term = new Terminal({
+                    cols : 132,
+                    rows : 40,
+                    tabStopWidth : 8,
+                    cursorBlink : true,
+                    cursorStyle : 'block',
+                    applicationCursor : true,
+                });
+
+            //term.customKeydownHandler = kbd_handler
+
+            mp_js_stdout = document.getElementById('mp_js_stdout');
+            mp_js_stdout.value = "";
+            term.open(mp_js_stdout);
+            term.fit();
+
+            /*Setup key input handler */
+            // window_prompt is the pythons.js function that will flush
+            // pseudo-readline buffer toward upy core
+            window.prompt = window_prompt
+
+
+            /*Write text to the terminal */
+            window.term_impl = function (text) { term.write(text) }
+
+            /*Setup key input handler */
+
+            term.on('data', function(key, e) {
+                if ( xterm_helper(term, key) ) {
+                    if (key.charCodeAt(0) <=27)
+                        console.log("KBD : "+key.charCodeAt(0)+ " len= "+key.length)
+                    window.stdin += key
+                }
+                //term.write(key)
+            });
+            /*Initialize MicroPython itself*/
+            /*Initialize the REPL.*/
+            pythons()
+        }
+    </script>
+
+
+</html>
+

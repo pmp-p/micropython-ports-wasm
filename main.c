@@ -23,13 +23,15 @@
 // vstr_t *repl_line;
 extern char *repl_line;
 
-static int repl_started = 0;
+static int repl_started = -1;
 static int KPANIC = 0;
 
 
 void
 py_iter_one(void){
-    if (!repl_started) return;
+
+    // shm not ready
+    if (repl_started<0) return;
 
     // io demux will be done here too via io_loop(json_state)
     if (!KPANIC)
@@ -42,7 +44,17 @@ py_iter_one(void){
             repl_line[0]=0;
         }
 
-    // should give a way here to discard repl input
+
+    // call asyncio auto stepping first in case no repl
+    if (!KPANIC)
+        PyRun_SimpleString("asyncio.step()");
+
+    // running repl after script in cpython is sys.flags.inspect, should monitor and init repl
+
+    // repl not ready
+    if (!repl_started) return;
+
+    // should give a way here to discard repl events feeding  "await input()" instead
 
     while (1) {
         int rx = EM_ASM_INT({
@@ -63,9 +75,7 @@ py_iter_one(void){
             pyexec_event_repl_process_char(rx);
         } else break;
     }
-    // call asyncio auto stepping
-    if (!KPANIC)
-        PyRun_SimpleString("asyncio.step()");
+
 }
 
 /* =====================================================================================
@@ -82,7 +92,7 @@ py_iter_one(void){
 
 
 
-
+#if WASM_FILE_API
 EMSCRIPTEN_KEEPALIVE void
 repl(const char *code) {
     int stl = strlen(code);
@@ -94,12 +104,15 @@ repl(const char *code) {
     repl_line[stl]=0;
 }
 
+
 EMSCRIPTEN_KEEPALIVE void
 writecode(char *filename,char *code) {
     EM_ASM({
         FS.createDataFile("/", UTF8ToString($0), UTF8ToString($1) , true, true);
     }, filename, code);
 }
+
+#endif
 
 #if 1
 
@@ -108,28 +121,59 @@ await_dlopen(const char *def){
     return !EM_ASM_INT( { return defined(UTF8ToString($0), window.lib); }, def );
 }
 
+// should check null
 
 EMSCRIPTEN_KEEPALIVE char*
-repl_init(){
-    if (!repl_started) {
+repl_init() {
+    if (repl_started<0) {
         repl_line = (char *)malloc(REPL_INPUT_SIZE);
         // this is for null end str !!!!!
-        repl_line[0]=0;
-        pyexec_event_repl_init();
-        repl_started=1;
+        for (int i=0;i<REPL_INPUT_SIZE;i++)
+            repl_line[i] = 0;
+        repl_started = 0;
     }
     return &repl_line[0];
 }
+
+EMSCRIPTEN_KEEPALIVE int
+repl_run(int warmup) {
+    if (!warmup) {
+        pyexec_event_repl_init();
+        repl_started = REPL_INPUT_MAX;
+    }
+    return REPL_INPUT_MAX;
+}
+
+
+
+
 
 int
 main(int argc, char *argv[]) {
 
     //keep symbol global for wasm debugging
     fprintf(stderr,"//#FIXME: add sys.executable to sys\n");
+
     void *lib_handle = dlopen("lib/libtest.wasm", RTLD_NOW | RTLD_GLOBAL);
     if (!lib_handle) {
         puts("cannot load side module");
-    }
+    } else
+        puts("+1 browser can dlopen side wasm library");
+
+
+    lib_handle = dlopen("libmicropython.wasm", RTLD_NOW | RTLD_GLOBAL);
+    if (!lib_handle) {
+        puts("-1 browser can't dlopen main dynamically linking error or wasm 4KB limitation, using static instead");
+    } else
+        puts("+1 browser can dlopen main wasm library");
+
+    // NOT USING dlopen() and libmicropython.wasm ATM because chrome will fail
+    // and that would mean compiling to shared library as .js
+/*
+    Error in loading dynamic library libmicropython.wasm:
+    RangeError: WebAssembly.Compile is disallowed on the main thread, if the buffer size is larger than 4KB.
+    Use WebAssembly.compile, or compile on a worker thread.
+*/
 
     //setenv("HOME","/data/data/u.root.upy",0);
     setenv("HOME","/",1);
@@ -137,7 +181,7 @@ main(int argc, char *argv[]) {
     //setenv("MICROPYPATH","/data/data/u.root.upy/assets",0);
     setenv("MICROPYPATH","/",1);
 
-    fprintf(stdout,"Py_InitializeEx(0)\r\n");
+    fprintf(stdout,"create/Py_InitializeEx(0)\r\n");
     Py_InitializeEx(0);
 
     for (int i=0; i<argc; i++) {
@@ -153,6 +197,7 @@ main(int argc, char *argv[]) {
     PyArg_ParseTuple(nullptr,"%s\n","argv1");
     fprintf(stderr," =================================================\r\n");
 
+    #if WASM_FILE_API
     writecode(
         "boot.py",
         "import sys\n"
@@ -160,26 +205,14 @@ main(int argc, char *argv[]) {
         "sys.path.clear()\n"
         "sys.path.append( '' )\n"
         "sys.path.append( 'assets' )\n"
-        "def runc(code, module=globals(), file='<code>'):\n"
-        "    code = compile( code, file, 'exec')\n"
-        "    exec( code, module, module)\n"
-        "    return module\n"
-        "\n"
-        "def runf(file='', module=globals(),patch=''):\n"
-        "    if not file.endswith('.py'): file+='.py'\n"
-        "    print(file)\n"
-        "    print('='*40)\n"
-        "    with open(file,'r') as code:\n"
-        "       runc(code.read()+patch, module, file)\n"
-        "    print('='*40)\n"
         "import asyncio\n"
         "import imp\n"
-//        "runf('assets/imp.py')\n"
-//        "imp = __import__(__name__)\n"
     );
 
     PyRun_VerySimpleFile("/boot.py");
-
+    #else
+    PyRun_SimpleString("import boot\n");
+    #endif
 
 
     emscripten_set_main_loop( py_iter_one, 0, 1);  // <= this will exit to js now.

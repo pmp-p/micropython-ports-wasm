@@ -65,7 +65,7 @@ def os_stderr( data : const_char_p = "" ) -> void :
     fprintf( stderr, "embed.os_stderr(%s)\n", data );
 
 
-def vars(module_obj : mp_obj_t = None ) -> dict:
+def butilins_vars(module_obj : mp_obj_t = None ) -> dict:
     mp_obj_dict_t *mod_globals = mp_obj_module_get_globals(module_obj);
     return mod_globals;
 

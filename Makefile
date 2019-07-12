@@ -26,6 +26,7 @@ ifdef EMSCRIPTEN
 		CFLAGS += -D__EMTERPRETER__=1
 	endif
 	ifdef WASM_FILE_API
+# note that WASM_FILE_API will pull filesystem function into the wasm lib	
 		CFLAGS += -DWASM_FILE_API=1
 	endif
 	CC = emcc
@@ -101,7 +102,13 @@ MPY_CROSS_FLAGS += -mcache-lookup-bc
 
 LD = $(CC)
 LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
-LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl','_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile', '_repl_init']"
+
+ifdef WASM_FILE_API
+	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl', '_repl_init', '_repl_run''_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
+else
+	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl_init','_repl_run', '_Py_InitializeEx']"
+endif
+
 
 SRC_C = \
 	upython.c \
@@ -172,6 +179,9 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 # https://github.com/emscripten-core/emscripten/wiki/Linking
 
 LOPT=-s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1 -s TOTAL_MEMORY=512MB
+ifdef WASM_FILE_API
+	LOPT += -s FORCE_FILESYSTEM=1
+endif	
 
 libs: $(OBJ)
 	$(ECHO) "Linking static $(LIBMICROPYTHON)"
@@ -232,7 +242,9 @@ $(PROG): libs
 	$(CC) $(CFLAGS) -g0 -o build/main.o main.c
 	$(Q)$(CC) $(INC) $(COPT) $(WASM_FLAGS) $(LINK_FLAGS) $(THR_FLAGS) \
  -o $@ main.c $(LIBMICROPYTHON) \
- --preload-file assets@/assets --preload-file micropython/lib@/lib
+ --preload-file assets@/assets \
+ --preload-file micropython/lib@/lib \
+  --preload-file libmicropython.wasm 
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
 

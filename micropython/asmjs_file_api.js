@@ -1,5 +1,41 @@
+// ========================== C =============================
+/* unused ATM
+window.lib = {"name":"lib"};
+
+async function _get(url,trigger){
+    fetch(url).then( function(r) { return r.arrayBuffer(); } ).then( function(udata) { window[trigger] = udata } );
+    await _until(defined)(trigger,window.urls)
+    return window.urls[trigger]
+}
+
+async function dlopen_lzma(lib,size_hint) {
+    if ( wasm_file_exists("lib/lib"+lib +".js") ){
+        console.log(" =========== CAN RAW EVAL ========== ")
+    }
+    var lzma_file = "lib"+lib+".js.lzma"
+    var blob = await get_lzma( window.lib, lib, lzma_file, size_hint, false, false)
+    write_file("lib","lib"+trigger+".so",blob)
+}
+
+*/
+
 // ============================== FILE I/O (sync => bad) =================================
-window.urls = {"name":"webcache","id":-1, "index": "/index.html"}
+
+// cheat a bit for clear log and less hammer
+var miss = [
+"asyncio/io/__init__.py",
+"asyncio/io/index.html",
+"boot/__init__.py",
+"boot/index.html",
+"imp/__init__.py",
+"imp/index.html",
+"types/__init__.py",
+"types/index.html",
+"uselect.py",
+"uselect/__init__.py",
+"uselect/index.html",]
+
+window.urls = {"cors": null, "name":"webcache","id":-1, "index": "/index.html", "miss":miss}
 
 
 function awfull_get(url) {
@@ -122,11 +158,15 @@ function wasm_file_exists(url, need_dot) {
     // -1 not found , 1 is a file on server , 2 is a directory
 
     function url_exists(url,code) {
+        if (urls.miss.indexOf(url)>-1)
+            return -1
+
         var xhr = new XMLHttpRequest()
         xhr.open('HEAD', url, false)
         xhr.send()
         if (xhr.status == 200 )
             return code
+        urls.miss[url]=xhr.status
         return -1
     }
 

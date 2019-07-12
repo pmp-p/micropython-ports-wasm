@@ -61,7 +61,7 @@ setdefault('JSDIR','')
 function include(filename, filetype){
     if (filetype===null ||typeof filetype === 'undefined')
         filetype = 'js';
-        if (filename.endswith('css'))
+        if (filename.endsWith('css'))
             filetype = 'css';
 
     if ( (filename.indexOf('.') === 0) || (filename.indexOf('/') === 0 ) ){
@@ -86,14 +86,13 @@ function include(filename, filetype){
         console.log("#error can't include "+filename+' as ' +filetype);
         return false;
     }
+    // .py includes ??
+
     if (typeof fileref!="undefined")
         console.log("#included "+filename+' as ' +filetype);
-
         document.getElementsByTagName("head")[0].appendChild(fileref)
         fileref.async = false;
         fileref.defer = false;
-        //fileref.src = window.URL.createObjectURL( window.EMScript );
-        //document.body.appendChild(fileref);
 }
 register(include)
 
@@ -111,6 +110,14 @@ register(_until)
 
 
 
+// ============================== FILE I/O (sync => bad) =================================
+include("asmjs_file_api.js")
+
+// ================== uplink ===============================================
+
+// separated file link.cpy => clink for cpython , ulink for micropython
+// entry point is embed_call(struct_from_json)
+
 // =================  EMSCRIPTEN ================================
 
 
@@ -125,6 +132,11 @@ function preRun(){
     argv = Module.arguments.pop().split('&')
     while (e=argv.shift())
         Module.arguments.push(e)
+
+        console.log("preRun: PYTHONSTARTUP ? "+ PYTHONSTARTUP )
+    if ( PYTHONSTARTUP )
+        PYTHONSTARTUP()
+
     console.log("preRun: End")
 }
 
@@ -138,7 +150,7 @@ function write_file(dirname, filename, arraybuffer) {
 //async
 function postRun(){
     console.log("postRun: Begin")
-    setTimeout(init_repl,100)
+    setTimeout(init_repl_begin,100)
     console.log("postRun: End")
 
 }
@@ -150,29 +162,43 @@ function PyRun_VerySimpleFile(text){
     Module._free(cs)
 }
 
-//async
+window.BAD_CORE = 1
+
+// TODO: ring buffer.
 function PyRun_SimpleString(text){
-  //  await
     if ( getValue( plink.shm, 'i8') ) {
-        console.log("shm locked, retrying in 1ms")
-        setTimeout(PyRun_SimpleString, 1, text )
+        console.log("shm still locked, retrying in 5ms")
+        setTimeout(PyRun_SimpleString, 5, text )
         return //
+    }
+    if (BAD_CORE) {
+    // hack until import => __import__ is fixed for micropython core
+    // beh text =text.replace(/import (.+?\w+);/,'imp.ort("$1");')
+    // beh import mod1,mod2,mod
+    // beh import mod as ule etc ..........
+        text =text.replace(/import (.+?\w+)\n/,'imp.ort("$1",host=__import__(__name__))\n')
     }
     stringToUTF8( text, plink.shm, 16384 )
 }
 
 
 
-function init_repl(){
+function init_repl_begin(){
 
-    console.log("init_repl:Begin (" + Module.arguments.length+")")
+    console.log("init_repl: Begin (" + Module.arguments.length+")")
     var scripts = document.getElementsByTagName('script')
 
     var doscripts = true
+
+    window.plink.shm = Module._repl_init()
+
+    // get repl max buffer size but don't start it yet
+    Module._repl_run(1)
+
     if (Module.arguments.length>1) {
 
         var argv0 = ""+Module.arguments[1]
-        if (argv0.startswith('http'))
+        if (argv0.startsWith('http'))
             if (window.urls.cors)
                 argv0 = window.urls.cors(argv0)
         else console.log("CORS PATCH OFF")
@@ -200,29 +226,34 @@ function init_repl(){
 
         for(var i = 0; i < scripts.length; i++){
             var script = scripts[i]
+
             if(script.type == "text/µpython"){
                 PyRun_SimpleString(script.text)
             }
         }
     }
-    //setTimeout(Module._repl_init, 1);
-    window.plink.shm = Module._repl_init()
-    console.log("shared memory ptr : " + window.plink.shm )
 
-    // roughly 1000/60
-    setInterval( stdin_poll , 16)
-
-    console.log("init_repl:End")
-
-
+    // give time for page scripts to display before repl banner
+    setTimeout(init_repl_end, 64);
 }
 
-// ============================== FILE I/O (sync => bad) =================================
-include("asmjs_file_api.js")
 
-// ================== uplink ===============================================
+function init_repl_end() {
 
-// separate file clink for cpython , plink for micropython , entry point is embed_call(struct_from_json)
+    console.log("shared memory ptr : " + window.plink.shm )
+
+    // go
+    Module._repl_run()
+
+    // feed repl, roughly 1000/60 ( usual screen sync )
+    setInterval( stdin_poll , 16)
+
+    console.log("init_repl: End")
+}
+
+
+
+
 
 // ================= STDIN =================================================
 var pts = {}
@@ -396,6 +427,12 @@ async function pythons(argc, argv){
 
     for(var i = 0; i < scripts.length; i++){
         var script = scripts[i]
+
+        console.log("l="+ script.language +" src="+script.src+ " len="+ script.text.length+ " async="+script.async)
+        /*
+        if (script.text.length)
+            console.log(script.text)
+*/
         if(script.type == "text/µpython"){
 
             var emterpretURL = "micropython.binary"
@@ -425,24 +462,6 @@ if ( undef("CORS_BROKER") ){
 
 
 
-// ========================== C =============================
-window.lib = {"name":"lib"};
-window.urls = {"name":"http","index":-1}
-
-async function _get(url,trigger){
-    fetch(url).then( function(r) { return r.arrayBuffer(); } ).then( function(udata) { window[trigger] = udata } );
-    await _until(defined)(trigger,window.urls)
-    return window.urls[trigger]
-}
-
-async function dlopen_lzma(lib,size_hint) {
-    if ( wasm_file_exists("lib/lib"+lib +".js") ){
-        console.log(" =========== CAN RAW EVAL ========== ")
-    }
-    var lzma_file = "lib"+lib+".js.lzma"
-    var blob = await get_lzma( window.lib, lib, lzma_file, size_hint, false, false)
-    write_file("lib","lib"+trigger+".so",blob)
-}
 
 
 

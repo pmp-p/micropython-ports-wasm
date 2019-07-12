@@ -149,13 +149,13 @@ hi()
         file.write(code.encode())
 
 
-    import hello
+#    import hello
 
 
-    import embed
-    print("================================")
-    runc(code, embed.vars( hello ))
-    print("================================")
+#    import imp
+#    print("================================")
+#    imp.ort('hello')
+#    print("================================")
 
     embed.os_compile('assets/hello.py','c.mpy')
     import c

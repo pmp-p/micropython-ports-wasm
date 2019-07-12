@@ -77,7 +77,7 @@ class JSProxy(Proxy):
                 return self.q_return.pop(cid)
             await aio.asleep_ms(1)
 
-    def set(self, cp,argv,cs=None):
+    def set(self,cp, argv, cs=None):
         if cs is not None:
             if len(cs)>1:
                 raise Exception('please simplify assign via (await %s(...)).%s = %r' % (cs[0][0], name,argv))
@@ -116,6 +116,14 @@ class obj:
         print('delattr ',name)
 
 
+# the method used is slow : we create new proxies along the path
+# for performance reason cases where an attribute of same name is repeated along the rpc path
+# should not be handled
+#  eg   window.document.something_not_window.document would NOT be addressable.
+# window and window.document.something_not_window could be the same CallPath object
+# faster but messy and safeguards required.
+
+# TODO: benchmark both.
 
 class CallPath(dict):
 
@@ -160,11 +168,15 @@ class CallPath(dict):
             return self[name]
         fqn = "%s.%s" % (self.__fqn, name)
         if DBG:
-            print("72:cp-ast", fqn)
+            print("163:cp-ast", fqn)
+            if len(self.__cs) and self.__cs[-1]:
+                print("163:cp-ast with call pending", fqn , *self.__cs[-1])
+
         if __UPY__:
             newattr = self.__class__().__setup__(self, fqn)
         else:
             newattr = self.__class__(self, fqn)
+
         self._cp_setup(name, newattr)
         return newattr
 
@@ -194,8 +206,10 @@ class CallPath(dict):
 #        setattr(self.__class__, key, PathEnd(host, fqn, default=v))
 
     def _cp_setup(self, key, v):
+        if len(self.__cs) and self.__cs[-1]:
+            print("210:cp-set with call pending", self.__fqn , *self.__cs[-1])
         if v is None:
-            if DBG:print("86:cp-set None ????", key, v)
+            if DBG:print("212:cp-set None ????", key, v)
             return
 
         if not isinstance(v, self.__class__):
@@ -243,18 +257,20 @@ class CallPath(dict):
 
     if __UPY__:
         def __iter__(self):
-            global DBG
-            DBG=1
             yield from self.__solver()
-            return self.__solved
+            try:
+                return self.__solved
+            finally:
+                self.__solved = None
+
     else:
         def __await__(self):
             return self.__solver().__await__()
 
     def __call__(self, *argv, **kw):
         if DBG:
-            print("89:cp-call", self.__fqn, argv, kw)
-        #stack up the async call list
+            print("255:cp-call (a/s)?", self.__fqn, argv, kw)
+        #stack up the (a)sync call list
         self.__cs.append( [self.__fqn, argv, kw ] )
         return self
 
@@ -288,6 +304,24 @@ class CallPath(dict):
         #return ":async-pe-get:%s" % self.__fqn
 
 #======================================================================================
+"""
+-----------SYNC-------------
+163:cp-ast window.canvas.getContext.beginPath
+163:cp-ast with call pending window.canvas.getContext.beginPath window.canvas.getContext ('2d',) {}
+209:cp-set None ???? beginPath None
+255:cp-call (a/s)? window.canvas.getContext.beginPath () {}
+
+-----------ASYNC-------------
+163:cp-ast window.canvas.getContext.beginPath
+163:cp-ast with call pending window.canvas.getContext.beginPath window.canvas.getContext ('2d',) {}
+209:cp-set None ???? beginPath None
+255:cp-call (a/s)? window.canvas.getContext.beginPath () {}
+window.canvas.getContext.beginPath __solver about to wait_answer(1) window.canvas.getContext ('2d',) {}
+        as id 1
+        will remain beginPath
+
+
+"""
 
 import asyncio
 import embed
@@ -335,12 +369,12 @@ class SyncProxy(Proxy):
         cid = self.new_call()
 
         #IO
-        self.io('S', CallPath.proxy.q_sync )
+        self.io(cid, 'S', CallPath.proxy.q_sync )
 
     def io(self, cid, m, q):
         while len(q):
             jscmd = ubinascii.hexlify( q.pop(0) ).decode()
-            embed.os_write('{"dom-%s":{"id":"%s","m":"//S:%s"}}' % (cid, cid, jscmd) )
+            embed.os_write('{"dom-%s":{"id":"%s","m":"//%c:%s"}}' % (cid, cid, m, jscmd) )
 
 
     async def get(self, cp,argv,**kw):

@@ -64,13 +64,20 @@ int mp_hal_stdin_rx_chr(void) {
     return c;
 }
 
+static unsigned char last = 0;
 
 
 //FIXME: libc print with valid json are likely to pass and get interpreted by pts
+//TODO: buffer all until render tick
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
-    for(int i=0;i<len;i++)
+    for(int i=0;i<len;i++) {
+        if ( (str[i] == 0x0a) && (last != 0x0d) )
+            printf("{\"%c\":%u}\n",49, 0x0d );
         printf("{\"%c\":%u}\n",49,(unsigned char)str[i]);
+        last = (unsigned char)str[i];
+    }
 }
+
 
 
 EMSCRIPTEN_KEEPALIVE static PyObject *
@@ -84,7 +91,10 @@ embed_run_script(PyObject *self, PyObject *argv) {
 }
 
 
-#if MICROPY_USE_READLINE == 0
+#if MICROPY_USE_READLINE
+
+#else
+
 char *prompt(char *p) {
     fprintf(stderr,"61:simple read string\n");
     static char buf[256];
@@ -104,4 +114,5 @@ char *prompt(char *p) {
     memcpy(line, buf, l);
     return line;
 }
+
 #endif

@@ -5,6 +5,10 @@ from http.server import *
 
 import argparse
 
+try:
+    import ssl
+except:
+    ssl = False
 
 def test(HandlerClass=BaseHTTPRequestHandler, ServerClass=ThreadingHTTPServer, protocol="HTTP/1.0", port=8000, bind=""):
     """Test the HTTP request handler class.
@@ -15,8 +19,15 @@ def test(HandlerClass=BaseHTTPRequestHandler, ServerClass=ThreadingHTTPServer, p
     server_address = (bind, port)
 
     HandlerClass.protocol_version = protocol
+
+
     with ServerClass(server_address, HandlerClass) as httpd:
         sa = httpd.socket.getsockname()
+
+
+        if ssl:
+            httpd.socket = ssl.wrap_socket (httpd.socket, keyfile='key.pem', certfile='server.pem', server_side=True)
+
         serve_message = "Serving HTTP on {host} port {port} (http://{host}:{port}/) ..."
         print(serve_message.format(host=sa[0], port=sa[1]))
         try:
