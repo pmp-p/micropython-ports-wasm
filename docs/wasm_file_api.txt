@@ -87,10 +87,10 @@ function wasm_file_open(url, cachefile){
         //we need to build the target path, it could be a module import.
 
         //transform to relative path to /
-        while (cachefile.startswith("/"))
+        while (cachefile.startsWith("/"))
             cachefile = cachefile.substring(1)
 
-        while (url.startswith("/"))
+        while (url.startsWith("/"))
             url = url.substring(1)
 
         // is it still a path with at least a one char folder ?
@@ -159,17 +159,17 @@ function wasm_file_exists(url, need_dot) {
 
     // we know those are all MEMFS local files.
     // and yes it's the same folder name as in another OS apps
-    if (url.startswith('assets/'))
+    if (url.startsWith('assets/'))
         return -1
 
-    if (url.endswith('.mpy'))
+    if (url.endsWith('.mpy'))
         return -1
 
     // are we possibly doing folder checking ?
     if (need_dot) {
         // .mpy is blacklisted for now
         // so if it's not .py then it's a folder check.
-        if (!url.endswith('.py')) {
+        if (!url.endsWith('.py')) {
             var found = -1
 
             // package search

@@ -7,20 +7,36 @@ type_gen = type((lambda: (yield))())
 
 cur_task = [0, 0, 0]
 
-auto = None
+auto = 0
 failure = False
 io_error = False
 
 
 _event_loop = None
 
-def run(*argv):
+def start(*argv):
+    argv = list(argv)
     global auto, _event_loop
-    get_event_loop()
-    main = getattr(__import__('__main__'), '__main__', None)
-    if main:
-        _event_loop.create_task( main(0,[] ) )
-    auto = 1
+    # TODO: keep track of the multiple __main__  and handle their loop separately
+    # a subprograms
+
+    if auto < 2:
+        get_event_loop()
+        main = getattr(__import__('__main__'), '__main__', None)
+        if main:
+            _event_loop.create_task( main(0,[]) )
+
+    else:
+        print("asyncio.start : event_loop already exists, will not add task __main__ !")
+
+    # TODO: should global argc/argv should be passed ?
+    # what about argc/argv conflicts ?
+    # shared argparse / usage ?
+
+    while len(argv):
+        _event_loop.create_task( argv.pop(0)(0,[]) )
+
+    auto = 2
 
 
 def __auto__():

@@ -123,6 +123,12 @@ except:
     # spaghetti with hot sauce.
     def ort(name, host=__import__('__main__')):
         global __import__, pivot_name, pivot_file, pivot_code
+        name = name.strip().split('#')[0]
+        if name.count(' '):
+            print("import %s => ' as ' not supported, go ask for fixing import" % name)
+            name = name.split(' ')[0]
+
+
         if sys.modules.get(name,None) is None:
             try:
                 __import__(name)

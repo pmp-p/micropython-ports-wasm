@@ -59,17 +59,19 @@ print("Hello World 1")
     <p>
 
 
-<script language="µpython" src="demos/dom-rw.py"></script>
+<script type="text/µpython">#!demos/dom-ex.py</script>
+
 
 <script type="text/µpython" async>#
-def __main__(argc,argv):
-    tic = 5
-    while tic:
-        await asyncio.sleep(1)
-        print("async count down", tic)
-        tic-=1
-    print("Hello World 2 (was async)")
-asyncio.run()
+if not 'exp' in sys.argv:
+    def __main__(argc,argv):
+        tic = 5
+        while tic:
+            await asyncio.sleep(1)
+            print("async count down", tic)
+            tic-=1
+        print("Hello World 2 (was async)")
+asyncio.start()
 </script>
 
 

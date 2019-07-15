@@ -11,5 +11,5 @@ echo Will use python $PYTHON
 
 $PYTHON -u -B -m fstrings_helper micropython/link.cpy > micropython/ulink.py
 mv -vf micropython.* micropython/
-$PYTHON -u -B -m micropython.js
+$PYTHON -u -B -m micropython.js "$@"
 

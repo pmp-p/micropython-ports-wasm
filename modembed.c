@@ -4,11 +4,15 @@
 */
 
 
+
 #include <string.h>
 #include <stdio.h>
 
 #include "py/obj.h"
 #include "py/runtime.h"
+
+#include "upython.h"
+
 
 static void print(mp_obj_t str) {
     mp_obj_print(str, PRINT_STR);
@@ -29,7 +33,7 @@ STATIC mp_obj_t PyBytes_FromString(char *string){
 #define None mp_const_none
 #define bytes(cstr) PyBytes_FromString(cstr)
 
-    
+
 // modgen
 // python annotations describe the C types you need, argv is always a varialble size array of mp_obj_t.
 // glue code will do its best to do the conversion or init.

@@ -28,8 +28,26 @@ String.prototype.rsplit = function(sep, maxsplit) {
     return maxsplit ? [ split.slice(0, -maxsplit).join(sep) ].concat(split.slice(-maxsplit)) : split;
 }
 
-String.prototype.endswith = String.prototype.endsWith
-String.prototype.startswith = String.prototype.startsWith
+/*
+if(typeof(String.prototype.trim) === "undefined")
+{
+    String.prototype.endswith = String.prototype.endsWith
+    String.prototype.startswith = String.prototype.startsWith
+    String.prototype.trim = function()
+    {
+        return String(this).replace(/^\s+|\s+$/g, '');
+    };
+}
+*/
+
+function trim(str) {
+    var str = str.replace(/^\s\s*/, ''),
+        ws = /\s/,
+        i = str.length;
+    while (ws.test(str.charAt(--i)));
+    return str.slice(0, i + 1);
+}
+
 
 function register(fn,fn_dn){
     if ( undef(fn_dn) )
@@ -113,10 +131,16 @@ register(_until)
 // ============================== FILE I/O (sync => bad) =================================
 include("asmjs_file_api.js")
 
+
 // ================== uplink ===============================================
 
 // separated file link.cpy => clink for cpython , ulink for micropython
 // entry point is embed_call(struct_from_json)
+
+
+// ================= web->sockets ===============================
+
+include("asmjs_socket_api.js")
 
 // =================  EMSCRIPTEN ================================
 
@@ -133,9 +157,10 @@ function preRun(){
     while (e=argv.shift())
         Module.arguments.push(e)
 
-        console.log("preRun: PYTHONSTARTUP ? "+ PYTHONSTARTUP )
-    if ( PYTHONSTARTUP )
+    if ( defined('PYTHONSTARTUP') )
         PYTHONSTARTUP()
+    else
+        console.log("preRun: function PYTHONSTARTUP() ? " )
 
     console.log("preRun: End")
 }
@@ -146,54 +171,27 @@ function write_file(dirname, filename, arraybuffer) {
     FS.createDataFile(dirname,filename, arraybuffer, true, true);
 }
 
-
-//async
-function postRun(){
+function postRun() {
     console.log("postRun: Begin")
-    setTimeout(init_repl_begin,100)
+    setTimeout(init_repl_begin, 1600)
+    console.log("postRun: -> init_repl_begin")
     console.log("postRun: End")
-
 }
 
-function PyRun_VerySimpleFile(text){
-    var cs = allocate(intArrayFromString(text), 'i8', ALLOC_STACK);
-    //console.log(script.text)
-    Module._PyRun_VerySimpleFile(cs)
-    Module._free(cs)
-}
-
-window.BAD_CORE = 1
-
-// TODO: ring buffer.
-function PyRun_SimpleString(text){
-    if ( getValue( plink.shm, 'i8') ) {
-        console.log("shm still locked, retrying in 5ms")
-        setTimeout(PyRun_SimpleString, 5, text )
-        return //
-    }
-    if (BAD_CORE) {
-    // hack until import => __import__ is fixed for micropython core
-    // beh text =text.replace(/import (.+?\w+);/,'imp.ort("$1");')
-    // beh import mod1,mod2,mod
-    // beh import mod as ule etc ..........
-        text =text.replace(/import (.+?\w+)\n/,'imp.ort("$1",host=__import__(__name__))\n')
-    }
-    stringToUTF8( text, plink.shm, 16384 )
-}
-
-
-
-function init_repl_begin(){
+async function init_repl_begin(){
 
     console.log("init_repl: Begin (" + Module.arguments.length+")")
     var scripts = document.getElementsByTagName('script')
 
-    var doscripts = true
+    window.pyscripts = new Array()
 
-    window.plink.shm = Module._repl_init()
+    window.plink.shm =  Module._shm_ptr()
+
 
     // get repl max buffer size but don't start it yet
-    Module._repl_run(1)
+    window.PyRun_SimpleString_MAXSIZE = Module._repl_run(1)
+
+    console.log("init_repl: shm "+window.plink.shm+"["+PyRun_SimpleString_MAXSIZE +"]")
 
     if (Module.arguments.length>1) {
 
@@ -222,19 +220,17 @@ function init_repl_begin(){
 
     }
 
-    if (doscripts) {
+    for(var i = 0; i < scripts.length; i++){
+        var script = scripts[i]
 
-        for(var i = 0; i < scripts.length; i++){
-            var script = scripts[i]
+        if(script.type == "text/µpython"){
+            pyscripts.push(script.text)
 
-            if(script.type == "text/µpython"){
-                PyRun_SimpleString(script.text)
-            }
         }
     }
 
-    // give time for page scripts to display before repl banner
-    setTimeout(init_repl_end, 64);
+    // run scripts or start repl asap
+    PyRun_SimpleString()
 }
 
 
@@ -242,15 +238,80 @@ function init_repl_end() {
 
     console.log("shared memory ptr : " + window.plink.shm )
 
-    // go
-    Module._repl_run()
-
-    // feed repl, roughly 1000/60 ( usual screen sync )
-    setInterval( stdin_poll , 16)
+    // go for banner and prompt
+    if (Module._repl_run(0)) {
+        // feed repl, roughly 1000/60 ( usual screen sync )
+        setInterval( stdin_poll , 16)
+    }
 
     console.log("init_repl: End")
+    window.init_repl_end = null
+
 }
 
+// =========================== REPL shm interface ===============================
+
+window.BAD_CORE = 1
+
+// TODO: ring buffer.
+
+function prepro(text) {
+    if (BAD_CORE) {
+    // hack until import => __import__ is fixed for micropython core
+    // beh text =text.replace(/import (.+?\w+);/,'imp.ort("$1");')
+    // beh import mod1,mod2,mod
+    // beh import mod as ule etc ..........
+    // just fix that import please
+        text =text.replace(/import (.+?\w+)\n/,'imp.ort("$1",host=__import__(__name__))\n')
+    }
+    return text
+}
+
+
+// FIXME: ordering of scripts blocks => use a queue and do it async
+function PyRun_SimpleString(text){
+    if ( getValue( plink.shm, 'i8') ) {
+        console.log("shm still locked, retrying in 16 ms")
+        setTimeout(PyRun_SimpleString, 16, text )
+        return //
+    }
+
+    if (!text)
+        text = pyscripts.shift()
+
+    if ( text.startsWith("#!") ) {
+        text = trim(text.replace("\n","").substr(2))
+        if ( text.endsWith('.py') ) {
+            console.log("Getting shebang py=["+text+"]")
+            text = awfull_get(text)
+        }
+    }
+
+    if ( text ) {
+        text= prepro(text)
+        if (text.length >= PyRun_SimpleString_MAXSIZE)
+            console.log("ERROR: python code ring buffer overrun")
+
+        text = prepro(text)
+        stringToUTF8( text, plink.shm, PyRun_SimpleString_MAXSIZE )
+        console.log("wrote "+text.length+"B to shm")
+    } else
+        console.log("invalid text block")
+
+    if (pyscripts.length)
+        return setTimeout(PyRun_SimpleString, 16 )
+
+    if (init_repl_end)
+        init_repl_end()
+
+}
+
+// not sure about ALLOC normal or stack
+function PyRun_VerySimpleFile(text){
+    var cs = allocate(intArrayFromString(text), 'i8', ALLOC_STACK);
+    Module._PyRun_VerySimpleFile(cs)
+    Module._free(cs)
+}
 
 
 
@@ -427,9 +488,8 @@ async function pythons(argc, argv){
 
     for(var i = 0; i < scripts.length; i++){
         var script = scripts[i]
-
+/*
         console.log("l="+ script.language +" src="+script.src+ " len="+ script.text.length+ " async="+script.async)
-        /*
         if (script.text.length)
             console.log(script.text)
 */
@@ -442,11 +502,12 @@ async function pythons(argc, argv){
                 emterpretXHR.onload = function() {
                     if (200 === emterpretXHR.status || 0 === emterpretXHR.status) {
                         Module.emterpreterFile = emterpretXHR.response
-                        console.log("Starting upython via emterpreter")
+                        console.log("Using µpython VM via emterpreter (async)")
                     } else {
-                        console.log("Starting upython synchronously : " + emterpretXHR.status )
+                        console.log("Using µpython VM synchronously because no micropython.binary => " + emterpretXHR.status )
                     }
                     include("micropython.js")
+                    //include("loader.js")
                 }
                 emterpretXHR.send(null)
             break
@@ -459,9 +520,6 @@ if ( undef("CORS_BROKER") ){
     window.CORS_BROKER = "https://cors-anywhere.herokuapp.com/"
     console.log("using default brooker CORS_BROKER="+CORS_BROKER)
 }
-
-
-
 
 
 

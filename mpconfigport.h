@@ -5,7 +5,7 @@
 
 // options to control how Micro Python is built
 #define MICROPY_QSTR_BYTES_IN_HASH  (1)
-#define MICROPY_ERROR_REPORTING     (MICROPY_ERROR_REPORTING_TERSE)
+#define MICROPY_ERROR_REPORTING     (MICROPY_ERROR_REPORTING_DETAILED)
 #define MICROPY_CPYTHON_COMPAT      (1)
 #define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_DOUBLE)
 //just in case of long urls and a local cache ?
@@ -40,6 +40,7 @@
 #define MICROPY_PERSISTENT_CODE_LOAD (1)
 #define MICROPY_PERSISTENT_CODE_SAVE (1)
 //#define MICROPY_EMIT_MACHINE_CODE (1)
+
 
 #define MICROPY_HAS_FILE_READER (1)
 #define MICROPY_HELPER_LEXER_UNIX (1)
@@ -163,10 +164,13 @@
 // IO is cooked and multiplexed via mp_hal_stdout_tx_strn in file.c
 // so do not modify those
 // https://github.com/python/cpython/blob/v3.7.3/Python/bltinmodule.c#L1849-L1932
+
+#define MICROPY_PY_IO               (1) // <=============== only 1 for wasm port
+
 #define MICROPY_PY_SYS_STDIO_BUFFER (1)
 #define MICROPY_PY_SYS_STDFILES     (1)
-#define MICROPY_PY_IO               (1)
 #define MICROPY_PY_OS_DUPTERM       (1)
+
 
 #define MICROPY_PY_THREAD           (0)
 #define MICROPY_PY_THREAD_GIL       (0)

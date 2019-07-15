@@ -101,17 +101,18 @@ endif
 MPY_CROSS_FLAGS += -mcache-lookup-bc
 
 LD = $(CC)
-LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
+#LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
+LDFLAGS = -fno-exceptions -fno-rtti
 
 ifdef WASM_FILE_API
-	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl', '_repl_init', '_repl_run''_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
+	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_repl_run''_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
 else
-	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_repl_init','_repl_run', '_Py_InitializeEx']"
+	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_strmp', '_Py_InitializeEx']"
 endif
 
 
 SRC_C = \
-	upython.c \
+	core/vfs.c \
 	wasm_mphal.c \
 	file.c \
 	modos.c \
@@ -179,6 +180,8 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 # https://github.com/emscripten-core/emscripten/wiki/Linking
 
 LOPT=-s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1 -s TOTAL_MEMORY=512MB
+
+
 ifdef WASM_FILE_API
 	LOPT += -s FORCE_FILESYSTEM=1
 endif	
@@ -192,63 +195,105 @@ libs: $(OBJ)
 
 # EMOPTS+= -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 1
 
+
+
 COPT += -s ENVIRONMENT=web -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1
+COPT += -s FORCE_FILESYSTEM=1
 
-COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
-#COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
+OPTIM=1
+#DLO=1
 
-COPT += -Oz -g0 -s FORCE_FILESYSTEM=1
+LINK_FLAGS += -s MAIN_MODULE=1
+
+# COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
+# exception thrown: Error: FS error,Error
+#    at new ErrnoError (http://127.0.0.1:8000/micropython.js:1:107185)
+#    at Object.mknod (http://127.0.0.1:8000/micropython.js:1:92046)
+#    at Object.mkdir (http://127.0.0.1:8000/micropython.js:1:92379)
+#    at Object.createFolder (http://127.0.0.1:8000/micropython.js:1:109472)
+#    at wasm_file_open (http://127.0.0.1:8000/asmjs_file_api.js:116:24)
+#    at Array.ASM_CONSTS (http://127.0.0.1:8000/micropython.js:1:37375)
+#    at _emscripten_asm_const_ii (http://127.0.0.1:8000/micropython.js:1:37616)
+#    at wasm-function[194]:71
+#    at wasm-function[1214]:46
+#    at wasm-function[955]:720
+
+ifdef DLO
+#	DLO = $(LIBMICROPYTHON) --use-preload-plugins
+ 	DLO = --use-preload-plugins 
+	DLO += --preload-file libmicropython.wasm@/lib/libmicropython.so
+	COPT += -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
+	COPT += -Oz -g0 --no-heap-copy
+	LINK_FLAGS +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 -s EXPORT_ALL=1 
+else
+	DLO= $(LIBMICROPYTHON)
+	ifdef OPTIM
+		# -s ASSERTIONS=0 => NEVER!
+		COPT += -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0 
+		COPT += -Oz -g0
+		LINK_FLAGS +=-s ERROR_ON_UNDEFINED_SYMBOLS=0	
+	else
+		COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
+		COPT += -O0
+		LINK_FLAGS +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 
+	endif
+endif
+
+#-s USE_WEBGL2=1 -s FULL_ES3=1 
+
+
+COPT += -s NO_EXIT_RUNTIME=1
+
+#no compression or dlopen(wasm) will fail on chrom*
 COPT += -s LZ4=0 --memory-init-file 0
-COPT += -s TOTAL_MEMORY=512MB -s NO_EXIT_RUNTIME=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
+COPT += -s TOTAL_MEMORY=512MB -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 
 
-WASM_FLAGS=-s BINARYEN_ASYNC_COMPILATION=1 -s WASM=1 -s BINARYEN_TRAP_MODE=\"clamp\"
+WASM_FLAGS= -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1 -s BINARYEN_TRAP_MODE=\"clamp\"
 
 ifdef ASYNC
 	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"' 
 endif
 
 
-LINK_FLAGS=-s MAIN_MODULE=1
+
 THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
 
 check:
-	PREPRO = $(addprefix -isystem, $(shell $(CC) -s USE_SDL=2 -I/tmp -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 	$(ECHO) EMSDK=$(EMSDK)
-	$(ECHO) EMSCRIPTEN=$(EMSCRIPTEN)	
+	$(ECHO) EMSCRIPTEN=$(EMSCRIPTEN)
 	$(ECHO) EMSDK_NODE=$(EMSDK_NODE)
-	$(ECHO) EMSCRIPTEN_TOOLS=$(EMSCRIPTEN_TOOLS)	
-	$(ECHO) EM_CONFIG=$(EM_CONFIG)		
+	$(ECHO) EMSCRIPTEN_TOOLS=$(EMSCRIPTEN_TOOLS)
+	$(ECHO) EM_CONFIG=$(EM_CONFIG)
 	$(ECHO) EMMAKEN_COMPILER=$(EMMAKEN_COMPILER)
 	$(ECHO) EMMAKEN_CFLAGS=$(EMMAKEN_CFLAGS)
-	$(ECHO) EM_CACHE=$(EM_CACHE)	
-	$(ECHO) EM_CONFIG=$(EM_CONFIG)	
+	$(ECHO) EMCC_FORCE_STDLIBS=$(EMCC_FORCE_STDLIBS)
+	$(ECHO) EM_CACHE=$(EM_CACHE)
+	$(ECHO) EM_CONFIG=$(EM_CONFIG)
 	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(shell env|grep ^EM)
 #	$(ECHO) "Using [$(CPP)] as prepro"
 	$(ECHO) "[$(PREPRO)]"
 
 	
-interpreter:
-	$(ECHO) "Building static executable $@"
-	$(CC) $(CFLAGS) -g -o build/main.o main.c
-	$(Q)$(CC) $(INC) $(COPT) $(WASM_FLAGS) $(LINK_FLAGS) $(THR_FLAGS) \
- -o $@ main.c $(LIBMICROPYTHON) \
- --preload-file assets@/assets --preload-file micropython/lib@/lib
-	$(shell mv $(BASENAME).* $(BASENAME)/)
-
 $(PROG): libs
-	$(ECHO) "Building static executable $@"
-	$(CC) $(CFLAGS) -g0 -o build/main.o main.c
-	$(Q)$(CC) $(INC) $(COPT) $(WASM_FLAGS) $(LINK_FLAGS) $(THR_FLAGS) \
- -o $@ main.c $(LIBMICROPYTHON) \
+	$(ECHO) "Building executable $@"
+#	$(Q)
+	$(CC) $(INC) $(COPT) $(WASM_FLAGS) $(LINK_FLAGS) $(THR_FLAGS) \
+ -o $@ main.c -ldl -lm -lc \
+ $(DLO) \
  --preload-file assets@/assets \
- --preload-file micropython/lib@/lib \
-  --preload-file libmicropython.wasm 
+ --preload-file micropython/lib@/lib
+# 
 	$(shell mv $(BASENAME).* $(BASENAME)/)
-
-
-
 #
+
+
+
+
+
+
+
+
 
 

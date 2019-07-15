@@ -38,6 +38,8 @@ else
 
 # WASM_FILE_API=1 \
 
+        #export EMCC_FORCE_STDLIBS=libc,libc++abi,libc++,libdlmalloc
+
         if emmake make \
  USER_C_MODULES=cmod \
  CFLAGS_EXTRA="-DMODULE_EXAMPLE_ENABLED=1 -s USE_SDL=2" \

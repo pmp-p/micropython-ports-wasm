@@ -1,3 +1,7 @@
+#ifndef UPYTHON_H
+
+#include <stdarg.h>
+
 #include "py/nlr.h"
 #include "py/compile.h"
 #include "py/runtime.h"
@@ -42,5 +46,8 @@ static char heap[32*1024*1024];
 
 
 int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...);
+static int repl_started = -100;
+#define UPYTHON_H 1
 
+#endif //UPYTHON_H
 

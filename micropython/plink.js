@@ -69,6 +69,23 @@ function ID(){
      return 'js|' + Math.random().toString(36).substr(2, 9);
 }
 
+function isCallable(value) {
+    if (!value) { return false; }
+    if (typeof value !== 'function' && typeof value !== 'object') { return false; }
+    if (typeof value === 'function' && !value.prototype) { return true; }
+    if (hasToStringTag) { return tryFunctionObject(value); }
+    if (isES6ClassFn(value)) { return false; }
+    var strClass = toStr.call(value);
+    return strClass === fnClass || strClass === genClass;
+}
+
+function unhex_utf8(s) {
+    var ary = []
+    for ( var i=0; i<s.length; i+=2 ) {
+        ary.push( parseInt(s.substr(i,2),16) )
+    }
+    return new TextDecoder().decode( new Uint8Array(ary) )
+}
 
 
 function embed_call_impl(callid, fn, owner, params) {
@@ -100,39 +117,12 @@ function embed_call_impl(callid, fn, owner, params) {
             plink.embed.state[""+callid ] =  rvid
     } else
         plink.embed.state[""+callid ] =""+rv
-    //console.log("embed_call_impl:" + plink.embed.state )
-}
-
-function isCallable(value) {
-    if (!value) { return false; }
-    if (typeof value !== 'function' && typeof value !== 'object') { return false; }
-    if (typeof value === 'function' && !value.prototype) { return true; }
-    if (hasToStringTag) { return tryFunctionObject(value); }
-    if (isES6ClassFn(value)) { return false; }
-    var strClass = toStr.call(value);
-    return strClass === fnClass || strClass === genClass;
-}
-
-
-
-
-
-
-
-
-
-
-
-function unhex_utf8(s) {
-    var ary = []
-    for ( var i=0; i<s.length; i+=2 ) {
-        ary.push( parseInt(s.substr(i,2),16) )
-    }
-    return new TextDecoder().decode( new Uint8Array(ary) )
+    //console.log("embed_call_impl:"+ callid+ " => " + plink.embed.state[callid] )
 }
 
 
 function io_sync(payload) {
+//    console.log(payload)
     try {
         eval(payload)
     } catch (x) {
@@ -157,10 +147,13 @@ function embed_call(jsdata) {
     var name = jsdata['m']
 
 
+
+
     if (name.startsWith("//"))
         return io_dispatch( name )
 
     try {
+
         var path = name.rsplit('.')
         var solved = []
         solved.push( window )
@@ -169,7 +162,7 @@ function embed_call(jsdata) {
             var elem = path.shift()
             if (elem){
                 var leaf = solved[ solved.length -1 ][ elem ]
-                console.log( solved[ solved.length -1 ]+" -> "+ leaf)
+//                console.log( solved[ solved.length -1 ]+" -> "+ leaf)
                 solved.push( leaf )
             } else break
         }
@@ -177,7 +170,7 @@ function embed_call(jsdata) {
         var owner = solved[ solved.length -2 ]
 
         if (!isCallable(target)) {
-            console.log("embed_call(id=" + callid + ", query="+name+") == " + target)
+//            console.log("embed_call(id=" + callid + ", query="+name+") == " + target)
             plink.embed.state[""+callid ] = ""+target;
             return;
         }
@@ -186,9 +179,11 @@ function embed_call(jsdata) {
         var params = jsdata['a'];
         var env = jsdata['k'] || {};
 
-        console.log('embed_call:'+target +' call '+callid+' launched with',params,' on object ' +owner)
+//        console.log('embed_call:'+target +' call '+callid+' launched with',params,' on object ' +owner)
 
-        setTimeout( embed_call_impl ,1, callid, target, owner, params );
+        //setTimeout( embed_call_impl ,1, callid, target, owner, params );
+        embed_call_impl( callid, target, owner, params )
+
     } catch (x) {
         console.log('malformed RPC '+jsdata+" : "+x )
     }
