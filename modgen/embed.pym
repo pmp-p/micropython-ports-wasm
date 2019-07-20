@@ -20,6 +20,10 @@
 
 struct timespec ts;
 
+extern char *repl_line;
+extern int show_os_loop(int state);
+
+
 extern mp_lexer_t* mp_lexer_new_from_file(const char *filename);
 #if MICROPY_PERSISTENT_CODE_SAVE
 extern void mp_raw_code_save_file(mp_raw_code_t *rc, const char *filename);
@@ -68,8 +72,11 @@ def os_write( data : const_char_p = "{}" ) -> void :
 def os_stderr( data : const_char_p = "" ) -> void :
     fprintf( stderr, "embed.os_stderr(%s)\n", data );
 
+def log( data : const_char_p = "" ) -> void :
+    fprintf( stderr, "%s\n", data );
 
-def butilins_vars(module_obj : mp_obj_t = None ) -> dict:
+
+def builtins_vars(module_obj : mp_obj_t = None ) -> dict:
     mp_obj_dict_t *mod_globals = mp_obj_module_get_globals(module_obj);
     return mod_globals;
 
@@ -103,6 +110,9 @@ def os_compile(source_file : const_char_p="", mpy_file : const_char_p="") -> voi
     fprintf(stderr,"os_compile: MICROPY_PERSISTENT_CODE_SAVE not enabled\n");
     #endif
 
+def os_showloop()->void :
+    fprintf(stderr,"will show begin/end for os loop\n");
+    show_os_loop(1);
 
 
 def os_hook() ->void:
@@ -136,16 +146,24 @@ def ticks_add(ticks : int=0, delta : int=0)->int:
 
 
 def sleep_ms(ms : int =0) -> void :
-    emscripten_sleep_with_yield( ms );
+    //emscripten_sleep_with_yield( ms );
+    emscripten_sleep(ms);
+
+def sleep(s : float =0) -> void :
+    emscripten_sleep( (int)(s*1000) );
+
 
 def ticks_period() -> int:
     return mp_obj_new_int_from_uint( MICROPY_PY_UTIME_TICKS_PERIOD );
 
 
+def os_read() -> bytes:
+    return bytes( repl_line );
+
 // TODO: remove after tests
 
 
-def os_read() -> bytes:
+def os_read_useless() -> bytes:
     // simple read string
 
     static char buf[256];

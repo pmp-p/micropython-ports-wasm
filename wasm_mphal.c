@@ -18,8 +18,8 @@
 
 #include "upython.h"
 
-
 #include <time.h>
+
 
 
 struct timespec ts;
@@ -66,15 +66,61 @@ int mp_hal_stdin_rx_chr(void) {
 
 static unsigned char last = 0;
 
+#define HEXBUF 1
+
+#if HEXBUF
+
+extern rbb_t out_rbb;
+
+unsigned char v2a(int c)
+{
+    const unsigned char hex[] = "0123456789abcdef";
+    return hex[c];
+}
+
+unsigned char hex_hi(unsigned char b) {
+    return v2a((b >> 4) & 0x0F);
+}
+unsigned char hex_lo(unsigned char b) {
+    return v2a((b) & 0x0F);
+}
+
+unsigned char out_push(unsigned char c) {
+    if (last>127) {
+        if (c>127)
+            fprintf(stderr," -- utf-8(2/2) %u --\n", c );
+    } else {
+        if (c>127)
+            fprintf(stderr," -- utf-8(1/2) %u --\n", c );
+    }
+    rbb_append(&out_rbb, hex_hi(c));
+    rbb_append(&out_rbb, hex_lo(c));
+    return (unsigned char)c;
+}
+
+
+#endif
 
 //FIXME: libc print with valid json are likely to pass and get interpreted by pts
 //TODO: buffer all until render tick
+
+//this one (over)cooks like _cooked
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     for(int i=0;i<len;i++) {
-        if ( (str[i] == 0x0a) && (last != 0x0d) )
+        if ( (str[i] == 0x0a) && (last != 0x0d) ) {
+            #if HEXBUF
+                out_push( 0x0d );
+            #else
             printf("{\"%c\":%u}\n",49, 0x0d );
+            #endif
+        }
+        #if HEXBUF
+            last = out_push( (unsigned char)str[i] );
+        #else
         printf("{\"%c\":%u}\n",49,(unsigned char)str[i]);
         last = (unsigned char)str[i];
+        #endif
+
     }
 }
 

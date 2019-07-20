@@ -6,15 +6,13 @@
 // options to control how Micro Python is built
 #define MICROPY_QSTR_BYTES_IN_HASH  (1)
 #define MICROPY_ERROR_REPORTING     (MICROPY_ERROR_REPORTING_DETAILED)
+#define MICROPY_ENABLE_EMERGENCY_EXCEPTION_BUF (1)
 #define MICROPY_CPYTHON_COMPAT      (1)
 #define MICROPY_FLOAT_IMPL          (MICROPY_FLOAT_IMPL_DOUBLE)
 //just in case of long urls and a local cache ?
 #define MICROPY_ALLOC_PATH_MAX      (1024)
 #define MICROPY_BUILTIN_METHOD_CHECK_SELF_ARG (0)
 #define MICROPY_CAN_OVERRIDE_BUILTINS (1)
-
-
-// #define FROZEN_MPY_DIR              "modules"
 
 #define MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE (1)
 
@@ -37,6 +35,8 @@
 #define MICROPY_ENABLE_EXTERNAL_IMPORT (1)
 #define MICROPY_PY_BUILTINS_COMPILE (1)
 #define MICROPY_PY_SYS_EXC_INFO     (0) // <============================ NON STANDARD PY2
+
+#define MICROPY_PERSISTENT_CODE (1)
 #define MICROPY_PERSISTENT_CODE_LOAD (1)
 #define MICROPY_PERSISTENT_CODE_SAVE (1)
 //#define MICROPY_EMIT_MACHINE_CODE (1)
@@ -49,14 +49,18 @@
 #define MICROPY_VFS_POSIX    (0)
 
 
+
 #define MICROPY_EMIT_WASM (1)
 //#define MICROPY_EMIT_INLINE_ASM (1)
 //#define MICROPY_EMIT_NATIVE
 #define MICROPY_EMIT_X64            (0)
 #define MICROPY_EMIT_THUMB          (0)
 #define MICROPY_EMIT_INLINE_THUMB   (0)
-#define MICROPY_ENABLE_PYSTACK      (1)
 
+
+#define MICROPY_STACKLESS           (1)
+#define MICROPY_ENABLE_PYSTACK      (1)
+#define MICROPY_OPT_COMPUTED_GOTO   (1)
 
 // nlr.h  MICROPY_NLR_* must match a supported arch
 // define or autodetect will fail to select WASM
@@ -69,6 +73,11 @@
     #define MICROPY_NLR_X86 (0)
     #define MICROPY_NLR_X64 (0)
 #endif
+
+// mpconfig
+#define MICROPY_PY_GENERATOR_PEND_THROW (1)  // def 1
+#define MICROPY_PY_STR_BYTES_CMP_WARN (1)    // def 0
+
 
 // MEMORY
 #define MICROPY_PY_MICROPYTHON_MEM_INFO   (1)
@@ -95,7 +104,6 @@
 
 //??
 #define MICROPY_USE_INTERNAL_ERRNO (0)
-#define MICROPY_USE_INTERNAL_PRINTF (0)
 
 #define MICROPY_USE_READLINE (0)
 #define MICROPY_PY_BUILTINS_INPUT (1)
@@ -139,7 +147,7 @@
 #define MICROPY_PY_BUILTINS_REVERSED  (1)
 #define MICROPY_PY_BUILTINS_SET       (1)
 #define MICROPY_PY_BUILTINS_SLICE     (1)
-#define MICROPY_PY_BUILTINS_STR_UNICODE (1)
+#define MICROPY_PY_BUILTINS_STR_UNICODE (0)
 #define MICROPY_PY_BUILTINS_STR_CENTER (1)
 #define MICROPY_PY_BUILTINS_STR_PARTITION (1)
 #define MICROPY_PY_BUILTINS_STR_SPLITLINES (1)
@@ -149,7 +157,7 @@
 #define MICROPY_PY_CMATH            (1)
 
 //? TEST THAT THING !
-#define MICROPY_PY_FFI              (1) // <================================ NON STANDARD NOT CPY
+#define MICROPY_PY_FFI              (1) // <========================== NON STANDARD NOT CPY
 
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)
@@ -165,11 +173,18 @@
 // so do not modify those
 // https://github.com/python/cpython/blob/v3.7.3/Python/bltinmodule.c#L1849-L1932
 
+
+#define MICROPY_USE_INTERNAL_PRINTF (0)
 #define MICROPY_PY_IO               (1) // <=============== only 1 for wasm port
+#define MICROPY_PY_IO_IOBASE            (1)
+#define MICROPY_PY_IO_RESOURCE_STREAM   (1)
+#define MICROPY_PY_IO_FILEIO            (1)
+#define MICROPY_PY_IO_BYTESIO           (1)
+#define MICROPY_PY_IO_BUFFEREDWRITER    (1)
 
 #define MICROPY_PY_SYS_STDIO_BUFFER (1)
 #define MICROPY_PY_SYS_STDFILES     (1)
-#define MICROPY_PY_OS_DUPTERM       (1)
+#define MICROPY_PY_OS_DUPTERM       (1) // <==== or js console will get C stdout too ( C-OUT [spam] )
 
 
 #define MICROPY_PY_THREAD           (0)
@@ -205,13 +220,6 @@
 #define MICROPY_PY_UTIMEQ           (1)
 #define MICROPY_PY_UZLIB            (1)
 
-//#define MICROPY_PY_IO                   (1) => 0 I/O
-#define MICROPY_PY_IO_IOBASE            (1)
-#define MICROPY_PY_IO_RESOURCE_STREAM   (1)
-#define MICROPY_PY_IO_FILEIO            (1)
-#define MICROPY_PY_IO_BYTESIO           (1)
-#define MICROPY_PY_IO_BUFFEREDWRITER    (1)
-
 #define MICROPY_VFS                 (0)
 
 #define MICROPY_DEBUG_PRINTERS      (0)
@@ -242,8 +250,8 @@ typedef unsigned mp_uint_t; // must be pointer size
 
 typedef long mp_off_t;
 
-// #define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn_cooked(str, len)
-#define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn(str, len)
+#define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn_cooked(str, len)
+//#define MP_PLAT_PRINT_STRN(str, len) mp_hal_stdout_tx_strn(str, len)
 
 
 extern const struct _mp_obj_module_t mp_module_time;

@@ -45,6 +45,10 @@ static char heap[32*1024*1024];
 #define PyObject mp_obj_t
 
 
+#include "core/ringbuf_b.h"
+#include "core/ringbuf_o.h"
+
+
 int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...);
 static int repl_started = -100;
 #define UPYTHON_H 1

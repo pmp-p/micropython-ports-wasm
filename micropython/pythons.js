@@ -128,6 +128,17 @@ register(_until)
 
 
 
+function unhex_utf8(s) {
+    var ary = []
+    for ( var i=0; i<s.length; i+=2 ) {
+        ary.push( parseInt(s.substr(i,2),16) )
+    }
+    return new TextDecoder().decode( new Uint8Array(ary) )
+}
+
+
+
+
 // ============================== FILE I/O (sync => bad) =================================
 include("asmjs_file_api.js")
 
@@ -178,7 +189,7 @@ function postRun() {
     console.log("postRun: End")
 }
 
-async function init_repl_begin(){
+function init_repl_begin(){
 
     console.log("init_repl: Begin (" + Module.arguments.length+")")
     var scripts = document.getElementsByTagName('script')
@@ -206,7 +217,7 @@ async function init_repl_begin(){
         window.currentTransferSize = 0
         window.currentTransfer = argv0
 
-        var ab = awfull_get(argv0)
+        var ab = awfull_get(argv0,'utf-8')
         if (window.currentTransferSize>=0) {
             console.log(ab.length)
             FS.createDataFile("/",'main.py', ab, true, true);
@@ -224,7 +235,8 @@ async function init_repl_begin(){
         var script = scripts[i]
 
         if(script.type == "text/µpython"){
-            pyscripts.push(script.text)
+            if (script.text)
+                pyscripts.push(script.text)
 
         }
     }
@@ -246,6 +258,7 @@ function init_repl_end() {
 
     console.log("init_repl: End")
     window.init_repl_end = null
+    Module._show_os_loop(1)
 
 }
 
@@ -262,7 +275,7 @@ function prepro(text) {
     // beh import mod1,mod2,mod
     // beh import mod as ule etc ..........
     // just fix that import please
-        text =text.replace(/import (.+?\w+)\n/,'imp.ort("$1",host=__import__(__name__))\n')
+        //text =text.replace(/import (.+?\w+)\n/,'imp.ort("$1",host=__import__(__name__))\n')
     }
     return text
 }
@@ -271,7 +284,7 @@ function prepro(text) {
 // FIXME: ordering of scripts blocks => use a queue and do it async
 function PyRun_SimpleString(text){
     if ( getValue( plink.shm, 'i8') ) {
-        console.log("shm still locked, retrying in 16 ms")
+        console.log("shm locked, retrying in 16 ms")
         setTimeout(PyRun_SimpleString, 16, text )
         return //
     }
@@ -279,11 +292,26 @@ function PyRun_SimpleString(text){
     if (!text)
         text = pyscripts.shift()
 
-    if ( text.startsWith("#!") ) {
-        text = trim(text.replace("\n","").substr(2))
-        if ( text.endsWith('.py') ) {
-            console.log("Getting shebang py=["+text+"]")
-            text = awfull_get(text)
+    var header = text.substring(0,64).trim()
+
+
+    // no : for script tags
+    var async_script = header.startsWith('#!async')
+
+    //if (async_script)
+    //    console.log("==== ASYNC TL =======> "+header)
+
+    // for script file there's :
+    header = header.replace('async:','').replace(' ','').trim()
+
+    if ( header.startsWith("#!") ) {
+        header = header.split("\n")[0].substr(2).trim()
+        // if not .py found then it's a script tag.
+        if ( header.endsWith('.py') ) {
+            console.log("Getting shebang py=["+header+"] async="+ async_script)
+            var tmp = awfull_get(text, "utf-8")
+            if (tmp)
+                text=tmp
         }
     }
 
@@ -292,8 +320,15 @@ function PyRun_SimpleString(text){
         if (text.length >= PyRun_SimpleString_MAXSIZE)
             console.log("ERROR: python code ring buffer overrun")
 
+        //try to fix the damn thing temporarily
         text = prepro(text)
-        stringToUTF8( text, plink.shm, PyRun_SimpleString_MAXSIZE )
+
+        // TODO: ordering of mixed sync/async toplevels
+        if (async_script)
+            stringToUTF8( text +"\n#async-tl", plink.shm, PyRun_SimpleString_MAXSIZE )
+        else
+            stringToUTF8( text, plink.shm, PyRun_SimpleString_MAXSIZE )
+
         console.log("wrote "+text.length+"B to shm")
     } else
         console.log("invalid text block")
@@ -316,7 +351,7 @@ function PyRun_VerySimpleFile(text){
 
 
 
-// ================= STDIN =================================================
+// ===================================== STDIN ================================
 var pts = {}
    pts.i = {}
    pts.i.line = ""
@@ -366,84 +401,6 @@ function stdin_poll(){
     window.stdin = ""
 }
 
-window.stdin_tx =stdin_tx
-
-
-// ================ STDOUT =================================================
-
-// TODO: add a dupterm for stderr, and display error in color in xterm if not in stdin_raw mode
-
-
-window.stdout_blit = false
-window.stdout_array = []
-
-
-function flush_stdout_utf8(){
-    var uint8array = new Uint8Array(window.stdout_array)
-    var string = new TextDecoder().decode( uint8array )
-    term_impl(string)
-    window.stdout_array=[]
-    stdout_blit = false
-}
-
-
-function stdout_process1_utf8(cc) {
-    window.stdout_array.push(cc)
-
-    if (window.stdin_raw) {
-        if (cc<128)
-            stdout_blit = true
-        return
-    }
-
-    if (cc==10) {
-        stdout_blit = true
-        return
-    }
-    //no blit on non raw mode until crlf
-}
-
-// TODO: find a javascript guru to optim array processing
-function stdout_process_utf8(cc) {
-    if (  Array.isArray(cc) ) {
-        while (cc.length>0)
-            stdout_process1_utf8(cc.shift())
-    } else
-        stdout_process1_utf8(cc)
-}
-
-window.stdout_process = stdout_process_utf8
-window.flush_stdout = flush_stdout_utf8
-
-
-
-// this is a demultiplexer for stdout and os (DOM/js ...) control
-function pts_decode(text){
-
-    try {
-        var jsdata = JSON.parse(text);
-        for (key in jsdata) {
-            // TODO: multiple fds for pty.js
-            if (key=="1") {
-                stdout_process( jsdata[key] )
-                continue
-            }
-            embed_call(jsdata[key])
-        }
-
-
-    } catch (x) {
-        // found a raw C string via libc
-        console.log("C-OUT ["+text+"]")
-        flush_stdout()
-        try {
-            posix.syslog(text)
-        } catch (y) {
-            term_impl(text+"\r\n")
-        }
-
-    }
-}
 
 // Ctrl+L is mandatory ! need xterm.js 3.14+
 function xterm_helper(term, key) {
@@ -473,6 +430,99 @@ function xterm_helper(term, key) {
     }
     return true
 }
+
+window.stdin_tx =stdin_tx
+
+
+// =================================== STDOUT ==================================
+
+// TODO: add a dupterm for stderr, and display error in color in xterm if not in stdin_raw mode
+
+
+window.stdout_blit = false
+window.stdout_array = []
+
+/*
+function flush_stdout_utf8_old(){
+    var uint8array = new Uint8Array(window.stdout_array)
+    var string = new TextDecoder().decode( uint8array )
+    term_impl(string)
+    window.stdout_array=[]
+    stdout_blit = false
+}
+
+
+function stdout_process1_utf8_old(cc) {
+    window.stdout_array.push(cc)
+
+    if (window.stdin_raw) {
+        if (cc<128)
+            stdout_blit = true
+        return
+    }
+
+    if (cc==10) {
+        stdout_blit = true
+        return
+    }
+    //no blit on non raw mode until crlf
+}
+
+
+// TODO: find a javascript guru to optim array processing
+function stdout_process_utf8(cc) {
+    if (  Array.isArray(cc) ) {
+        while (cc.length>0)
+            stdout_process1_utf8(cc.shift())
+    } else
+        stdout_process1_utf8(cc)
+}
+
+*/
+
+
+function flush_stdout_utf8(){}
+
+function stdout_process_utf8(cc) {
+    term_impl(cc)
+    stdout_blit = false
+}
+
+
+window.stdout_process = stdout_process_utf8
+window.flush_stdout = flush_stdout_utf8
+
+
+
+// this is a demultiplexer for stdout and os (DOM/js ...) control
+function pts_decode(text){
+
+    try {
+        var jsdata = JSON.parse(text);
+        for (key in jsdata) {
+            // TODO: multiple fds for pty.js
+            if (key=="1") {
+                stdout_process(unhex_utf8( jsdata[key]))
+                //stdout_process( jsdata[key] )
+                continue
+            }
+            embed_call(jsdata[key])
+        }
+
+
+    } catch (x) {
+        // found a raw C string via libc
+        console.log("C-OUT ["+text+"]")
+        flush_stdout()
+        try {
+            posix.syslog(text)
+        } catch (y) {
+            term_impl(text+"\r\n")
+        }
+
+    }
+}
+
 // ========================== startup hooks ======================================
 
 window.Module = {

@@ -1,5 +1,5 @@
 # (c) 2014-2018 Paul Sokolovsky. MIT license.
-# (c) 2019- Paul P. MIT license.
+# (c) 2019- Pmp P. MIT license.
 
 import sys
 
@@ -8,11 +8,21 @@ type_gen = type((lambda: (yield))())
 cur_task = [0, 0, 0]
 
 auto = 0
+# for asyncio tasks
 failure = False
+
+# for io errors ( dom==gpu / websocket==socket  )
 io_error = False
 
-
 _event_loop = None
+
+def task(t, *argv, **kw):
+    global _event_loop
+    if _event_loop is None:
+        get_event_loop()
+    print("about to start %s(*%r,**%r)" % (t.__name__, argv,kw) )
+    _event_loop.create_task( t(*argv,**kw) )
+
 
 def start(*argv):
     argv = list(argv)
@@ -21,7 +31,9 @@ def start(*argv):
     # a subprograms
 
     if auto < 2:
-        get_event_loop()
+        if _event_loop is None:
+            get_event_loop()
+
         main = getattr(__import__('__main__'), '__main__', None)
         if main:
             _event_loop.create_task( main(0,[]) )
@@ -34,7 +46,7 @@ def start(*argv):
     # shared argparse / usage ?
 
     while len(argv):
-        _event_loop.create_task( argv.pop(0)(0,[]) )
+        task(argv)
 
     auto = 2
 
@@ -89,6 +101,7 @@ if __EMSCRIPTEN__:
 
     # on emscripten browser runs the loop both for IO and tasks
     from .io import step
+    from .asyncify import asyncify
 
 import utime as time
 import utimeq

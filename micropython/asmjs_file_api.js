@@ -48,12 +48,16 @@ var miss = [
 "_datetime/__init__.py",
 "_datetime/index.html",
 "_datetime.py",
+"asyncio/asyncify/__init__.py",
+"asyncio/asyncify/index.html",
+"imp_empty_pivot_module/__init__.py",
+"imp_empty_pivot_module/index.html",
 ]
 
 window.urls = {"cors": null, "name":"webcache","id":-1, "index": "/index.html", "err":miss}
 
 
-function awfull_get(url) {
+function awfull_get(url, charset) {
     function updateProgress (oEvent) {
       if (oEvent.lengthComputable) {
         var percentComplete = oEvent.loaded / oEvent.total;
@@ -85,8 +89,10 @@ function awfull_get(url) {
             //console.log("awfull_get: Transfer is complete saving : "+window.currentTransferSize);
         }
     }
-
-    oReq.overrideMimeType("text/plain; charset=x-user-defined");
+    if (charset)
+        oReq.overrideMimeType("text/plain; charset="+charset);
+    else
+        oReq.overrideMimeType("text/plain; charset=x-user-defined");
     oReq.addEventListener("progress", updateProgress);
     oReq.addEventListener("load", transferComplete);
     oReq.addEventListener("error", transferFailed);

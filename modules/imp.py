@@ -2,7 +2,7 @@ import sys
 import builtins
 import types
 
-# keep the builtin function accessible in this module and from imp.__import__
+# keep the builtin function accessible in this module and via imp.__import__
 __import__ = __import__
 
 
@@ -100,9 +100,6 @@ try:
         sys.modules[name] = mod
         return mod
 
-    # install hook
-    builtins.__import__ = importer
-    print("__import__ is now", importer)
 
 except:
     DBG=0
@@ -143,8 +140,18 @@ except:
                 # the nearly empty pivot module will provide globals() itself to exec so vars not required
                 import imp_pivot
                 sys.modules[name]=sys.modules.pop('imp_pivot')
+        return sys.modules.get(name,None)
 
 
+    def importer(name,*argv,**kw):
+        global __import__
+        if name=='syscall':
+            print("<async syscall>",end='')
+        elif not name in sys.modules:
+            print("importing ",name)
+        return __import__(name, *argv,**kw)
 
 
-
+# install hook
+builtins.__import__ = importer
+print("__import__ is now", importer)

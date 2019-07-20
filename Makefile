@@ -20,7 +20,6 @@ EM_CACHE ?= $(HOME)/.emscripten_cache
 QSTR_DEFS = qstrdefsport.h
 
 
-
 ifdef EMSCRIPTEN
 	ifdef ASYNC
 		CFLAGS += -D__EMTERPRETER__=1
@@ -33,6 +32,7 @@ ifdef EMSCRIPTEN
 	CPP = clang -E -D__CPP__ -D__EMSCRIPTEN__
 	CPP += --sysroot $(EMSCRIPTEN)/system	
 	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
+
 	# Act like 'emcc'
 	CPP += -U__i386 -U__i386 -Ui386 -U__SSE -U__SSE_MATH -U__SSE2 -U__SSE2_MATH -U__MMX__ -U__SSE__ -U__SSE_MATH__ -U__SSE2__ -U__SSE2_MATH__
 else
@@ -107,7 +107,7 @@ LDFLAGS = -fno-exceptions -fno-rtti
 ifdef WASM_FILE_API
 	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_repl_run''_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
 else
-	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_strmp', '_Py_InitializeEx']"
+	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_strmp', '_show_os_loop']"
 endif
 
 
@@ -148,12 +148,13 @@ endif
 
 
 # List of sources for qstr extraction
-SRC_QSTR += $(SRC_C) $(LIB_SRC_C)
+SRC_QSTR += $(SRC_C)
+SRC_QSTR += $(LIB_SRC_C)
+
 
 # Append any auto-generated sources that are needed by sources listed in
 # SRC_QSTR
 SRC_QSTR_AUTO_DEPS += SRC_QSTR
-
 
 OBJ = $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_LIB:.c=.o))
@@ -252,7 +253,18 @@ COPT += -s TOTAL_MEMORY=512MB -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 WASM_FLAGS= -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1 -s BINARYEN_TRAP_MODE=\"clamp\"
 
 ifdef ASYNC
-	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"' 
+	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
+	WASM_FLAGS += -s EMTERPRETIFY_WHITELIST='[ "_embed_sleep", "_embed_sleep_ms", "_py_iter_one",\
+ "_mp_call_function_n_kw","_mp_execute_bytecode", "_fun_bc_call", \
+ "_gen_instance_close",\
+ "_gen_instance_iternext",\
+ "_gen_instance_send",\
+ "_gen_instance_throw",\
+ "_mp_obj_gen_resume",\
+ "_mp_resume"]'
+	
+#	WASM_FLAGS += -s EMTERPRETIFY_SYNCLIST='["_mp_obj_gen_resume"]'  -s EMTERPRETIFY_ADVISE=1
+
 endif
 
 

@@ -79,19 +79,12 @@ function isCallable(value) {
     return strClass === fnClass || strClass === genClass;
 }
 
-function unhex_utf8(s) {
-    var ary = []
-    for ( var i=0; i<s.length; i+=2 ) {
-        ary.push( parseInt(s.substr(i,2),16) )
-    }
-    return new TextDecoder().decode( new Uint8Array(ary) )
-}
 
 
-function embed_call_impl(callid, fn, owner, params) {
+async function embed_call_impl(callid, fn, owner, params) {
     var rv = null;
     try {
-        rv = fn.apply(owner,params)
+        rv = await fn.apply(owner,params)
     } catch(x){
         console.log("call failed : "+fn+"("+params+") : "+ x )
     }
