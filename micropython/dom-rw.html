@@ -1,23 +1,42 @@
 <html><head><script type="text/µpython">#sync is the default
-embed.os_showloop()
-embed.log("CODE1: Begin")
-print("Hello World ..")
-embed.log("sleep")
-import syscall
-embed.log("end sleep")
-print(". 1")
-embed.log("CODE1: End")
+if 1:
+    embed.os_showloop()
+    embed.log("CODE1: Begin")
+    print("Hello World ..")
+    embed.log("sleep")
+    import syscall
+    embed.log("end sleep")
+    print(". 1")
+    embed.log("CODE1: End")
 </script>
 
 <script type="text/µpython">#sync is the default
-embed.log("CODE2: Begin")
-print("Hello World ..")
-embed.log("sleep")
-sleep(5) #should not block at all it's overloaded as a generator
-import syscall  # do it
-embed.log("end sleep")
-print(". 2")
-embed.log("CODE2: End")
+
+def testx(crash=3):
+    print("Hello World ..")
+    embed.log("sleep")
+    if crash>3:import syscall
+    embed.log("end sleep")
+    print(".",crash)
+
+if 1:
+    embed.log("CODE2: Begin")
+
+    print("Hello World ..")
+    embed.log("sleep")
+    sleep(5) #should not block at all it's overloaded as a generator
+    import syscall  # do it
+    embed.log("end sleep")
+    print(". 2")
+    #testx()
+    embed.log("CODE2: End")
+</script>
+
+
+<script type="text/µpython">
+embed.log("CODE4: Begin")
+#testx(4)
+embed.log("CODE4: End")
 </script>
 
 <meta charset="utf-8">
@@ -84,7 +103,7 @@ embed.log("CODE2: End")
 # this one would freeze browser and kill script without async or emterpreting(slow)
 sleep(5)
 
-print("Hé!", sys)
+#print("Hé!", sys)
 tic = 5
 while tic:
     await asyncio.sleep(1)

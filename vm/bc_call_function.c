@@ -1,4 +1,4 @@
-#if VM_SHOW_TRACE
+#if 0 //VM_SHOW_TRACE
     VM_ENTRY(MP_BC_CALL_FUNCTION): {
         MARK_EXC_IP_SELECTIVE();
         DECODE_UINT;
@@ -42,7 +42,9 @@ if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw
             mp_obj_t VM_result_1;
 
             mp_obj_type_t *type = mp_obj_get_type(fun_in);
+
             if (type->call != NULL) {
+                #if 0
                 // ctx_current = ctx_push( 1 );  //VM_1
                 ctx_next = ctx_push( 1 );
                 if (show_os_loop(-1)){
@@ -52,10 +54,13 @@ if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw
                     ctx_next);
                 }
                 //NEXT.
+                #endif
 
                 VM_result_1 = type->call(fun_in, n_args, n_kw, args);
+                #if 0
                 if (show_os_loop(-1))
                     fprintf(stderr,"     ========= should have pushed ========\n");
+                #endif
                 goto VM_1;
             }
 

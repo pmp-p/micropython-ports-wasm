@@ -7,6 +7,9 @@
                     // We have following stack layout here:
                     // fun arg0 arg1 ... kw0 val0 kw1 val1 ... seq dict <- TOS
                     sp -= (unum & 0xff) + ((unum >> 7) & 0x1fe) + 2;
+
+                    if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION_VAR_KW\n");
+
                     #if MICROPY_STACKLESS
                     if (mp_obj_get_type(*sp) == &mp_type_fun_bc) {
                         CTX.code_state->ip = ip;
@@ -33,6 +36,7 @@
                         } else
                         #endif
                         {
+VM_depth++;
                             new_state->prev = CTX.code_state;
                             CTX.code_state = new_state;
                             nlr_pop();
@@ -40,6 +44,9 @@
                         }
                     }
                     #endif
+// no return there ?
+                    if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION_VAR_KW_return\n");
+
 static int VM_mp_call_method_n_kw_var = 0;
 VM_mp_call_method_n_kw_var++;
 if (show_os_loop(-1)) fprintf(stderr,"iter:917 mp_call_method_n_kw_var(%d)\n", VM_mp_call_method_n_kw_var);

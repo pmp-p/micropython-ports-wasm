@@ -59,6 +59,7 @@
 
 
 #define MICROPY_STACKLESS           (1)
+#define MICROPY_STACKLESS_STRICT    (1)   // <=========================== 1!
 #define MICROPY_ENABLE_PYSTACK      (1)
 #define MICROPY_OPT_COMPUTED_GOTO   (1)
 

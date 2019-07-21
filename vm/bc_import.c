@@ -39,14 +39,14 @@ if ( !strcmp(qstr_str(qst),"syscall") ) {
             SET_TOP(mp_import_name(qst, obj, TOP()));
 
 if ( !strcmp(qstr_str(qst),"syscall") ) {
-    fprintf(stderr,"iter:1140 import->pause\n");
+    fprintf(stderr,"    BC_IMPORT import->pause\n");
     mpi_ctx[ctx_current].vmloop_state = VM_PAUSED;
     TRACE(ip);
     VM_MARK_EXC_IP_GLOBAL();
     nlr_pop();
     goto VM_paused;
 } else
-    fprintf(stderr,"iter:1139 import [%s]\n", qstr_str(qst) );
+    fprintf(stderr,"    BC_IMPORT [%s]\n", qstr_str(qst) );
             VM_DISPATCH();
         }
 

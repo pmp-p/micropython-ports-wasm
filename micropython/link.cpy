@@ -30,14 +30,16 @@ class obj:
         print('delattr ', name)
 
 
-# the method used is slow : we create new proxies along the path
+# the method used is slow : lots of new proxies are created along the path
 # for performance reason cases where an attribute of same name is repeated along the rpc path
 # should not be handled
 #  eg   window.document.something_not_window.document would NOT be addressable.
 # window and window.document.something_not_window could be the same CallPath object
 # faster but messy and safeguards required.
+#
+# other idea hash the paths in the same instance ...
 
-# TODO: benchmark both.
+# TODO: benchmark all.
 
 
 class CallPath(dict):
@@ -199,10 +201,11 @@ class CallPath(dict):
                 self.__solved = None
 
     else:
-        pass
-    def __await__(self):
-        if ADBG:print("205:cp-(async)await", self.__fqn,*self.__csp)
-        return self.__solver().__await__()
+        # uasyncio __await__ not called
+        # https://github.com/micropython/micropython/issues/2678
+        def __await__(self):
+            if ADBG:print("207:cp-(async)await", self.__fqn,*self.__csp)
+            return self.__solver().__await__()
 
 
     def __call__(self, *argv, **kw):
@@ -214,11 +217,11 @@ class CallPath(dict):
 
 
     def __enter__(self):
-        if DBG:print("280:cp-enter")
+        if DBG:print("223:cp-enter")
         return self
 
     def __aenter__(self):
-        if ADBG:print("216:cp-(async)enter", self.__fqn,*self.__csp)
+        if ADBG:print("227:cp-(async)enter", self.__fqn,*self.__csp)
         return self
 
 
@@ -233,7 +236,7 @@ class CallPath(dict):
         print("#FIMXE: __del__ on proxy to release js obj")
 
     def __aexit__(self, type, value, traceback):
-        if ADBG:print("231:cp-(async)exit", self.__fqn,*self.__csp)
+        if ADBG:print("242:cp-(async)exit", self.__fqn,*self.__csp)
         self.__exit(type, value, traceback)
 
 
