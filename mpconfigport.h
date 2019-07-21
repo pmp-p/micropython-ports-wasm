@@ -48,7 +48,7 @@
 #define MICROPY_READER_POSIX (0)
 #define MICROPY_VFS_POSIX    (0)
 
-
+#define HAVE_mp_raw_code_save_file (1)
 
 #define MICROPY_EMIT_WASM (1)
 //#define MICROPY_EMIT_INLINE_ASM (1)

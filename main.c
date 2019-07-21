@@ -157,7 +157,7 @@ int prepare_code() {
 }
 
 
-// https://developers.google.com/web/updates/2015/08/using-requestidlecallback
+
 
 
 

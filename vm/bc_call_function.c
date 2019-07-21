@@ -1,4 +1,4 @@
-#if 0
+#if VM_SHOW_TRACE
     VM_ENTRY(MP_BC_CALL_FUNCTION): {
         MARK_EXC_IP_SELECTIVE();
         DECODE_UINT;
@@ -31,10 +31,8 @@
         #endif
 static int VM_mp_call_function_n_kw = 0;
 VM_mp_call_function_n_kw++;
-if (show_os_loop(-1)) fprintf(stderr,"iter:869 mp_call_function_n_kw(%d)\n",VM_mp_call_function_n_kw);
-#if 0
-        mp_obj_t VM_result_1 = mp_call_function_n_kw(*sp, unum & 0xff, (unum >> 8) & 0xff, sp + 1);
-#else
+if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw(%d)\n",VM_mp_call_function_n_kw);
+
         {
             mp_obj_t fun_in = *sp;
             size_t n_args = unum & 0xff;
@@ -68,8 +66,9 @@ if (show_os_loop(-1)) fprintf(stderr,"iter:869 mp_call_function_n_kw(%d)\n",VM_m
                     "'%s' object isn't callable", mp_obj_get_type_str(fun_in)));
             }
 
-#endif
 VM_1:
+if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw_return\n");
+
 VM_mp_call_function_n_kw--;
             SET_TOP(VM_result_1);
         }
@@ -77,36 +76,36 @@ VM_mp_call_function_n_kw--;
     }
 #else
 
-ENTRY(MP_BC_CALL_FUNCTION): {
-    MARK_EXC_IP_SELECTIVE();
-    DECODE_UINT;
-    sp -= (unum & 0xff) + ((unum >> 7) & 0x1fe);
+    VM_ENTRY(MP_BC_CALL_FUNCTION): {
+        MARK_EXC_IP_SELECTIVE();
+        DECODE_UINT;
+        sp -= (unum & 0xff) + ((unum >> 7) & 0x1fe);
 
-    if (mp_obj_get_type(*sp) == &mp_type_fun_bc) {
-        CTX.code_state->ip = ip;
-        CTX.code_state->sp = sp;
-        CTX.code_state->exc_sp = MP_TAGPTR_MAKE(CTX.exc_sp, 0);
-        mp_code_state_t *new_state = mp_obj_fun_bc_prepare_codestate(*sp, unum & 0xff, (unum >> 8) & 0xff, sp + 1);
-        #if !MICROPY_ENABLE_PYSTACK
-        if (new_state == NULL) {
-            // Couldn't allocate codestate on heap: in the strict case raise
-            // an exception, otherwise just fall through to stack allocation.
-            #if MICROPY_STACKLESS_STRICT
-        deep_recursion_error:
-            mp_raise_recursion_depth();
+        if (mp_obj_get_type(*sp) == &mp_type_fun_bc) {
+            CTX.code_state->ip = ip;
+            CTX.code_state->sp = sp;
+            CTX.code_state->exc_sp = MP_TAGPTR_MAKE(CTX.exc_sp, 0);
+            mp_code_state_t *new_state = mp_obj_fun_bc_prepare_codestate(*sp, unum & 0xff, (unum >> 8) & 0xff, sp + 1);
+            #if !MICROPY_ENABLE_PYSTACK
+            if (new_state == NULL) {
+                // Couldn't allocate codestate on heap: in the strict case raise
+                // an exception, otherwise just fall through to stack allocation.
+                #if MICROPY_STACKLESS_STRICT
+            deep_recursion_error:
+                mp_raise_recursion_depth();
+                #endif
+            } else
             #endif
-        } else
-        #endif
-        {
-            new_state->prev = CTX.code_state;
-            CTX.code_state = new_state;
-            nlr_pop();
-            goto run_code_state;
+            {
+                new_state->prev = CTX.code_state;
+                CTX.code_state = new_state;
+                nlr_pop();
+                goto run_code_state;
+            }
         }
-    }
-    SET_TOP(mp_call_function_n_kw(*sp, unum & 0xff, (unum >> 8) & 0xff, sp + 1));
+        SET_TOP(mp_call_function_n_kw(*sp, unum & 0xff, (unum >> 8) & 0xff, sp + 1));
 VM_1:
-    VM_DISPATCH();
-}
+        VM_DISPATCH();
+    }
 
 #endif

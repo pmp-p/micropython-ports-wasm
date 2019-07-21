@@ -186,7 +186,13 @@ function wasm_file_exists(url, need_dot) {
 
         var xhr = new XMLHttpRequest()
         xhr.open('HEAD', url, false)
-        xhr.send()
+        try {
+            xhr.send()
+        } catch (x) {
+            console.log("NETWORK ERROR :" + x)
+            return -1
+        }
+
         if (xhr.status == 200 )
             return code
         urls.err[url]=xhr.status
