@@ -29,9 +29,9 @@
             }
         }
         #endif
-static int VM_mp_call_function_n_kw = 0;
-VM_mp_call_function_n_kw++;
-if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw(%d)\n",VM_mp_call_function_n_kw);
+
+VM_mp_call_function++;
+if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw(%d)\n", VM_mp_call_function);
 
         {
             mp_obj_t fun_in = *sp;
@@ -74,7 +74,7 @@ if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw
 VM_1:
 if (show_os_loop(-1)) fprintf(stderr,"    BC_CALL_FUNCTION mp_call_function_n_kw_return\n");
 
-VM_mp_call_function_n_kw--;
+VM_mp_call_function--;
             SET_TOP(VM_result_1);
         }
         VM_DISPATCH();
@@ -108,7 +108,7 @@ VM_mp_call_function_n_kw--;
                 goto run_code_state;
             }
         }
-        SET_TOP(mp_call_function_n_kw(*sp, unum & 0xff, (unum >> 8) & 0xff, sp + 1));
+        SET_TOP(mpsl_call_function_n_kw(*sp, unum & 0xff, (unum >> 8) & 0xff, sp + 1));
 VM_1:
         VM_DISPATCH();
     }

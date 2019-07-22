@@ -32,6 +32,7 @@ else
         echo
         echo Building ...
 
+        export USER_C_MODULES=cmod
         $PYTHON -u -B -m modgen
         $PYTHON -u -B -m fstrings_helper micropython/link.cpy > micropython/ulink.py
 
@@ -39,10 +40,12 @@ else
 # WASM_FILE_API=1 \
 
         #export EMCC_FORCE_STDLIBS=libc,libc++abi,libc++,libdlmalloc
+        export MOD="-DMODULE_EMBED_ENABLED=1 -DMODULE_EXAMPLE_ENABLED=1 -DMODULE_LVGL_ENABLED=1"
 
         if emmake make \
- USER_C_MODULES=cmod \
- CFLAGS_EXTRA="-DMODULE_EXAMPLE_ENABLED=1 -s USE_SDL=2" \
+ JSFLAGS="-s USE_SDL=2" \
+ USER_C_MODULES=${USER_C_MODULES} \
+ CFLAGS_EXTRA="${MOD}" \
  FROZEN_MPY_DIR=modules \
  FROZEN_DIR=flash \
  "$@"

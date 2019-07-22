@@ -102,7 +102,7 @@ VM_mp_call_method_n_kw_var--;
                         }
                     }
 
-                    mp_obj_t VM_result_2 = mp_call_method_n_kw_var(false, unum, sp);
+                    mp_obj_t VM_result_2 = mpsl_call_method_n_kw_var(false, unum, sp);
 VM_2:
                     SET_TOP(VM_result_2);
                     VM_DISPATCH();

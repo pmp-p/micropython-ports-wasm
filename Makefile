@@ -6,10 +6,10 @@ PORTS=$(EM_CACHE)/asmjs/ports-builds
 BASENAME=micropython
 PROG=$(BASENAME).html
 LIBMICROPYTHON = lib$(BASENAME).a
-
-# clang has slightly different options to GCC
-CLANG = 1
 CROSS = 0
+# clang has slightly different options to GCC
+#CLANG = 1
+
 
 
 include ../../py/mkenv.mk
@@ -22,19 +22,23 @@ QSTR_DEFS = qstrdefsport.h
 
 ifdef EMSCRIPTEN
 	ifdef ASYNC
-		CFLAGS += -D__EMTERPRETER__=1
+		CFLAGS += -D__EMTERPRETER__=1 
+		CFLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
+		CFLAGS += -s EMTERPRETIFY_SYNCLIST='["_mp_execute_bytecode"]' -s EMTERPRETIFY_ADVISE=1
 	endif
+
 	ifdef WASM_FILE_API
 # note that WASM_FILE_API will pull filesystem function into the wasm lib	
 		CFLAGS += -DWASM_FILE_API=1
 	endif
-	CC = emcc
-	CPP = clang -E -D__CPP__ -D__EMSCRIPTEN__
-	CPP += --sysroot $(EMSCRIPTEN)/system	
-	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 
+	CC = emcc
+	
 	# Act like 'emcc'
-	CPP += -U__i386 -U__i386 -Ui386 -U__SSE -U__SSE_MATH -U__SSE2 -U__SSE2_MATH -U__MMX__ -U__SSE__ -U__SSE_MATH__ -U__SSE2__ -U__SSE2_MATH__
+	CPP = clang -E -undef -D__CPP__ -D__EMSCRIPTEN__
+	CPP += --sysroot $(EMSCRIPTEN)/system
+	CPP += -include $(BUILD)/clang_predefs.h	
+	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 else
 	ifdef CLANG
 		CC=clang
@@ -51,7 +55,8 @@ endif
 ifdef LVGL
 	LVOPTS = -DMICROPY_PY_LVGL=1
 	CFLAGS += $(LVOPTS)
-	CC += $(LVOPTS) -s USE_SDL=2
+	CC += $(LVOPTS)
+	JSFLAGS += -s USE_SDL=2
 	CFLAGS_USERMOD += $(LVOPTS) -s USE_SDL=2 -Wno-unused-function -Wno-for-loop-analysis
 	CPP += -DMICROPY_PY_LVGL=1
 endif
@@ -66,7 +71,6 @@ LD = $(CC)
 INC += -I.
 INC += -I../..
 INC += -I$(BUILD)
-
 
 
 CFLAGS = $(INC) -Wall -Werror -ansi -std=gnu99
@@ -101,13 +105,13 @@ endif
 MPY_CROSS_FLAGS += -mcache-lookup-bc
 
 LD = $(CC)
-#LDFLAGS = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
-LDFLAGS = -fno-exceptions -fno-rtti
+#LD_SHARED = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
+LD_SHARED = -fno-exceptions -fno-rtti
 
 ifdef WASM_FILE_API
-	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_repl_run''_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
+	LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_repl_run''_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
 else
-	LDFLAGS += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_strmp', '_show_os_loop']"
+	LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_strmp', '_show_os_loop']"
 endif
 
 
@@ -120,7 +124,7 @@ SRC_C = \
 	moduos_vfs.c \
 
 
-#optionnal experimental FFI
+# optionnal experimental FFI
 SRC_C+= \
 	modffi.c \
 	ffi/types.c \
@@ -133,7 +137,8 @@ SRC_LIB= $(addprefix lib/, \
         mp-readline/readline.c \
 	)
 
-SRC_MOD+=modembed.c
+# now using user mod dir
+#SRC_MOD+=modembed.c
 
 ifdef LVGL
 	LIB_SRC_C = $(addprefix lib/,\
@@ -143,7 +148,12 @@ ifdef LVGL
         $(LIB_SRC_C_EXTRA) \
         timeutils/timeutils.c \
 	)
-	CFLAGS+=  -Wno-unused-function -Wno-for-loop-analysis
+	CFLAGS += -Wno-unused-function -Wno-for-loop-analysis
+endif
+
+#force preprocessor env to be created before qstr extraction
+ifdef EMSCRIPTEN
+	SRC_QSTR += $(BUILD)/clang_predefs.h
 endif
 
 
@@ -162,17 +172,20 @@ OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(SRC_MOD:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
 
+CFLAGS += $(CFLAGS_EXTRA)
+
+$(BUILD)/clang_predefs.h:
+	@emcc $(CFLAGS) $(JSFLAGS) -E -x c /dev/null -dM > $@
+	
+	
 all: $(PROG)
 
 include ../../py/mkrules.mk
 
-clean:
-	$(RM) -rf $(BUILD) $(CLEAN_EXTRA) $(LIBMICROPYTHON)
-	$(shell rm $(BASENAME)/$(BASENAME).* || echo echo test data cleaned up)
 		
+# one day, maybe go via a *embeddable* static lib first  ?
 LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 
-#one day, maybe go via a *embeddable* static lib first  ?
 
 
 #see https://github.com/emscripten-core/emscripten/issues/7811
@@ -180,31 +193,25 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 
 # https://github.com/emscripten-core/emscripten/wiki/Linking
 
-LOPT=-s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1 -s TOTAL_MEMORY=512MB
-
-
-ifdef WASM_FILE_API
-	LOPT += -s FORCE_FILESYSTEM=1
-endif	
-
-libs: $(OBJ)
-	$(ECHO) "Linking static $(LIBMICROPYTHON)"
-	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
-	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
-	$(Q)$(LD) $(LDFLAGS) $(LOPT) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc
+LD_LIB = -s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1 -s TOTAL_MEMORY=512MB
 
 
 # EMOPTS+= -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 1
 
+COPT += -s ENVIRONMENT=web
+COPT += -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1
+
+ifdef WASM_FILE_API
+	LD_LIB += -s FORCE_FILESYSTEM=1
+	COPT += -s FORCE_FILESYSTEM=1
+endif	
 
 
-COPT += -s ENVIRONMENT=web -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1
-COPT += -s FORCE_FILESYSTEM=1
 
 OPTIM=1
 #DLO=1
 
-LINK_FLAGS += -s MAIN_MODULE=1
+LD_PROG += -s MAIN_MODULE=1
 
 # COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
 # exception thrown: Error: FS error,Error
@@ -225,18 +232,18 @@ ifdef DLO
 	DLO += --preload-file libmicropython.wasm@/lib/libmicropython.so
 	COPT += -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
 	COPT += -Oz -g0 --no-heap-copy
-	LINK_FLAGS +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 -s EXPORT_ALL=1 
+	LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 -s EXPORT_ALL=1 
 else
 	DLO= $(LIBMICROPYTHON)
 	ifdef OPTIM
 		# -s ASSERTIONS=0 => NEVER!
 		COPT += -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0 
 		COPT += -Oz -g0
-		LINK_FLAGS +=-s ERROR_ON_UNDEFINED_SYMBOLS=0	
+		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=0	
 	else
 		COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
 		COPT += -O0
-		LINK_FLAGS +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 
+		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 
 	endif
 endif
 
@@ -255,7 +262,10 @@ WASM_FLAGS= -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1 -s BINARYEN_TRAP_MODE=\"cl
 ifdef ASYNC
 	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
 	WASM_FLAGS += -s EMTERPRETIFY_WHITELIST='[ "_embed_sleep", "_embed_sleep_ms", "_py_iter_one",\
- "_mp_call_function_n_kw","_mp_execute_bytecode", "_fun_bc_call", \
+ "_mp_execute_bytecode", "_fun_bc_call",\
+ "_mp_call_method_n_kw", "_mp_call_function_n_kw",\
+ "_mp_import_name", \
+ "_mpsl_call_method_n_kw_var", "_mpsl_call_function_n_kw", "_mpsl_iternext_allow_raise",\
  "_gen_instance_close",\
  "_gen_instance_iternext",\
  "_gen_instance_send",\
@@ -284,14 +294,23 @@ check:
 	$(ECHO) EM_CONFIG=$(EM_CONFIG)
 	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(shell env|grep ^EM)
-#	$(ECHO) "Using [$(CPP)] as prepro"
 	$(ECHO) "[$(PREPRO)]"
+
+
+clean:
+	$(RM) -rf $(BUILD) $(CLEAN_EXTRA) $(LIBMICROPYTHON)
+	$(shell rm $(BASENAME)/$(BASENAME).* || echo echo test data cleaned up)
+
+libs: $(OBJ)
+	$(ECHO) "Linking static $(LIBMICROPYTHON)"
+	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
+	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
+	$(Q)$(LD) $(LD_SHARED) $(LD_LIB) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc
 
 	
 $(PROG): libs
 	$(ECHO) "Building executable $@"
-#	$(Q)
-	$(CC) $(INC) $(COPT) $(WASM_FLAGS) $(LINK_FLAGS) $(THR_FLAGS) \
+	$(Q)$(CC) $(CFLAGS_EXTRA) $(INC) $(COPT) $(WASM_FLAGS) $(LD_PROG) $(THR_FLAGS) \
  -o $@ main.c -ldl -lm -lc \
  $(DLO) \
  --preload-file assets@/assets \

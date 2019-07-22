@@ -1,7 +1,8 @@
-#include <stdint.h>
 
 #define MODULES_H "modules.h"
-#include MODULES_H
+// #include MODULES_H
+#define MODULES_LINKS
+
 
 // options to control how Micro Python is built
 #define MICROPY_QSTR_BYTES_IN_HASH  (1)

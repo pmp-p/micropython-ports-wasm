@@ -18,6 +18,7 @@
 #include "core/vm.c"
 
 
+
 struct mp_interpreter {
     // builtins override dict  ?
     // __main__ ?
@@ -106,6 +107,10 @@ void ctx_save(ctx) {
 #define CTX  mpi_ctx[ctx_current]
 #define NEXT mpi_ctx[ctx_next]
 
+
+#include "vm/debug.c"
+
+
 void mp_new_interpreter(void * mpi, int ctx, int parent, int childcare) {
     mpi_ctx[ctx].vmloop_state = VM_IDLE;
     mpi_ctx[ctx].parent = parent;
@@ -156,11 +161,7 @@ int prepare_code() {
     return 1;
 }
 
-
-
-
-
-
+#include "vm/stackwith.c"
 
 
 void

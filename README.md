@@ -168,7 +168,7 @@ multiplexed rpc
 https://brionv.com/log/2019/05/10/wasm-rpc-thoughts/
 
 a C api for pythons ?
-https://github.com/pyhandle/pyhandle
+https://github.com/pyhandle/hpy
 
 
 native code compiler ?

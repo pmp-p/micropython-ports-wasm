@@ -1,9 +1,21 @@
 #define MICROPY_ENABLE_PYSTACK (1)
 #define MICROPY_STACKLESS (1)
 
-#define VM_SHOW_TRACE 1
+
+
+#if 0
+    #define VM_SHOW_TRACE 1
+    #define VM_TRACE(ip) if (show_os_loop(-1)) { fprintf(stderr, "sp=%d ", (int)(sp - &CTX.code_state->state[0] + 1)); mp_bytecode_print2(ip, 1, CTX.code_state->fun_bc->const_table); }
+#else
+    #define VM_SHOW_TRACE 0
+    #define VM_TRACE(ip)
+#endif
+
+
 static int VM_depth = 0;
 
+#include "vm/decoders.c"
+/*
 #if MICROPY_PERSISTENT_CODE
 
 #define VM_DECODE_QSTR \
@@ -19,6 +31,7 @@ static int VM_depth = 0;
 #else
     #error "VM_DECODE_QSTR/VM_DECODE_PTR/VM_DECODE_OBJ"
 #endif
+*/
 
 
 #define VM_PUSH_EXC_BLOCK(with_or_finally) do { \
@@ -95,6 +108,8 @@ VM_mp_execute_bytecode:
 
 CTX.inject_exc = MP_OBJ_NULL ;
 
+
+
 #define SELECTIVE_EXC_IP (0)
 #if SELECTIVE_EXC_IP
     #define MARK_EXC_IP_SELECTIVE() { CTX.code_state->ip = ip; } /* stores ip 1 byte past last opcode */
@@ -108,7 +123,7 @@ CTX.inject_exc = MP_OBJ_NULL ;
 #if VM_OPT_COMPUTED_GOTO
     #include "py/vmVM_ENTRYtable.h"
     #define VM_DISPATCH() do { \
-        TRACE(ip); \
+        VM_TRACE(ip); \
         VM_MARK_EXC_IP_GLOBAL(); \
         goto *VM_ENTRY_table[*ip++]; \
     } while (0)
@@ -196,9 +211,10 @@ VM_DISPATCH_loop:
 #if VM_OPT_COMPUTED_GOTO
                 VM_DISPATCH();
 #else
-                TRACE(ip);
+    VM_skip:
+                VM_TRACE(ip);
                 VM_MARK_EXC_IP_GLOBAL();
-VM_skip:
+
                 switch (*ip++) {
 #endif
 
@@ -749,7 +765,9 @@ unwind_jump:;
                     } else {
                         obj = MP_OBJ_FROM_PTR(&sp[-MP_OBJ_ITER_BUF_NSLOTS + 1]);
                     }
-                    mp_obj_t value = mp_iternext_allow_raise(obj);
+if (show_os_loop(-1)) fprintf(stderr, "    766:mpsl_iternext_allow_raise\n");
+                    mp_obj_t value = mpsl_iternext_allow_raise(obj);
+if (show_os_loop(-1)) fprintf(stderr, "    766:mpsl_iternext_allow_raise_return\n");
                     if (value == MP_OBJ_STOP_ITERATION) {
                         sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
                         ip += ulab; // jump to after for-block
@@ -1049,16 +1067,16 @@ yield:
                         t_exc = CTX.inject_exc;
                         CTX.inject_exc = MP_OBJ_NULL;
                         if (show_os_loop(-1))
-                            fprintf(stderr,"iter:1156 resume + exc\n");
+                            fprintf(stderr,"iter:1052 resume + exc\n");
                         ret_kind = mp_resume(TOP(), MP_OBJ_NULL, t_exc, &ret_value);
                     } else {
                         if (show_os_loop(-1))
-                            fprintf(stderr,"iter:1156 resume\n");
+                            fprintf(stderr,"iter:1056 resume\n");
                         ret_kind = mp_resume(TOP(), send_value, MP_OBJ_NULL, &ret_value);
                     }
 
                     if (ret_kind == MP_VM_RETURN_YIELD) {
-                        fprintf(stderr,"iter:1162 yield from\n");
+                        fprintf(stderr,"iter:1061 yield from\n");
                         ip--;
                         PUSH(ret_value);
                         goto yield;
