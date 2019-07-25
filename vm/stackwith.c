@@ -1,6 +1,22 @@
+// ??? what with ths one extern mp_obj_t polymorph_it_iternext(mp_obj_t self_in);
+extern mp_fun_1_t gen_instance_iternext_ptr();
+
+mp_obj_t fun_bc_call_ptr(){
+    return &fun_bc_call;
+}
 
 
 static int VM_mp_call_function = 0;
+
+/* gosub.c
+typedef struct _mp_obj_gen_instance_t {
+    mp_obj_base_t base;
+    mp_obj_dict_t *globals;
+    mp_code_state_t code_state;
+} mp_obj_gen_instance_t;
+*/
+
+
 
 // args contains, eg: arg0  arg1  key0  value0  key1  value1
 mp_obj_t mpsl_call_function_n_kw(mp_obj_t fun_in, size_t n_args, size_t n_kw, const mp_obj_t *args) {
@@ -15,9 +31,9 @@ mp_obj_t mpsl_call_function_n_kw(mp_obj_t fun_in, size_t n_args, size_t n_kw, co
     // do the call
     if (type->call != NULL) {
 
-        if (show_os_loop(-1)) fprintf(stderr,"    mpsl_call_function_n_kw(%d)\n",VM_mp_call_function++);
+//if (show_os_loop(-1)) fprintf(stderr,"    mpsl_call_function_n_kw(%d)\n",VM_mp_call_function++);
         mp_obj_t result = type->call(fun_in, n_args, n_kw, args);
-        if (show_os_loop(-1)) fprintf(stderr,"    mpsl_call_function_n_kw_return(%d)\n",--VM_mp_call_function);
+//if (show_os_loop(-1)) fprintf(stderr,"    mpsl_call_function_n_kw_return(%d)\n",--VM_mp_call_function);
         return result;
     }
 

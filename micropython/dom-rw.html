@@ -18,27 +18,50 @@ def testx(crash=3):
     embed.log("end sleep")
     print(".",crash)
 </script>
--->
+
 
 <script type="text/µpython">#sync is the default
 embed.log("CODE2: Begin")
 print("Hello World ..")
 embed.log("sleep")
-sleep(5) #should not block at all it's overloaded as a generator
+x=sleep(5) #should not block at all it's overloaded as a generator
 #import syscall  # do it
 embed.log("end sleep")
 print(". 2")
 #testx()
 embed.log("CODE2: End")
 </script>
-
-<!--
-<script type="text/µpython">
-embed.log("CODE4: Begin")
-#testx(4)
-embed.log("CODE4: End")
-</script>
 -->
+
+
+<script type="text/µpython">
+#import time
+embed.log("        ****************** Begin ****************")
+print("        ****************** Begin ****************")
+if 1:
+    def f1(a):
+        print('f1',a)
+
+    def f2(b):
+        print('f2',b)
+        f1(1)
+
+    def f3(c):
+        print('f3',c)
+        f2(2)
+
+    f3(3)
+
+#for countdown in (2,1,0):
+#    print("---- {} -----".format(countdown) )
+#time.sleep(.001)
+
+#for countdown in (3,2,1,0):
+#    print("---- {} -----".format(countdown) )
+#    x= time.sleep(countdown)
+print("         ***************** End ******************")
+embed.log("         ***************** End ******************")
+</script>
 
 
 <meta charset="utf-8">

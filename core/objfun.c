@@ -538,3 +538,17 @@ mp_obj_t mp_obj_new_fun_asm(size_t n_args, const void *fun_data, mp_uint_t type_
 }
 
 #endif // MICROPY_EMIT_INLINE_ASM
+/*
+void obj_fun_ptr(){
+    fprintf(stderr, "fun_builtin_0_call=%p\n",&fun_builtin_0_call);
+    fprintf(stderr, "fun_builtin_1_call=%p\n",&fun_builtin_1_call);
+    fprintf(stderr, "fun_builtin_2_call=%p\n",&fun_builtin_2_call);
+    fprintf(stderr, "fun_builtin_3_call=%p\n",&fun_builtin_3_call);
+    fprintf(stderr, "fun_builtin_var_call=%p\n",&fun_builtin_var_call);
+    fprintf(stderr, "fun_bc_call=%p\n",&fun_bc_call);
+    //fprintf(stderr, "fun_native_call=%p\n",&fun_native_call);
+    //fprintf(stderr, "fun_asm_call=%p\n",&fun_asm_call);
+
+
+
+}*/

@@ -222,7 +222,7 @@ function init_repl_begin(){
             console.log(ab.length)
             FS.createDataFile("/",'main.py', ab, true, true);
             PyRun_VerySimpleFile('main.py')
-            doscripts = false
+
         } else {
             console.log("error getting main.py from '"+argv0+"'")
             term_impl("Javascript : error getting main.py from '"+argv0+"'\r\n")

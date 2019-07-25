@@ -6,7 +6,12 @@
 #define VM_RUNNING   1
 #define VM_RESUMING  2
 #define VM_PAUSED    3
+#define VM_SYSCALL    3
 
+
+#define clog(...) if (show_os_loop(-1)){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
+
+#define SYS_MAX_RECURSION 32
 
 #include "core/main_pre.c"
 
@@ -19,130 +24,40 @@
 
 
 
-struct mp_interpreter {
-    // builtins override dict  ?
-    // __main__ ?
-    // sys.(std*) ?
-    // sys.argv
+EMSCRIPTEN_KEEPALIVE int VM_depth = 0;
 
-    // cpu time load stats ?
+extern mp_obj_t mp_builtin___import__(size_t n_args, const mp_obj_t *args);
 
-    //who created us
-    unsigned int parent ;
 
-    //who did we create and was running last
-    unsigned int childcare ;
-
-    int vmloop_state;
-    unsigned long coropass;
-
-    mp_lexer_t *lex;
-    qstr source_name;
-    mp_parse_tree_t parse_tree;
-
-    mp_obj_t * /*const*/ fastn;
-    //mp_exc_stack_t * /*const*/ exc_stack;
-    mp_exc_stack_t * /*const*/ exc_stack;
-
-    size_t n_state;
-    size_t state_size;
-
-    volatile mp_obj_t inject_exc;
-    mp_code_state_t *code_state;
-    mp_exc_stack_t *volatile exc_sp;
-
-    mp_obj_fun_bc_t *self;
-    mp_obj_type_t *type;
-
-    int jump_index;
-
-    mp_obj_t self_in;
-    size_t n_args;
-    size_t n_kw;
-    const mp_obj_t *args;
-
-    mp_obj_t result;
-
-    mp_vm_return_kind_t vm_return_kind;
-
-};
-
-#define SYS_MAX_RECURSION 32
-
-//TODO sys max recursion handling.
-static struct mp_interpreter mpi_ctx[32];
-
-static int ctx_current = 1;
-static int ctx_next = 2;
-
+#include "vm/gosub.c"
 
 static mp_lexer_t *lex;
 
-/*
-static int vmloop_state = VM_IDLE;
-static unsigned long coropass;
-static mp_lexer_t *lex;
+#define VM_DECODE_UINT \
+    mp_uint_t unum = 0; \
+    do { \
+        unum = (unum << 7) + (*CTX.ip & 0x7f); \
+    } while ((*CTX.ip++ & 0x80) != 0)
 
-static qstr source_name;
-static mp_parse_tree_t parse_tree;
-static mp_obj_t self_in;
-static mp_obj_type_t *type;
-static mp_obj_fun_bc_t *self;
-static size_t n_state;
-static size_t state_size;
-static mp_vm_return_kind_t vm_return_kind;
-static volatile mp_obj_t inject_exc;
-static mp_code_state_t *code_state;
-static mp_exc_stack_t *volatile exc_sp;
+#define VM_DECODE_ULABEL CTX.ulab = (CTX.ip[0] | (CTX.ip[1] << 8)); CTX.ip += 2
+#define VM_DECODE_SLABEL CTX.slab = (CTX.ip[0] | (CTX.ip[1] << 8)) - 0x8000; CTX.ip += 2
 
-void ctx_restore(ctx) {
-    memcpy(&mpi_ctx[0], (const unsigned char*)&mpi_ctx[ctx], sizeof(mpi_ctx[0]));
-}
+#define VM_DECODE_QSTR \
+    CTX.qst = CTX.ip[0] | CTX.ip[1] << 8; \
+    CTX.ip += 2;
 
-void ctx_save(ctx) {
-    memcpy(&mpi_ctx[ctx], (const unsigned char*)&mpi_ctx[0], sizeof(mpi_ctx[0]));
-}
-*/
+#define VM_DECODE_PTR \
+    VM_DECODE_UINT; \
+    CTX.ptr = (void*)(uintptr_t)CTX.code_state->fun_bc->const_table[unum]
 
-#define CTX  mpi_ctx[ctx_current]
-#define NEXT mpi_ctx[ctx_next]
+#define VM_DECODE_OBJ \
+    VM_DECODE_UINT; \
+    mp_obj_t obj = (mp_obj_t)CTX.code_state->fun_bc->const_table[unum]
+
 
 
 #include "vm/debug.c"
 
-
-void mp_new_interpreter(void * mpi, int ctx, int parent, int childcare) {
-    mpi_ctx[ctx].vmloop_state = VM_IDLE;
-    mpi_ctx[ctx].parent = parent;
-    mpi_ctx[ctx].childcare = childcare;
-    mpi_ctx[ctx].jump_index = 0;
-    mpi_ctx[ctx].code_state = NULL ;
-
-    mpi_ctx[ctx].n_args = 0;
-    mpi_ctx[ctx].n_kw = 0;
-    mpi_ctx[ctx].args = NULL;
-
-}
-
-int ctx_get() {
-    int ctx;
-    for (ctx=3; ctx<SYS_MAX_RECURSION; ctx++)
-        if (mpi_ctx[ctx].vmloop_state == VM_IDLE)
-            break;
-    return ctx;
-}
-
-int ctx_push(int jump_index) {
-    //push
-    int ctx = ctx_get();
-
-    //track
-    CTX.childcare = ctx ;
-
-    mp_new_interpreter(&mpi_ctx, ctx, ctx_current, 0);
-    mpi_ctx[ctx].jump_index = jump_index;
-    return ctx;
-}
 
 
 int prepare_code() {
@@ -167,16 +82,20 @@ int prepare_code() {
 void
 py_iter_one(void) {
 
-    if ( CTX.vmloop_state >= VM_PAUSED ) {
+    if ( CTX.vmloop_state >= VM_PAUSED )
+        CTX.vmloop_state--;
 
-        if (--CTX.vmloop_state == VM_RESUMING) {
 
-            //ctx_restore(ctx_current);
-            //vmloop_state = CTX.vmloop_state ;
-
-            fprintf(stderr,"resuming vm %d (trying) jump to %d\n", ctx_current, CTX.jump_index);
-            goto VM_jump_table;
-        }
+    if (CTX.vmloop_state <= VM_RESUMING) {
+            if (ENTRY_POINT != JMP_NONE) {
+                fprintf(stderr,"spawn vm %d entry => %d\n", ctx_current, CTX.pointer);
+                goto VM_jump_table_entry;
+            }
+            if (EXIT_POINT != JMP_NONE) {
+                fprintf(stderr,"resuming vm %d at %d\n", ctx_current, CTX.pointer);
+                goto VM_jump_table_exit;
+            }
+    } else {
         fprintf(stderr," - paused -\n");
         return;
     }
@@ -206,21 +125,23 @@ py_iter_one(void) {
     // io demux will be done here too via io_loop(json_state)
     if (!KPANIC && repl_line[0]){
 
-        if (show_os_loop(-1))
+        if (show_os_loop(-1)) {
             fprintf(stderr," ----------- BEGIN ------------------\n");
-
+//            obj_fun_ptr();
+        }
 
         //fprintf(stderr,"IO %lu [%s]\n", strlen(repl_line), repl_line);
         //is it async top level ?
         if (endswith(repl_line, "#async-tl")) {
-            fprintf(stderr, "#async-tl -> asyncio.asyncify()\n");
-            PyRun_SimpleString("asyncio.asyncify()");
+            fprintf(stderr, "#async-tl -> aio.asyncify()\n");
+            PyRun_SimpleString("aio.asyncify()");
 
         } else {
 
             if (prepare_code()) {
 
-                nlr_buf_t nlr;
+                static nlr_buf_t nlr;
+
                 if (nlr_push(&nlr) == 0) {
 
                     CTX.parse_tree = mp_parse(CTX.lex, MP_PARSE_FILE_INPUT);
@@ -231,9 +152,11 @@ py_iter_one(void) {
                             MP_EMIT_OPT_NONE,
                             EXEC_FLAG_IS_REPL);
 
-                    CTX.type = mp_obj_get_type(CTX.self_in);
+                    //CTX.type = mp_obj_get_type(CTX.self_in);
 
-                    #include "core/itervm.c"
+                    #include "vm/stackless.c"
+
+                    #include "vm/stackmess.c"
 
                     nlr_pop();
                 } else {
@@ -242,20 +165,21 @@ py_iter_one(void) {
                     KPANIC = 1;
                 }
             }
-VM_idle:
+
             CTX.vmloop_state = VM_IDLE;
             repl_line[0]=0;
-            if (show_os_loop(-1)) {
+            if (show_os_loop(0)) {
                 fprintf(stderr," ----------- END -------------------\n");
-                show_os_loop(0);
+                //emscripten_pause_main_loop();
+                //emscripten_cancel_main_loop();
             }
         }
 
     }
 
     // call asyncio auto stepping first in case of no repl
-    if (!KPANIC)
-        PyRun_SimpleString("asyncio.step()");
+   // if (!KPANIC)
+     //   PyRun_SimpleString("aio.step()");
 
     // running repl after script in cpython is sys.flags.inspect, should monitor and init repl
 
@@ -280,12 +204,17 @@ VM_idle:
     }
 
 VM_ret:
-     return;
+    return;
 
 VM_paused:
-    //ctx_save(ctx_current);
-    CTX.vmloop_state = VM_PAUSED + 5;
+    CTX.vmloop_state = VM_PAUSED + 3;
     fprintf(stderr," - paused interpreter %d -\n", ctx_current);
+    return;
+
+VM_syscall:
+    CTX.vmloop_state = VM_SYSCALL;
+    if (show_os_loop(-1))
+        fprintf(stderr," - syscall %d -\n", ctx_current);
 }
 
 /* =====================================================================================

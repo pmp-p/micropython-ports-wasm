@@ -1,6 +1,33 @@
 # (c) 2014-2018 Paul Sokolovsky. MIT license.
 # (c) 2019- Pmp P. MIT license.
 
+#
+#       The POSIX AIO interface consists of the following functions:
+#
+#       aio_read(3)     Enqueue a read request.  This is the asynchronous
+#                       analog of read(2).
+#
+#       aio_write(3)    Enqueue a write request.  This is the asynchronous
+#                       analog of write(2).
+#
+#       aio_fsync(3)    Enqueue a sync request for the I/O operations on a
+#                       file descriptor.  This is the asynchronous analog of
+#                       fsync(2) and fdatasync(2).
+#
+#       aio_error(3)    Obtain the error status of an enqueued I/O request.
+#
+#       aio_return(3)   Obtain the return status of a completed I/O request.
+#
+#       aio_suspend(3)  Suspend the caller until one or more of a specified
+#                       set of I/O requests completes.
+#
+#       aio_cancel(3)   Attempt to cancel outstanding I/O requests on a
+#                       specified file descriptor.
+#
+#       lio_listio(3)   Enqueue multiple I/O requests using a single function
+#
+#
+
 import sys
 
 type_gen = type((lambda: (yield))())

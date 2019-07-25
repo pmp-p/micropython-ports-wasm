@@ -5,8 +5,12 @@ for name in ("sys", "embed", "__main__"):
     print("4: module %s was not registered in sys.modules" % name)
     sys.modules[name] = __import__(name)
 
+#embed.os_showloop()
+#import m1
+
+
 import gc
-import utime as time
+import utime as Time
 import micropython
 import builtins
 
@@ -26,10 +30,11 @@ sys.modules['syscall'] = syscall
 syscall.stack = []
 
 
-builtins.asyncio = asyncio
+builtins.aio = asyncio
+builtins.asyncio = asyncio # almost ... for the non bloat part.
 builtins.imp = imp
 builtins.gc = gc
-builtins.Time = time
+builtins.Time = Time
 
 # for js script compat
 builtins.true = True
@@ -53,51 +58,44 @@ builtins.vars = vars
 del vars
 
 
-class RTAwait(Exception):
-    pass
+def await_(gen):
+    return_value = None
+    while True:
+        try:
+            return_value = next(gen)
+        except StopIteration:
+            break
+    return return_value
+builtins.await_ = await_
 
 
-builtins.RTAwait = RTAwait
+def awaited(fn, *argv, **kw):
 
+    def syscall(*argv,**kw):
+        return await_(fn(*argv,**kw))
 
-async def awaited_sleep(s):  # awaited_ prefix means we want to be awaited also on standard calls.
-    ms = float(s) * 1000
-    for step in (0, 1, 2):
-        if step == 0:
-            yield "'awaited_sleep'"
-            continue
-        if step == 1:
-            try:
-                raise RTAwait("async call in sync repl")
-            except:
-                continue
-        if step == 2:
-            try:
-                yield from asyncio.sleep_ms(ms)
-            except:
-                continue
-    #embed.sleep(5)
-    embed.log(" ** should have slept %s s" % s)
+    return syscall
+
+builtins.awaited = awaited
+
+@awaited
+def sleep(t):
+    start = Time.time() * 1_000_000
+    diff = int( t * 1_000_000 )
+    stop = start + diff
+    while Time.time()*1_000_000< stop:
+        yield
     return None
 
-builtins.sleep = awaited_sleep
+
+builtins.sleep = sleep
 #builtins.sleep = embed.sleep
-
-
-def await_(gen):
-    try:
-        tuple(gen)
-    except StopIteration as e:
-        return e.args[0]
-
-
-builtins.await_ = await_
 
 # mask
 del await_
 
 # mask
-del awaited_sleep
+#del awaited_sleep
 
 
 old_sdh = __repl_print__
@@ -108,22 +106,22 @@ async def late_repl(argv):
     await argv
     embed.os_stderr("ASYNC-REPL: done")
 
+if 0:
+    # async ?
+    def printer(argv):
+        global old_sdh
+        if argv is not None:
+            if repr(argv).count("'") > 1:
+                if repr(argv).split("'", 2)[1].startswith("awaited_"):
+                    embed.log("comefrom 90")
+                    for x in argv:
+                        embed.log("%r" % x)
+                        syscall.stack.append(argv)
+                    embed.log("goto 85")
+        return old_sdh(argv)
 
-# async ?
-def printer(argv):
-    global old_sdh
-    if argv is not None:
-        if repr(argv).count("'") > 1:
-            if repr(argv).split("'", 2)[1].startswith("awaited_"):
-                embed.log("comefrom 90")
-                for x in argv:
-                    embed.log("%r" % x)
-                    syscall.stack.append(argv)
-                embed.log("goto 85")
-    return old_sdh(argv)
 
+    builtins.__repl_print__ = printer
 
-builtins.__repl_print__ = printer
-
-# mask
-del printer
+    # mask
+    del printer

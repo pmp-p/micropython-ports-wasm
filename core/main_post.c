@@ -106,10 +106,14 @@ main(int argc, char *argv[]) {
 
     //py_init(argc, argv);
 
+    entry_point[0]=JMP_NONE;
+    exit_point[0]=JMP_NONE;
+    come_from[0]=0;
+
     for (int i=0; i<SYS_MAX_RECURSION; i++)
         mp_new_interpreter(&mpi_ctx, i, 0 , 0);
 
-    // 0 is current context
+    // 0 hypervisor with no branching ( can use optimized original vm.c )
     // 1 supervisor
     // 2 __main__
 

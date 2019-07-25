@@ -78,14 +78,19 @@ py_init(int argc, char *argv[]) {
 
 static int SHOW_OS_LOOP=0;
 
-EMSCRIPTEN_KEEPALIVE int show_os_loop(int state) {
-
+EMSCRIPTEN_KEEPALIVE int
+show_os_loop(int state) {
+    int last = SHOW_OS_LOOP;
     if (state>=0) {
         SHOW_OS_LOOP = state;
         if (state>0)
             fprintf(stderr,"------------- showing os loop --------------\n");
+        else {
+            if (last!=state)
+                fprintf(stderr,"------------- hiding os loop --------------\n");
+        }
     }
-    return (SHOW_OS_LOOP>0);
+    return (last>0);
 }
 
 void py_boot(){
