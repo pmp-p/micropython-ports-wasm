@@ -158,7 +158,7 @@ endif
 
 
 # List of sources for qstr extraction
-SRC_QSTR += $(SRC_C)
+SRC_QSTR += $(SRC_C) core/objtype.c
 SRC_QSTR += $(LIB_SRC_C)
 
 

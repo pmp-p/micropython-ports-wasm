@@ -6,14 +6,6 @@
 #define VM_TOP() (*CTX.sp)
 #define VM_SET_TOP(val) *CTX.sp = (val)
 
-#if 0
-    #define VM_SHOW_TRACE 0
-    #define VM_TRACE(ip) if (show_os_loop(-1)) { fprintf(stderr, "sp=%d ", (int)(CTX.sp - &CTX.code_state->state[0] + 1)); \
-        mp_bytecode_print2(ip, 1, CTX.code_state->fun_bc->const_table); }
-#else
-    #define VM_SHOW_TRACE 0
-    #define VM_TRACE(ip)
-#endif
 
 
 #if MICROPY_PERSISTENT_CODE
@@ -34,6 +26,7 @@
     #error "VM_DECODE_QSTR/VM_DECODE_PTR/VM_DECODE_OBJ"
 #endif
 
+#define EX_DECODE_ULABEL size_t ulab = (exip[0] | (exip[1] << 8)); exip += 2
 
 #define VM_PUSH_EXC_BLOCK(with_or_finally) do { \
     VM_DECODE_ULABEL; /* except labels are always forward */ \
@@ -47,34 +40,17 @@
     CTX.exc_sp--; /* pop back to previous exception handler */ \
     CLEAR_SYS_EXC_INFO() /* just clear sys.exc_info(), not compliant, but it shouldn't be used in 1st place */
 
-
-goto VM_fun_bc_call;
-
-VM_jump_table_entry: {
-    void* jump_entry;
-    jump_entry = ENTRY_POINT;
-    ENTRY_POINT = JMP_NONE;
-    goto *jump_entry;
-}
-
-VM_jump_table_exit: {
-    void* jump_exit;
-    jump_exit = EXIT_POINT ;
-    EXIT_POINT = JMP_NONE;
-    goto *jump_exit;
-}
-
-
+// =======================================================================================
 // Begin : fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args)
 VM_fun_bc_call:
     clog("mpsl:%d fun_bc_call", ctx_current);
 
 MP_STACK_CHECK();
 
-CTX.self = MP_OBJ_TO_PTR(CTX.self_in);
+CTX.self_fun = MP_OBJ_TO_PTR(CTX.self_in);
 
 
-DECODE_CODESTATE_SIZE(CTX.self->bytecode, CTX.n_state, CTX.state_size);
+DECODE_CODESTATE_SIZE(CTX.self_fun->bytecode, CTX.n_state, CTX.state_size);
 
 // allocate state for locals and stack
 // mpi_ctx[ctx].code_state == NULL ;
@@ -101,19 +77,19 @@ if (CTX.code_state == NULL) {
 }
 #endif
 
-INIT_CODESTATE(CTX.code_state, CTX.self, CTX.n_args, CTX.n_kw, CTX.args); //for __main__ is 0, 0, NULL);
+INIT_CODESTATE(CTX.code_state, CTX.self_fun, CTX.n_args, CTX.n_kw, CTX.args); //for __main__ is 0, 0, NULL);
 
 // execute the byte code with the correct globals context
-mp_globals_set(CTX.self->globals);
+mp_globals_set(CTX.self_fun->globals);
 
-// End : fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args)
+// Partial : fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args)
 // ================================================================================================
-VM_mp_execute_bytecode:
 // ================================================================================================
 // Begin : mp_execute_bytecode(mp_code_state_t *code_state, volatile mp_obj_t inject_exc)
 
+VM_mp_execute_bytecode:
 
-CTX.inject_exc = MP_OBJ_NULL ;
+    CTX.inject_exc = MP_OBJ_NULL ;
 
 
 #define MARK_EXC_IP_SELECTIVE()
@@ -177,11 +153,13 @@ run_code_state: ;
 goto VM_continue;
 
 VM_resume:
-    clog("mpsl:169 VM(%d)resume\n", ctx_current);
+    clog("mpsl:156 VM(%d)resume\n", ctx_current);
 
 VM_continue:
     // outer exception handling loop
     for (;;) {
+        static nlr_buf_t nlr;
+        //nlr = CTX.nlr;
 
 outer_VM_DISPATCH_loop:
         if (nlr_push(&nlr) == 0) {
@@ -213,17 +191,18 @@ if ( CTX.vmloop_state != VM_RESUMING ) {
 
 VM_DISPATCH_loop:
     if ( CTX.vmloop_state == VM_RESUMING ) {
-     //? restore what ?
-    if (show_os_loop(-1))
-        fprintf(stderr,"mpsl:169 VM(%d)restored\n", ctx_current);
-            CTX.ip = CTX.code_state->ip;
-            CTX.sp = CTX.code_state->sp;
-            obj_shared = CTX.obj_shared ;
+        //? restore what ?
+        clog("mpsl:195 VM(%d)restored", ctx_current);
+        //CTX.ip = CTX.code_state->ip;
+        //CTX.sp = CTX.code_state->sp;
+        //obj_shared = CTX.obj_shared ;
+        CTX.vmloop_state = VM_RUNNING;
     }
-    CTX.vmloop_state = VM_RUNNING;
+
 #if VM_OPT_COMPUTED_GOTO
                 VM_DISPATCH();
 #else
+
     VM_skip:
             VM_TRACE(CTX.ip);
             VM_MARK_EXC_IP_GLOBAL();
@@ -1008,8 +987,7 @@ unwind_return:
                     goto VM_mp_execute_bytecode_return;
 
                 VM_ENTRY(MP_BC_RAISE_VARARGS): {
-if (show_os_loop(-1))
-    fprintf(stderr,"mpsl:1139 raise\n");
+clog("mpsl:998 MP_BC_RAISE_VARARGS\n");
                     MARK_EXC_IP_SELECTIVE();
                     mp_uint_t unum = *CTX.ip;
                     mp_obj_t obj;
@@ -1219,41 +1197,48 @@ pending_exception_check:
             } // for loop
 
         } else {
+
+
 exception_handler:
             // exception occurred
-
-            if (show_os_loop(0)) fprintf(stderr,"mpsl:1270 except\n");
+            clog("mpsl:1204 exception_handler");
             #if MICROPY_PY_SYS_EXC_INFO
             MP_STATE_VM(cur_exception) = nlr.ret_val;
             #endif
 
             #if SELECTIVE_EXC_IP
-            // with selective ip, we store the ip 1 byte past the opcode, so move CTX.ptr back
-            code_state->ip -= 1;
+            // with selective ip, we store the ip 1 byte past the opcode, so move ptr back
+            CTX.code_state->ip -= 1;
             #endif
 
             if (mp_obj_is_subclass_fast(MP_OBJ_FROM_PTR(((mp_obj_base_t*)nlr.ret_val)->type), MP_OBJ_FROM_PTR(&mp_type_StopIteration))) {
+                clog("mpsl:1226 exception_handler-test-done");
                 if (CTX.code_state->ip) {
                     // check if it's a StopIteration within a for block
                     if (*CTX.code_state->ip == MP_BC_FOR_ITER) {
-                        const byte *ip = CTX.code_state->ip + 1;
-                        VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
-                        CTX.code_state->ip = ip + CTX.ulab; // jump to after for-block
+                        const byte *exip = CTX.code_state->ip + 1;
+                        EX_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
+                        CTX.code_state->ip = exip + ulab; // jump to after for-block
                         CTX.code_state->sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
                         goto outer_VM_DISPATCH_loop; // continue with VM_DISPATCH loop
 
-                    } else if (*CTX.code_state->ip == MP_BC_YIELD_FROM) {
+                    } // no continuation
+
+                    if (*CTX.code_state->ip == MP_BC_YIELD_FROM) {
                         // StopIteration inside yield from call means return a value of
                         // yield from, so inject exception's value as yield from's result
                         // (Instead of stack pop then push we just replace exhausted gen with value)
                         *CTX.code_state->sp = mp_obj_exception_get_value(MP_OBJ_FROM_PTR(nlr.ret_val));
                         CTX.code_state->ip++; // yield from is over, move to next instruction
                         goto outer_VM_DISPATCH_loop; // continue with VM_DISPATCH loop
-                    }
-                }
+
+                    } // no continuation
+                    clog("ITER/YIELD/[??????]");
+                } else clog("CTX.code_state->ip ??????");
+                clog("mpsl:1238 continue");
             }
 
-
+FATAL("mpsl:1226 skipping bad exception_handler");
 
 #if MICROPY_STACKLESS
 unwind_loop:
@@ -1262,41 +1247,41 @@ unwind_loop:
             // TODO: don't set traceback for exceptions re-raised by END_FINALLY.
             // But consider how to handle nested exceptions.
             if (nlr.ret_val != &mp_const_GeneratorExit_obj) {
-                const byte *ip = CTX.code_state->fun_bc->bytecode;
-                ip = mp_decode_uint_skip(ip); // skip n_state
-                ip = mp_decode_uint_skip(ip); // skip n_exc_stack
-                ip++; // skip scope_params
-                ip++; // skip n_pos_args
-                ip++; // skip n_kwonly_args
-                ip++; // skip n_def_pos_args
-                size_t bc = CTX.code_state->ip - ip;
-                size_t code_info_size = mp_decode_uint_value(ip);
-                ip = mp_decode_uint_skip(ip); // skip code_info_size
+                const byte *exip = CTX.code_state->fun_bc->bytecode;
+                exip = mp_decode_uint_skip(exip); // skip n_state
+                exip = mp_decode_uint_skip(exip); // skip n_exc_stack
+                exip++; // skip scope_params
+                exip++; // skip n_pos_args
+                exip++; // skip n_kwonly_args
+                exip++; // skip n_def_pos_args
+                size_t bc = CTX.code_state->ip - exip;
+                size_t code_info_size = mp_decode_uint_value(exip);
+                exip = mp_decode_uint_skip(exip); // skip code_info_size
                 bc -= code_info_size;
                 #if MICROPY_PERSISTENT_CODE
-                qstr block_name = ip[0] | (ip[1] << 8);
-                qstr source_file = ip[2] | (ip[3] << 8);
-                ip += 4;
+                qstr block_name = exip[0] | (exip[1] << 8);
+                qstr source_file = exip[2] | (exip[3] << 8);
+                exip += 4;
                 #else
-                qstr block_name = mp_decode_uint_value(ip);
-                ip = mp_decode_uint_skip(ip);
-                qstr source_file = mp_decode_uint_value(ip);
-                ip = mp_decode_uint_skip(ip);
+                qstr block_name = mp_decode_uint_value(exip);
+                exip = mp_decode_uint_skip(exip);
+                qstr source_file = mp_decode_uint_value(exip);
+                exip = mp_decode_uint_skip(exip);
                 #endif
                 size_t source_line = 1;
                 size_t c;
-                while ((c = *ip)) {
+                while ((c = *exip)) {
                     size_t b, l;
                     if ((c & 0x80) == 0) {
                         // 0b0LLBBBBB encoding
                         b = c & 0x1f;
                         l = c >> 5;
-                        ip += 1;
+                        exip += 1;
                     } else {
                         // 0b1LLLBBBB 0bLLLLLLLL encoding (l's LSB in second byte)
                         b = c & 0xf;
-                        l = ((c << 4) & 0x700) | ip[1];
-                        ip += 2;
+                        l = ((c << 4) & 0x700) | exip[1];
+                        exip += 2;
                     }
                     if (bc >= b) {
                         bc -= b;
@@ -1307,7 +1292,7 @@ unwind_loop:
                     }
                 }
                 mp_obj_exception_add_traceback(MP_OBJ_FROM_PTR(nlr.ret_val), source_file, source_line, block_name);
-            }
+            } else clog("vm:1424 mp_const_GeneratorExit_obj");
 
             while ((CTX.exc_sp >= CTX.exc_stack) && (CTX.exc_sp->handler <= CTX.code_state->ip)) {
 
@@ -1325,12 +1310,12 @@ unwind_loop:
             if (CTX.exc_sp >= CTX.exc_stack) {
                 // catch exception and pass to byte code
                 CTX.code_state->ip = CTX.exc_sp->handler;
-                mp_obj_t *sp = MP_TAGPTR_PTR(CTX.exc_sp->val_sp);
+                mp_obj_t *exsp = MP_TAGPTR_PTR(CTX.exc_sp->val_sp);
                 // save this exception in the stack so it can be used in a reraise, if needed
                 CTX.exc_sp->prev_exc = nlr.ret_val;
                 // push exception object so it can be handled by bytecode
                 VM_PUSH(MP_OBJ_FROM_PTR(nlr.ret_val));
-                CTX.code_state->sp = sp;
+                CTX.code_state->sp = exsp;
 
             #if MICROPY_STACKLESS
             } else if (CTX.code_state->prev != NULL) {
@@ -1363,21 +1348,29 @@ unwind_loop:
     }
 
 //===================================================================================================
-//===================================================================================================
-//===================================================================================================
-
 // End : mp_execute_bytecode(mp_code_state_t *code_state, volatile mp_obj_t inject_exc)
+
 VM_mp_execute_bytecode_return:
+    //are we still in a fun_bc_call(...) ?
     if ( ENTRY_POINT != &&VM_fun_bc_call) {
-        if (exit_point[CTX.pointer] != JMP_NONE) {
-            clog("mpsl:1475 VM[%d]_mp_execute_bytecode_return JUMP %d\n", ctx_current, CTX.pointer);
-            goto VM_jump_table_exit;
+        // is it not just toplevel main ?
+        if ( EXIT_POINT != JMP_NONE) {
+            // was it gosub
+            if (JUMP_TYPE == TYPE_SUB)
+                RETURN;
+
+            if (JUMP_TYPE == TYPE_JUMP) {
+                // or branching
+                clog("mpsl:1475 VM[%d]_mp_execute_bytecode_return JUMP %d\n", ctx_current, CTX.pointer);
+                COME_FROM;
+            }
+
+            FATAL("VM_mp_execute_bytecode_return: invalid jump table");
+
         } else
             clog("mpsl:1376 VM[%d]_mp_execute_bytecode_return no jump\n", ctx_current);
     }
-//===================================================================================================
-//===================================================================================================
-//===================================================================================================
+
 
 
 
@@ -1389,7 +1382,7 @@ if (CTX.vm_return_kind == MP_VM_RETURN_NORMAL) {
     CTX.return_value = *CTX.code_state->sp;
 } else {
     if (CTX.vm_return_kind == MP_VM_RETURN_YIELD) {
-            clog("mpsl:1392 CTX YIELD\n");
+            clog("mpsl:1384 MP_VM_RETURN_YIELD\n");
     } else {
         // must be an exception because normal functions can't yield
         assert(CTX.vm_return_kind == MP_VM_RETURN_EXCEPTION);
@@ -1407,16 +1400,15 @@ if (CTX.state_size != 0) {
 }
 #endif
 
-if (CTX.vm_return_kind == MP_VM_RETURN_NORMAL) {
-    goto VM_fun_bc_call_return;
-} else { // MP_VM_RETURN_EXCEPTION
+if (CTX.vm_return_kind != MP_VM_RETURN_NORMAL) {
     nlr_raise(CTX.return_value);
 }
 
+//===================================================================================================
 // End : fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args)
 
 VM_fun_bc_call_return:
     clog("mpsl:1419 VM[%d]_fun_bc_call_return\n", ctx_current);
-    if ( EXIT_POINT != JMP_NONE )
+    if ( EXIT_POINT != JMP_NONE ) {
         goto VM_jump_table_exit;
-
+    }

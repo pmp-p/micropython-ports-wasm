@@ -116,6 +116,7 @@ extern int show_os_loop(int state);
 //  MP_VM_RETURN_EXCEPTION, exception in state[0]
 
 mp_vm_return_kind_t mp_execute_bytecode(mp_code_state_t *code_state, volatile mp_obj_t inject_exc) {
+
 #define SELECTIVE_EXC_IP (0)
 #if SELECTIVE_EXC_IP
 #define MARK_EXC_IP_SELECTIVE() { code_state->ip = ip; } /* stores ip 1 byte past last opcode */
@@ -124,6 +125,7 @@ mp_vm_return_kind_t mp_execute_bytecode(mp_code_state_t *code_state, volatile mp
 #define MARK_EXC_IP_SELECTIVE()
 #define MARK_EXC_IP_GLOBAL() { code_state->ip = ip; } /* stores ip pointing to last opcode */
 #endif
+
 #if MICROPY_OPT_COMPUTED_GOTO
     #include "py/vmentrytable.h"
     #define DISPATCH() do { \
@@ -1334,7 +1336,7 @@ pending_exception_check:
         } else {
 exception_handler:
             // exception occurred
-            fprintf(stderr,"vm:1328 except\n");
+            fprintf(stderr,"vm:1339 exception_handler\n");
             #if MICROPY_PY_SYS_EXC_INFO
             MP_STATE_VM(cur_exception) = nlr.ret_val;
             #endif
@@ -1345,6 +1347,7 @@ exception_handler:
             #endif
 
             if (mp_obj_is_subclass_fast(MP_OBJ_FROM_PTR(((mp_obj_base_t*)nlr.ret_val)->type), MP_OBJ_FROM_PTR(&mp_type_StopIteration))) {
+                 clog("mpsl:1226 exception_handler-test-done");
                 if (code_state->ip) {
                     // check if it's a StopIteration within a for block
                     if (*code_state->ip == MP_BC_FOR_ITER) {
@@ -1361,7 +1364,9 @@ exception_handler:
                         code_state->ip++; // yield from is over, move to next instruction
                         goto outer_dispatch_loop; // continue with dispatch loop
                     }
-                }
+                    clog("ITER/YIELD/[??????]");
+                } else clog("CTX.code_state->ip ??????");
+                clog("vm:1369 continue");
             }
 
 #if MICROPY_STACKLESS
@@ -1416,7 +1421,7 @@ unwind_loop:
                     }
                 }
                 mp_obj_exception_add_traceback(MP_OBJ_FROM_PTR(nlr.ret_val), source_file, source_line, block_name);
-            }
+            } else clog("vm:1424 mp_const_GeneratorExit_obj");
 
             while (exc_sp >= exc_stack && exc_sp->handler <= code_state->ip) {
 

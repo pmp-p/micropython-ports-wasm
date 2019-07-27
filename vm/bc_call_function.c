@@ -1,3 +1,5 @@
+// OK+
+
 #define FUN_NAME qstr_str(mp_obj_fun_get_name(NEXT.self_in))
 
 VM_ENTRY(MP_BC_CALL_FUNCTION): {
@@ -5,7 +7,6 @@ VM_ENTRY(MP_BC_CALL_FUNCTION): {
     VM_DECODE_UINT;
     CTX.sp -= (unum & 0xff) + ((unum >> 7) & 0x1fe);
 
-// TODO: make that a function
     if (mp_obj_get_type(*CTX.sp) == &mp_type_fun_bc) {
         CTX.code_state->ip = CTX.ip;
         CTX.code_state->sp = CTX.sp;
@@ -29,9 +30,6 @@ VM_ENTRY(MP_BC_CALL_FUNCTION): {
         }
     }
 
-
-#if 1 // OK
-    //static mp_obj_t return_result;
     ctx_get_next();
     NEXT.self_in = *CTX.sp;
     NEXT.n_args = unum & 0xff;
@@ -41,14 +39,10 @@ VM_ENTRY(MP_BC_CALL_FUNCTION): {
     if ( strlen(FUN_NAME)>1 )
         GOSUB(SUB_call_function_n_kw, RET_call_function, FUN_NAME );
     else
-        GOSUB(SUB_call_function_n_kw, RET_call_function, "BC_CALL_FUNCTION" );
+        GOSUB(SUB_call_function_n_kw, RET_call_function, "?BC_CALL_FUNCTION?" );
 
 RET_call_function:
-    VM_SET_TOP(CTX.sub_value);
-#else
-    VM_SET_TOP( mpsl_call_function_n_kw(*CTX.sp, unum & 0xff, (unum >> 8) & 0xff, CTX.sp + 1) );
-#endif
-
+    VM_SET_TOP(SUBVAL);
     VM_DISPATCH();
 
 }

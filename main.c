@@ -1,12 +1,6 @@
 #define DBG 0
 #define DLOPEN 0
 
-//order matters
-#define VM_IDLE     0
-#define VM_RUNNING   1
-#define VM_RESUMING  2
-#define VM_PAUSED    3
-#define VM_SYSCALL    3
 
 
 #define clog(...) if (show_os_loop(-1)){ fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
@@ -17,7 +11,14 @@
 
 #include <setjmp.h>
 
+
+// to have correct pointer cast on .call those must be included here
 #include "core/objfun.c"
+#include "core/objclosure.c"
+#include "core/objboundmeth.c"
+#include "core/objgenerator.c"
+#include "core/objtype.c"
+
 
 #include "py/runtime.h"
 #include "core/vm.c"
@@ -78,7 +79,6 @@ int prepare_code() {
 
 #include "vm/stackwith.c"
 
-
 void
 py_iter_one(void) {
 
@@ -87,14 +87,37 @@ py_iter_one(void) {
 
 
     if (CTX.vmloop_state <= VM_RESUMING) {
-            if (ENTRY_POINT != JMP_NONE) {
-                fprintf(stderr,"spawn vm %d entry => %d\n", ctx_current, CTX.pointer);
-                goto VM_jump_table_entry;
+        crash_point = &&VM_CRASH;
+
+        if ( (ENTRY_POINT != JMP_NONE)  && !JUMPED_IN) {
+            fprintf(stderr,"spawn vm %d entry => %d\n", ctx_current, CTX.pointer);
+
+VM_jump_table_entry: {
+                void* jump_entry;
+                jump_entry = ENTRY_POINT;
+                // Never to re-enter as this point. can only use the exit.
+                JUMPED_IN = 1;
+                goto *jump_entry;
             }
-            if (EXIT_POINT != JMP_NONE) {
-                fprintf(stderr,"resuming vm %d at %d\n", ctx_current, CTX.pointer);
-                goto VM_jump_table_exit;
+        }
+
+
+        if (EXIT_POINT != JMP_NONE) {
+            fprintf(stderr,"resuming vm %d ptr=%d\n", ctx_current, CTX.pointer);
+
+VM_jump_table_exit: {
+                // was it gosub
+                if (JUMP_TYPE == TYPE_SUB)
+                    RETURN;
+
+                // was it branching
+                if (JUMP_TYPE == TYPE_JUMP)
+                    COME_FROM;
+
+                FATAL("VM_jump_table_exit: invalid jump table");
             }
+        }
+
     } else {
         fprintf(stderr," - paused -\n");
         return;
@@ -126,8 +149,8 @@ py_iter_one(void) {
     if (!KPANIC && repl_line[0]){
 
         if (show_os_loop(-1)) {
-            fprintf(stderr," ----------- BEGIN ------------------\n");
-//            obj_fun_ptr();
+            clog(" -------------------- BEGIN --------------------");
+            //fun_ptr();
         }
 
         //fprintf(stderr,"IO %lu [%s]\n", strlen(repl_line), repl_line);
@@ -140,9 +163,9 @@ py_iter_one(void) {
 
             if (prepare_code()) {
 
-                static nlr_buf_t nlr;
+                static nlr_buf_t main_nlr;
 
-                if (nlr_push(&nlr) == 0) {
+                if (nlr_push(&main_nlr) == 0) {
 
                     CTX.parse_tree = mp_parse(CTX.lex, MP_PARSE_FILE_INPUT);
 
@@ -161,17 +184,15 @@ py_iter_one(void) {
                     nlr_pop();
                 } else {
                     // uncaught exception
-                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)main_nlr.ret_val);
                     KPANIC = 1;
                 }
             }
 
-            CTX.vmloop_state = VM_IDLE;
+            //?? TODO:CTX CTX.vmloop_state = VM_IDLE;
             repl_line[0]=0;
             if (show_os_loop(0)) {
                 fprintf(stderr," ----------- END -------------------\n");
-                //emscripten_pause_main_loop();
-                //emscripten_cancel_main_loop();
             }
         }
 
@@ -204,6 +225,12 @@ py_iter_one(void) {
     }
 
 VM_ret:
+    return;
+
+VM_CRASH:
+    clog("KP - game over");
+    //emscripten_pause_main_loop();
+    emscripten_cancel_main_loop();
     return;
 
 VM_paused:

@@ -10,7 +10,16 @@
 #include "py/bc0.h"
 #include "py/bc.h"
 
-#define VM_DECODERS 1
+
+#if 0
+    #define VM_SHOW_TRACE 0
+    #define VM_TRACE(cip) if (show_os_loop(-1)){ logd("sp=%d ", (int)(CTX.sp - &CTX.code_state->state[0] + 1)); \
+        mp_bytecode_print2(cip, 1, CTX.code_state->fun_bc->const_table); }
+#else
+    #define VM_SHOW_TRACE 0
+    #define VM_TRACE(ip)
+#endif
+
 
 #define DBG_DECODE_UINT { \
     unum = 0; \

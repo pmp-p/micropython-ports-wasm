@@ -1,4 +1,13 @@
 <html><head>
+
+<script type="text/µpython">#sync is the default
+embed.log("CODE: Begin")
+print( sleep(.05) ) #should not block at all it's overloaded as a generator
+#import syscall
+embed.log("CODE: End")
+</script>
+
+
 <!--
 <script type="text/µpython">#sync is the default
 if 0:
@@ -31,26 +40,24 @@ print(". 2")
 #testx()
 embed.log("CODE2: End")
 </script>
--->
 
 
 <script type="text/µpython">
-#import time
+import time
 embed.log("        ****************** Begin ****************")
 print("        ****************** Begin ****************")
-if 1:
-    def f1(a):
-        print('f1',a)
+def f1(a):
+    print('f1',a)
 
-    def f2(b):
-        print('f2',b)
-        f1(1)
+def f2(b):
+    print('f2',b)
+    f1(1)
 
-    def f3(c):
-        print('f3',c)
-        f2(2)
+def f3(c):
+    print('f3',c)
+    f2(2)
 
-    f3(3)
+f3(3)
 
 #for countdown in (2,1,0):
 #    print("---- {} -----".format(countdown) )
@@ -63,6 +70,7 @@ print("         ***************** End ******************")
 embed.log("         ***************** End ******************")
 </script>
 
+-->
 
 <meta charset="utf-8">
 <meta name=viewport content='width=device-width,initial-scale=1'>

@@ -1,8 +1,18 @@
+// OK+
+
+#ifndef MICROPY_CAN_OVERRIDE_BUILTINS
+#define MICROPY_CAN_OVERRIDE_BUILTINS 1
+#endif
+
 VM_ENTRY(MP_BC_IMPORT_NAME): {
+
     MARK_EXC_IP_SELECTIVE();
     VM_DECODE_QSTR;  // qst => import [name]
+
+    clog("BC_IMPORT_NAME(%d:%d): [%s]\n", ctx_current, CTX.sub_id, qstr_str(CTX.qst) );
+
     ctx_get_next();
-    NEXT.qst = CTX.qst;
+    //NEXT.qst = CTX.qst;
     NEXT.n_args = 5 ;
     NEXT.n_kw = 0;
     NEXT.argv[0] = MP_OBJ_NEW_QSTR(CTX.qst) ;
@@ -13,47 +23,48 @@ VM_ENTRY(MP_BC_IMPORT_NAME): {
 
     NEXT.args  = &NEXT.argv[0] ; //implicit
 
-#if 0
-    CTX.sub_value = mp_import_name(NEXT.qst, NEXT.argv[3], NEXT.argv[4] );
-    ctx_release();
-#else
-    #if 1 //MICROPY_CAN_OVERRIDE_BUILTINS
+if ( !strcmp(qstr_str(CTX.qst),"syscall") )
+    clog("    BC_IMPORT_NAME(%d:%d) import %s->pause", ctx_current, CTX.sub_id, qstr_str(CTX.qst) );
+
+
+    #if MICROPY_CAN_OVERRIDE_BUILTINS
     {
         mp_obj_dict_t *bo_dict = MP_STATE_VM(mp_module_builtins_override_dict);
         // lookup __import__ and call that instead of going straight to builtin implementation
         if (bo_dict != NULL) {
             mp_map_elem_t *cust_imp = mp_map_lookup(&bo_dict->map, MP_OBJ_NEW_QSTR(MP_QSTR___import__), MP_MAP_LOOKUP);
             if (cust_imp != NULL) {
-            #if 1 // TODO:CTX NOT OK -> globals()
                 NEXT.self_in = cust_imp->value ;
                 GOSUB(SUB_call_function_n_kw, RET_import_name, qstr_str(CTX.qst));
-RET_import_name:
-            #else
-                CTX.sub_value = mpsl_call_function_n_kw(cust_imp->value, NEXT.n_args, NEXT.n_kw, NEXT.argv);
-                ctx_release();
-            #endif
-                goto EXIT_import_name;
-            }
+            } // no continuation
         }
     }
-    CTX.sub_value = mp_builtin___import__(5, CTX.argv);
-    #else
-    CTX.sub_value = mp_builtin___import__(5, CTX.argv);
-    ctx_release();
     #endif
-#endif
-EXIT_import_name:
-    VM_SET_TOP( CTX.sub_value );
+
+    SUBVAL = mp_builtin___import__(5, NEXT.argv);
+    ctx_release();
+
+RET_import_name:
+    // not a sub, here we don't return
+    RETVAL = SUBVAL ; //VM_SET_TOP( CTX.sub_value );
+    VM_SET_TOP( RETVAL );
+
+// TODO:CTX
 
 if ( !strcmp(qstr_str(CTX.qst),"syscall") ) {
-    fprintf(stderr,"    BC_IMPORT import->pause\n");
-    mpi_ctx[ctx_current].vmloop_state = VM_PAUSED;
+    clog("    BC_IMPORT_NAME(%d:%d) import %s->pause", ctx_current, CTX.sub_id, qstr_str(CTX.qst) );
+#if 0
+    CTX_STATE = VM_PAUSED;
     TRACE(CTX.ip);
     VM_MARK_EXC_IP_GLOBAL();
-    nlr_pop();
-    goto VM_paused;
+    //???? nlr_pop();
+    BRANCH(VM_paused, VM_resume, "import syscall");
+#else
+    BRANCH(VM_paused, VM_DISPATCH_loop, "import syscall");
+#endif
+
 } else
-    fprintf(stderr,"    BC_IMPORT [%s]\n", qstr_str(CTX.qst) );
+    clog("BC_IMPORT_NAME(%d:%d): [%s]\n", ctx_current, CTX.sub_id, qstr_str(CTX.qst) );
 
     VM_DISPATCH();
 }

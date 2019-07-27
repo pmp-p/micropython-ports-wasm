@@ -1,4 +1,4 @@
-#if 1
+#if 0
 VM_ENTRY(MP_BC_FOR_ITER): {
     MARK_EXC_IP_SELECTIVE();
     VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
@@ -85,57 +85,26 @@ if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:mp_call_method_n_kw_retur
 
 #else
 
-mp_obj_t mpsl_iternext_allow_raise(mp_obj_t o_in) {
-    mp_obj_type_t *type = mp_obj_get_type(o_in);
-    if (type->iternext != NULL) {
-        return type->iternext(o_in);
-    } else {
-        // check for __next__ method
-        mp_obj_t dest[2];
-        mp_load_method_maybe(o_in, MP_QSTR___next__, dest);
-        if (dest[0] != MP_OBJ_NULL) {
-            // __next__ exists, call it and return its result
-if (show_os_loop(-1)) fprintf(stderr, "    766:mp_call_method_n_kw\n");
-            mp_obj_t next = mp_call_method_n_kw(0, 0, dest);
-if (show_os_loop(-1)) fprintf(stderr, "    766:mp_call_method_n_kw_return\n");
-            return next;
+    VM_ENTRY(MP_BC_FOR_ITER): {
+        MARK_EXC_IP_SELECTIVE();
+        VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
+        CTX.code_state->sp = CTX.sp;
+        mp_obj_t obj;
+        if (CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1] == MP_OBJ_NULL) {
+            obj = CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 2];
         } else {
-            if (MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE) {
-                mp_raise_TypeError("object not an iterator");
-            } else {
-                nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
-                    "'%s' object isn't an iterator", mp_obj_get_type_str(o_in)));
-            }
+            obj = MP_OBJ_FROM_PTR(&CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1]);
         }
+clog("    bc_for_iter:98 >> mpsl_iternext_allow_raise\n");
+        mp_obj_t value = mpsl_iternext_allow_raise(obj);
+
+clog("    bc_for_iter:101 << mpsl_iternext_allow_raise_return\n");
+        if (value == MP_OBJ_STOP_ITERATION) {
+            CTX.sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
+            CTX.ip += CTX.ulab; // jump to after for-block
+        } else {
+            VM_PUSH(value); // push the next iteration value
+        }
+        VM_DISPATCH();
     }
-}
-
-
-
-
-                VM_ENTRY(MP_BC_FOR_ITER): {
-                    MARK_EXC_IP_SELECTIVE();
-                    DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
-                    CTX.code_state->sp = sp;
-                    mp_obj_t obj;
-                    if (sp[-MP_OBJ_ITER_BUF_NSLOTS + 1] == MP_OBJ_NULL) {
-                        obj = sp[-MP_OBJ_ITER_BUF_NSLOTS + 2];
-                    } else {
-                        obj = MP_OBJ_FROM_PTR(&sp[-MP_OBJ_ITER_BUF_NSLOTS + 1]);
-                    }
-if (show_os_loop(-1)) fprintf(stderr, "    766:mpsl_iternext_allow_raise\n");
-                    mp_obj_t value = mpsl_iternext_allow_raise(obj);
-
-
-
-
-if (show_os_loop(-1)) fprintf(stderr, "    766:mpsl_iternext_allow_raise_return\n");
-                    if (value == MP_OBJ_STOP_ITERATION) {
-                        sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
-                        ip += ulab; // jump to after for-block
-                    } else {
-                        PUSH(value); // push the next iteration value
-                    }
-                    VM_DISPATCH();
-                }
 #endif

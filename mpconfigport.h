@@ -52,8 +52,10 @@
 #define HAVE_mp_raw_code_save_file (1)
 
 #define MICROPY_EMIT_WASM (1)
-//#define MICROPY_EMIT_INLINE_ASM (1)
+
+//MICROPY_EMIT_INLINE_ASM ((MICROPY_EMIT_INLINE_THUMB || MICROPY_EMIT_INLINE_XTENSA)
 //#define MICROPY_EMIT_NATIVE
+
 #define MICROPY_EMIT_X64            (0)
 #define MICROPY_EMIT_THUMB          (0)
 #define MICROPY_EMIT_INLINE_THUMB   (0)

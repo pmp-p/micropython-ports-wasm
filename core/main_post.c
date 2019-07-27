@@ -109,6 +109,7 @@ main(int argc, char *argv[]) {
     entry_point[0]=JMP_NONE;
     exit_point[0]=JMP_NONE;
     come_from[0]=0;
+    type_point[0]=0;
 
     for (int i=0; i<SYS_MAX_RECURSION; i++)
         mp_new_interpreter(&mpi_ctx, i, 0 , 0);
