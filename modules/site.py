@@ -57,15 +57,30 @@ builtins.vars = vars
 # mask
 del vars
 
+builtins.undef = object()
+if 0:
+    def await_(gen):
+        return_value = None
+        while True:
+            try:
+                return_value = next(gen)
+            except StopIteration:
+                break
+        return return_value
 
-def await_(gen):
-    return_value = None
-    while True:
-        try:
-            return_value = next(gen)
-        except StopIteration:
-            break
-    return return_value
+else:
+    def await_(gen):
+        nvalue = None
+        return_value = None
+        while True:
+            nvalue = next(gen,undef)
+            if nvalue is undef:
+                return return_value
+            return_value = nvalue
+
+builtins.await_ = await_
+
+
 builtins.await_ = await_
 
 

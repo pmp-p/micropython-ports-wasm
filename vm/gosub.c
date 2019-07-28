@@ -122,7 +122,7 @@ static void* entry_point[MAX_BRANCHING];
 static void* exit_point[MAX_BRANCHING];
 static int point_ptr = 0;  // index 0 is reserved for no branching
 
-static void* crash_point;
+static void* crash_point = JMP_NONE;
 
 
 void mp_new_interpreter(void * mpi, int ctx, int parent, int childcare) {

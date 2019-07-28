@@ -49,6 +49,7 @@ SUB_call_function_n_kw: {
             NEXT.n_kw = CTX.n_kw ;
 // BUG THERE
 #if 0
+    #pragma message ("I WILL CRASH ON next()")
             // recursive is now iterative
             GOSUB(SUB_call_function_n_kw, CTX_call_function_n_kw_free, FUN_NAME);
 CTX_call_function_n_kw_free:

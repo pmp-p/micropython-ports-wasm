@@ -20,9 +20,14 @@
 #include "core/objtype.c"
 
 
+
+
 #include "py/runtime.h"
 #include "core/vm.c"
 
+
+#include "vm/stackwith.c"
+#include "core/modbuiltins.c" // mpsl_iternext_allow_raise is in stackwith.c
 
 
 EMSCRIPTEN_KEEPALIVE int VM_depth = 0;
@@ -59,7 +64,7 @@ static mp_lexer_t *lex;
 
 #include "vm/debug.c"
 
-
+static int coropass =0 ;
 
 int prepare_code() {
     //lib/utils/pyexec.c:#define EXEC_FLAG_IS_REPL (4)
@@ -77,7 +82,6 @@ int prepare_code() {
     return 1;
 }
 
-#include "vm/stackwith.c"
 
 void
 py_iter_one(void) {
@@ -87,7 +91,8 @@ py_iter_one(void) {
 
 
     if (CTX.vmloop_state <= VM_RESUMING) {
-        crash_point = &&VM_CRASH;
+        if (crash_point == JMP_NONE)
+            crash_point = &&VM_CRASH;
 
         if ( (ENTRY_POINT != JMP_NONE)  && !JUMPED_IN) {
             fprintf(stderr,"spawn vm %d entry => %d\n", ctx_current, CTX.pointer);
@@ -146,61 +151,63 @@ VM_jump_table_exit: {
 
 
     // io demux will be done here too via io_loop(json_state)
-    if (!KPANIC && repl_line[0]){
+    if (!KPANIC){
+        //if ( (coropass++<128) &&
+        if (repl_line[0]){
+            fprintf(stderr,"loop\n");
+            if (show_os_loop(-1)) {
+                clog(" -------------------- BEGIN --------------------");
+                //fun_ptr();
+            }
 
-        if (show_os_loop(-1)) {
-            clog(" -------------------- BEGIN --------------------");
-            //fun_ptr();
-        }
+            //fprintf(stderr,"IO %lu [%s]\n", strlen(repl_line), repl_line);
+            //is it async top level ?
+            if (endswith(repl_line, "#async-tl")) {
+                fprintf(stderr, "#async-tl -> aio.asyncify()\n");
+                PyRun_SimpleString("aio.asyncify()");
 
-        //fprintf(stderr,"IO %lu [%s]\n", strlen(repl_line), repl_line);
-        //is it async top level ?
-        if (endswith(repl_line, "#async-tl")) {
-            fprintf(stderr, "#async-tl -> aio.asyncify()\n");
-            PyRun_SimpleString("aio.asyncify()");
+            } else {
 
-        } else {
+                if (prepare_code()) {
 
-            if (prepare_code()) {
+                    static nlr_buf_t main_nlr;
 
-                static nlr_buf_t main_nlr;
+                    if (nlr_push(&main_nlr) == 0) {
 
-                if (nlr_push(&main_nlr) == 0) {
+                        CTX.parse_tree = mp_parse(CTX.lex, MP_PARSE_FILE_INPUT);
 
-                    CTX.parse_tree = mp_parse(CTX.lex, MP_PARSE_FILE_INPUT);
+                        mpi_ctx[ctx_current].self_in = mp_compile(
+                                &CTX.parse_tree,
+                                CTX.source_name,
+                                MP_EMIT_OPT_NONE,
+                                EXEC_FLAG_IS_REPL);
 
-                    mpi_ctx[ctx_current].self_in = mp_compile(
-                            &CTX.parse_tree,
-                            CTX.source_name,
-                            MP_EMIT_OPT_NONE,
-                            EXEC_FLAG_IS_REPL);
+                        //CTX.type = mp_obj_get_type(CTX.self_in);
 
-                    //CTX.type = mp_obj_get_type(CTX.self_in);
+                        #include "vm/stackless.c"
 
-                    #include "vm/stackless.c"
-
-                    #include "vm/stackmess.c"
-
-                    nlr_pop();
-                } else {
-                    // uncaught exception
-                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)main_nlr.ret_val);
-                    KPANIC = 1;
+                        nlr_pop();
+                    } else {
+                        // uncaught exception
+                        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)main_nlr.ret_val);
+                        KPANIC = 1;
+                    }
                 }
-            }
 
-            //?? TODO:CTX CTX.vmloop_state = VM_IDLE;
-            repl_line[0]=0;
-            if (show_os_loop(0)) {
-                fprintf(stderr," ----------- END -------------------\n");
+
+                if (show_os_loop(0)) {
+                    fprintf(stderr," ----------- END -------------------\n");
+                }
+                //?? TODO:CTX CTX.vmloop_state = VM_IDLE;
+                repl_line[0]=0;
             }
         }
+
+    // call asyncio auto stepping first in case of no repl
+     //   PyRun_SimpleString("aio.step()");
 
     }
 
-    // call asyncio auto stepping first in case of no repl
-   // if (!KPANIC)
-     //   PyRun_SimpleString("aio.step()");
 
     // running repl after script in cpython is sys.flags.inspect, should monitor and init repl
 
@@ -226,6 +233,8 @@ VM_jump_table_exit: {
 
 VM_ret:
     return;
+
+#include "vm/stackmess.c"
 
 VM_CRASH:
     clog("KP - game over");

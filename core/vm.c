@@ -35,8 +35,10 @@ extern int show_os_loop(int state);
 #include "py/bc0.h"
 #include "py/bc.h"
 #include "emscripten.h"
-#if 0
-#define TRACE(ip) printf("sp=%d ", (int)(sp - &code_state->state[0] + 1)); mp_bytecode_print2(ip, 1, code_state->fun_bc->const_table);
+#if 1
+#define logd(...) fprintf(stderr, __VA_ARGS__ )
+#define TRACE(ip) if (show_os_loop(-1)){ logd("sp=%d ", (int)(sp - &code_state->state[0] + 1));\
+ mp_bytecode_print2(ip, 1, code_state->fun_bc->const_table); }
 #else
 #define TRACE(ip)
 #endif

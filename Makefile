@@ -158,7 +158,7 @@ endif
 
 
 # List of sources for qstr extraction
-SRC_QSTR += $(SRC_C) core/objtype.c
+SRC_QSTR += $(SRC_C) core/objtype.c core/modbuiltins.c
 SRC_QSTR += $(LIB_SRC_C)
 
 
@@ -242,7 +242,7 @@ else
 		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=0	
 	else
 		COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
-		COPT += -O0
+		COPT += -O0 -g4
 		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 
 	endif
 endif
