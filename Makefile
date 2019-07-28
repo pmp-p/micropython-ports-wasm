@@ -151,10 +151,6 @@ ifdef LVGL
 	CFLAGS += -Wno-unused-function -Wno-for-loop-analysis
 endif
 
-#force preprocessor env to be created before qstr extraction
-ifdef EMSCRIPTEN
-	SRC_QSTR += $(BUILD)/clang_predefs.h
-endif
 
 
 # List of sources for qstr extraction
@@ -174,9 +170,7 @@ OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
 
 CFLAGS += $(CFLAGS_EXTRA)
 
-$(BUILD)/clang_predefs.h:
-	@emcc $(CFLAGS) $(JSFLAGS) -E -x c /dev/null -dM > $@
-	
+
 	
 all: $(PROG)
 
@@ -185,6 +179,17 @@ include ../../py/mkrules.mk
 		
 # one day, maybe go via a *embeddable* static lib first  ?
 LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
+
+#force preprocessor env to be created before qstr extraction
+ifdef EMSCRIPTEN
+$(BUILD)/clang_predefs.h:
+	$(Q)mkdir -p $(dir $@)
+	$(Q)emcc $(CFLAGS) $(CFLAGS_EXTRA) $(JSFLAGS) -E -x c /dev/null -dM > $@
+
+# Create `clang_predefs.h` as soon as possible, using a Makefile trick
+
+Makefile: $(BUILD)/clang_predefs.h	
+endif
 
 
 
@@ -237,14 +242,15 @@ else
 	DLO= $(LIBMICROPYTHON)
 	ifdef OPTIM
 		# -s ASSERTIONS=0 => NEVER!
-		COPT += -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0 
+		COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1 
 		COPT += -Oz -g0
 		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=0	
 	else
 		COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
 		COPT += -O0 -g4
-		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 
+		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 		
 	endif
+
 endif
 
 #-s USE_WEBGL2=1 -s FULL_ES3=1 
