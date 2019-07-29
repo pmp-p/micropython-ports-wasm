@@ -27,6 +27,11 @@ EMSCRIPTEN_KEEPALIVE static char *stack_top;
     static mp_obj_t pystack[16384];
 #endif
 
+void clear_shared_array_buffer() {
+    for (int i=0;i<REPL_INPUT_SIZE;i++)
+        repl_line[i] = 0;
+}
+
 EMSCRIPTEN_KEEPALIVE void
 Py_InitializeEx(int param) {
 
@@ -44,8 +49,7 @@ Py_InitializeEx(int param) {
 
     repl_line = (char *)malloc(REPL_INPUT_SIZE);
     // this is for null end str !!!!!
-    for (int i=0;i<REPL_INPUT_SIZE;i++)
-        repl_line[i] = 0;
+    clear_shared_array_buffer();
 
     mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
 

@@ -152,22 +152,22 @@ VM_jump_table_exit: {
 
     // io demux will be done here too via io_loop(json_state)
     if (!KPANIC){
-        //if ( (coropass++<128) &&
-        if (repl_line[0]){
-            fprintf(stderr,"loop\n");
+        if (repl_line[0]) {
             if (show_os_loop(-1)) {
                 clog(" -------------------- BEGIN --------------------");
                 //fun_ptr();
             }
 
-            //fprintf(stderr,"IO %lu [%s]\n", strlen(repl_line), repl_line);
             //is it async top level ?
             if (endswith(repl_line, "#async-tl")) {
                 fprintf(stderr, "#async-tl -> aio.asyncify()\n");
                 PyRun_SimpleString("aio.asyncify()");
 
             } else {
-
+                // TODO where/when call aio.step() if no repl ?
+                // call asyncio auto stepping first in case of no repl
+                //   PyRun_SimpleString("aio.step()");
+                // actually plink does the call.
                 if (prepare_code()) {
 
                     static nlr_buf_t main_nlr;
@@ -183,34 +183,36 @@ VM_jump_table_exit: {
                                 EXEC_FLAG_IS_REPL);
 
                         //CTX.type = mp_obj_get_type(CTX.self_in);
-
+//if (!coropass) {
                         #include "vm/stackless.c"
-
+//} else
+fprintf(stderr,"loop\n");
                         nlr_pop();
                     } else {
                         // uncaught exception
                         mp_obj_print_exception(&mp_plat_print, (mp_obj_t)main_nlr.ret_val);
                         KPANIC = 1;
                     }
+
                 }
 
 
-                if (show_os_loop(0)) {
-                    fprintf(stderr," ----------- END -------------------\n");
-                }
-                //?? TODO:CTX CTX.vmloop_state = VM_IDLE;
-                repl_line[0]=0;
             }
+
+            if (show_os_loop(0)) {
+                fprintf(stderr," ----------- END -------------------\n");
+                coropass = 1;
+                //?? TODO:CTX CTX.vmloop_state = VM_IDLE;
+
+            }
+            //clear_shared_array_buffer();
+            repl_line[0] = 0;
         }
 
-    // call asyncio auto stepping first in case of no repl
-     //   PyRun_SimpleString("aio.step()");
 
     }
 
-
     // running repl after script in cpython is sys.flags.inspect, should monitor and init repl
-
 
     // repl not ready
     if (!repl_started) return;
