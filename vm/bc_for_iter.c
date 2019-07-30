@@ -1,28 +1,32 @@
-#if 0
+#if 1
 VM_ENTRY(MP_BC_FOR_ITER): {
     MARK_EXC_IP_SELECTIVE();
     VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
     CTX.code_state->sp = CTX.sp;
 
-    static mp_obj_t return_value = MP_OBJ_NULL;;
-    static mp_obj_t obj ;
-    static mp_obj_t send_value = mp_const_none;
-    static mp_obj_t throw_value = MP_OBJ_NULL;
-    static mp_obj_type_t *type;
+    ctx_get_next();
+    NEXT.return_value = MP_OBJ_NULL;;
+    NEXT.send_value = mp_const_none;
+    NEXT.throw_value = MP_OBJ_NULL;
 
     if (CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1] == MP_OBJ_NULL) {
-        obj = CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 2];
+        NEXT.self_in = CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 2];
     } else {
-        obj = MP_OBJ_FROM_PTR(&CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1]);
+        NEXT.self_in = MP_OBJ_FROM_PTR(&CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1]);
     }
+// =============  mp_obj_t value = mpsl_iternext_allow_raise(obj); ===============
 
-    type = mp_obj_get_type(obj);
+    mp_obj_type_t *type = mp_obj_get_type(NEXT.self_in);
 
     if (type->iternext != NULL) {
-        if ((mp_fun_1_t)type->iternext == gen_instance_iternext_ptr() ) {
 
-if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:gen_instance_iternext\n"  );
 
+clog(">>>  BC_FOR_ITER:gen_instance_iternext\n"  );
+            RETVAL = type->iternext(NEXT.self_in);
+
+        if ( (mp_fun_1_t)*type->iternext == &gen_instance_iternext_ptr ) {
+            clog(">>> BC_FOR_ITER:type->iternext\n"  );
+#if 0
             static mp_vm_return_kind_t mpsl_obj_gen_resume;
 
             #include "vm/mpsl_obj_gen_resume.c"
@@ -47,39 +51,37 @@ if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:gen_instance_iternext\n" 
                     nlr_raise(return_value);
             }
 
-if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:gen_instance_iternext_return\n"  );
 
-        } else {
-            if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:type->iternext\n"  );
-            return_value = type->iternext(obj);
-            if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:type->iternext_return\n");
+#endif
+clog("<<< BC_FOR_ITER:type->iternext_return\n");
         }
-
+clog("<<< BC_FOR_ITER:gen_instance_iternext_return\n"  );
     } else {
         // check for __next__ method
         mp_obj_t dest[2];
-        mp_load_method_maybe(obj, MP_QSTR___next__, dest);
+        mp_load_method_maybe(NEXT.self_in, MP_QSTR___next__, dest);
         if (dest[0] != MP_OBJ_NULL) {
             // __next__ exists, call it and return its result
-if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:mp_call_method_n_kw\n");
-        return_value = mp_call_method_n_kw(0, 0, dest);
-if (show_os_loop(-1)) fprintf(stderr, "    BC_FOR_ITER:mp_call_method_n_kw_return\n");
+clog(">>> BC_FOR_ITER:mp_call_method_n_kw\n");
+            RETVAL = mp_call_method_n_kw(0, 0, dest);
+clog("<<< BC_FOR_ITER:mp_call_method_n_kw_return\n");
         } else {
             if (MICROPY_ERROR_REPORTING == MICROPY_ERROR_REPORTING_TERSE) {
                 mp_raise_TypeError("object not an iterator");
             } else {
                 nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_TypeError,
-                    "'%s' object isn't an iterator", mp_obj_get_type_str(obj)));
+                    "'%s' object isn't an iterator", mp_obj_get_type_str(NEXT.self_in)));
             }
         }
     }
-
-    if (return_value == MP_OBJ_STOP_ITERATION) {
+//========================== end mpsl_iternext_allow_raise(mp_obj_t o_in)  ==================
+    if (RETVAL == MP_OBJ_STOP_ITERATION) {
         CTX.sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
         CTX.ip += CTX.ulab; // jump to after for-block
     } else {
-        VM_PUSH(return_value); // push the next iteration value
+        VM_PUSH(RETVAL); // push the next iteration value
     }
+    ctx_release();
     VM_DISPATCH();
 }
 

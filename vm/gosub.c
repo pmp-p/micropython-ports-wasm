@@ -68,6 +68,7 @@ struct mp_registers {
 
 //  mp_call_function_n_kw, closure_call and iterators state
     mp_obj_t self_in;
+    mp_obj_fun_builtin_var_t *self_fb;
     mp_obj_fun_bc_t *self_fun;
     mp_obj_closure_t *self_clo;
 
@@ -84,6 +85,7 @@ struct mp_registers {
     mp_obj_t send_value, throw_value, return_value;
 
     mp_obj_t sub_value;  // child ctx computed value.
+    mp_obj_t *sub_args ; // child allocated memory ptr
     int sub_alloc ; // child allocated memory size
 
     mp_vm_return_kind_t vm_return_kind;
@@ -247,6 +249,7 @@ void* ctx_return(){
 
     PARENT.sub_value = CTX.return_value;
     PARENT.sub_alloc = CTX.alloc;
+    PARENT.sub_args  = CTX.args ;
 
     // possibly return in upper branch ?
     if (point_ptr!=CTX.pointer) {

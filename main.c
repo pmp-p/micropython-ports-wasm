@@ -182,11 +182,10 @@ VM_jump_table_exit: {
                                 MP_EMIT_OPT_NONE,
                                 EXEC_FLAG_IS_REPL);
 
-                        //CTX.type = mp_obj_get_type(CTX.self_in);
-//if (!coropass) {
                         #include "vm/stackless.c"
-//} else
-fprintf(stderr,"loop\n");
+
+                        fprintf(stderr,"loop\n");
+
                         nlr_pop();
                     } else {
                         // uncaught exception

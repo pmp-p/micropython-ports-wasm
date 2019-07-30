@@ -147,7 +147,7 @@
 #define MICROPY_PY_BUILTINS_HELP_MODULES (0)
 #define MICROPY_PY_BUILTINS_MEMORYVIEW (1)
 #define MICROPY_PY_BUILTINS_MIN_MAX   (1)
-#define MICROPY_PY_BUILTINS_NEXT2     (1) // <=============== more compat with cpython
+#define MICROPY_PY_BUILTINS_NEXT2     (1) // <=============== next2 make next() compat with cpython
 #define MICROPY_PY_BUILTINS_PROPERTY  (1)
 #define MICROPY_PY_BUILTINS_REVERSED  (1)
 #define MICROPY_PY_BUILTINS_SET       (1)

@@ -39,7 +39,7 @@ VM_ENTRY(MP_BC_CALL_FUNCTION): {
     if ( strlen(FUN_NAME)>1 )
         GOSUB(SUB_call_function_n_kw, RET_call_function, FUN_NAME );
     else
-        GOSUB(SUB_call_function_n_kw, RET_call_function, "?BC_CALL_FUNCTION?" );
+        GOSUB(SUB_call_function_n_kw, RET_call_function, mp_obj_get_type_str(NEXT.self_in) );
 
 RET_call_function:
     VM_SET_TOP(SUBVAL);

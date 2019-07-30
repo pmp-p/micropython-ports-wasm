@@ -1238,7 +1238,7 @@ exception_handler:
                 clog("mpsl:1238 continue");
             }
 
-FATAL("mpsl:1226 skipping bad exception_handler");
+//FATAL("mpsl:1226 skipping bad exception_handler");
 
 #if MICROPY_STACKLESS
 unwind_loop:

@@ -213,7 +213,7 @@ endif
 
 
 
-OPTIM=1
+#OPTIM=1
 #DLO=1
 
 LD_PROG += -s MAIN_MODULE=1
@@ -241,13 +241,13 @@ ifdef DLO
 else
 	DLO= $(LIBMICROPYTHON)
 	ifdef OPTIM
-		# -s ASSERTIONS=0 => NEVER!
+		# -s ASSERTIONS=0 => risky !
 		COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=1 
 		COPT += -Oz -g0
 		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=0	
 	else
 		COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
-		COPT += -O0 -g4
+		COPT += -O0 -g4 --source-map-base http://localhost:8000/
 		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 		
 	endif
 
