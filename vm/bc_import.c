@@ -60,7 +60,8 @@ if ( !strcmp(qstr_str(CTX.qst),"syscall") ) {
     //???? nlr_pop();
     BRANCH(VM_paused, VM_resume, "import syscall");
 #else
-    BRANCH(VM_paused, VM_DISPATCH_loop, "import syscall");
+    //BRANCH(VM_paused, VM_DISPATCH_loop, "import syscall");
+    BRANCH(VM_stackmess, VMOP_PAUSE, VM_DISPATCH_loop, "import syscall");
 #endif
 
 } else

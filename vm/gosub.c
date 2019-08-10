@@ -14,6 +14,16 @@ typedef struct _mp_obj_gen_instance_t {
 #define VM_PAUSED    4
 #define VM_SYSCALL    5
 
+static int VMOP = -1;
+
+#define VMOP_NONE 0
+#define VMOP_CALL 1
+#define VMOP_CRASH 2
+#define VMOP_PAUSE 3
+#define VMOP_SYSCALL 4
+
+
+
 static int sub_tracking = 0;
 
 struct mp_registers {
@@ -25,18 +35,20 @@ struct mp_registers {
     // cpu time load stats ?
 
     //who created us
-    unsigned int parent ;
+    int parent ;
 
     //
     int sub_id ;
 
     //who did we create and was running last
-    unsigned int childcare ;
+    int childcare ;
 
     int vmloop_state;
     nlr_buf_t nlr;
 
     mp_lexer_t *lex;
+    mp_reader_t reader;
+
     qstr source_name;
     mp_parse_tree_t parse_tree;
 
@@ -99,6 +111,11 @@ static struct mp_registers mpi_ctx[SYS_MAX_RECURSION];
 
 static int ctx_current = 1;
 static int ctx_next = 2;
+
+//need interrupt state marker ( @syscall / @awaited  )
+static int ctx_sti = 0 ;
+
+
 #define CTX  mpi_ctx[ctx_current]
 #define NEXT mpi_ctx[ctx_next]
 #define PARENT mpi_ctx[CTX.parent]
@@ -201,6 +218,7 @@ void* ctx_sub(void* jump_entry, void* jump_back, const char* jto, const char* jb
 
 void *crash(const char *panic){
     clog("%s", panic);
+    VMOP = VMOP_CRASH;
     return crash_point;
 
 }
@@ -235,7 +253,7 @@ void* ctx_come_from() {
         return crash("jumping back from upper branch not allowed");
     } else
         point_ptr--;
-
+    clog("<<<ZZZ[%d]",ctx_current);
     // go up one level of branching ( or if 0 reach root )
     CTX.pointer = ptr_back;
     return return_point;
@@ -278,7 +296,8 @@ void* ctx_return(){
 }
 
 
-void* ctx_branch(void* jump_entry, void *jump_back, const char *jto, const char *jback, const char* context) {
+void* ctx_branch(void* jump_entry,int vmop, void *jump_back, const char *jto, const char *jback, const char* context) {
+    VMOP = vmop;
     zigzag(jump_entry, jump_back, TYPE_JUMP);
     clog("    ZZZ> %s(...) %s -> %s  @%d",context, jto, jback, ctx_current);
     JUMPED_IN = 1 ;
@@ -289,7 +308,7 @@ void* ctx_branch(void* jump_entry, void *jump_back, const char *jto, const char 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
-#define BRANCH(arg0, arg1, arg2) goto *ctx_branch(&&arg0, &&arg1, TOSTRING(arg0), TOSTRING(arg1), arg2)
+#define BRANCH(arg0, vmop, arg1, arg2) goto *ctx_branch(&&arg0, vmop, &&arg1, TOSTRING(arg0), TOSTRING(arg1), arg2)
 
 #define FATAL(msg) goto *crash(msg)
 

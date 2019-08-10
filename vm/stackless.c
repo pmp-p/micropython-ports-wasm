@@ -40,10 +40,7 @@
     CTX.exc_sp--; /* pop back to previous exception handler */ \
     CLEAR_SYS_EXC_INFO() /* just clear sys.exc_info(), not compliant, but it shouldn't be used in 1st place */
 
-// =======================================================================================
-// Begin : fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args)
-VM_fun_bc_call:
-    clog("mpsl:%d fun_bc_call", ctx_current);
+
 
 MP_STACK_CHECK();
 
@@ -1410,5 +1407,27 @@ if (CTX.vm_return_kind != MP_VM_RETURN_NORMAL) {
 VM_fun_bc_call_return:
     clog("mpsl:1419 VM[%d]_fun_bc_call_return\n", ctx_current);
     if ( EXIT_POINT != JMP_NONE ) {
-        goto VM_jump_table_exit;
+        // was it gosub
+        if (JUMP_TYPE == TYPE_SUB)
+            RETURN;
+
+        // was it branching
+        if (JUMP_TYPE == TYPE_JUMP)
+            COME_FROM;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//

@@ -192,7 +192,7 @@ function log(msg) {
 
 plink.io = function() {
     // fill repl buffer, calling PyRun_SimpleString would crash on chromium
-    const rpcdata = "aio.step('''"+ JSON.stringify(plink.embed.state) +"''')\n"
+    const rpcdata = "aio.step('''"+ JSON.stringify(plink.embed.state) +"''')#aio.step\n"
     stringToUTF8( rpcdata, plink.shm, 16384 )
     plink.embed.state = {}
 }

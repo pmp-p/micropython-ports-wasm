@@ -18,7 +18,6 @@
 
 #include "py/smallint.h"
 
-struct timespec ts;
 
 extern char *repl_line;
 extern int show_os_loop(int state);
@@ -131,12 +130,14 @@ def os_hook() ->void:
 // https://www.python.org/dev/peps/pep-0564/
 //    https://vstinner.github.io/python37-pep-564-nanoseconds.html
 def time_ns() -> int:
-      clock_gettime(CLOCK_MONOTONIC, &ts);
-      //unsigned long ul = ts.tv_nsec ;
-      return mp_obj_new_int_from_uint( ts.tv_nsec );
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    //unsigned long ul = ts.tv_nsec ;
+    return mp_obj_new_int_from_uint( ts.tv_nsec );
 
 // upy
 def time_ms() -> int:
+    struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     //unsigned long ul = ts.tv_nsec * 1000000 ;
     return mp_obj_new_int_from_uint( ts.tv_nsec * 1000000);

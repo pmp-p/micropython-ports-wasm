@@ -1,4 +1,4 @@
-// OK
+// OK+
 
 VM_ENTRY(MP_BC_CALL_FUNCTION_VAR_KW): {
     MARK_EXC_IP_SELECTIVE();
@@ -52,20 +52,10 @@ VM_ENTRY(MP_BC_CALL_FUNCTION_VAR_KW): {
     NEXT.n_args = out_args.n_args;
     NEXT.n_kw = out_args.n_kw;
 
-#if 1
-clog(">>> bc_call_method_n_kw_var");
     GOSUB(SUB_call_function_n_kw, RET_call_function_var_kw, "BC_CALL_FUNCTION_VAR_KW");
 RET_call_function_var_kw:
     if (CTX.sub_alloc)
         mp_nonlocal_free(CTX.sub_args, CTX.sub_alloc);
-#else
-    SUBVAL = mpsl_call_function_n_kw(out_args.fun, out_args.n_args, out_args.n_kw, out_args.args);
-    mp_nonlocal_free(*NEXT.args, NEXT.alloc);
-    ctx_release();
-
-    //SUBVAL = mpsl_call_method_n_kw_var(false, unum, CTX.sp);
-#endif
-clog("<<< bc_call_method_n_kw_var_return");
 
     VM_SET_TOP(SUBVAL);
     VM_DISPATCH();

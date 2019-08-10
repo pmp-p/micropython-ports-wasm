@@ -3,7 +3,7 @@
 #if WASM_FILE_API
 EMSCRIPTEN_KEEPALIVE void
 repl(const char *code) {
-    int stl = strlen(code);
+    int stl = bsd_strlen(code);
     if (stl>REPL_INPUT_MAX){
         stl=REPL_INPUT_MAX;
         fprintf( stderr, "REPL Buffer overflow: %i > %i", stl, REPL_INPUT_MAX);
@@ -50,7 +50,7 @@ char **copy_argv(int argc, char *argv[]) {
   size_t ptr_args = argc + 1;
   for (int i = 0; i < argc; i++)
   {
-    length += (strlen(argv[i]) + 1);
+    length += (bsd_strlen(argv[i]) + 1);
   }
   char** new_argv = (char**)malloc((ptr_args) * sizeof(char*) + length);
   // copy argv into the contiguous buffer
@@ -59,7 +59,7 @@ char **copy_argv(int argc, char *argv[]) {
   {
     new_argv[i] = &(((char*)new_argv)[(ptr_args * sizeof(char*)) + length]);
     strcpy(new_argv[i], argv[i]);
-    length += (strlen(argv[i]) + 1);
+    length += (bsd_strlen(argv[i]) + 1);
   }
   // insert NULL terminating ptr at the end of the ptr array
   new_argv[ptr_args-1] = NULL;

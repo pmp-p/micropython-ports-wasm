@@ -80,7 +80,7 @@ Py_InitializeEx(int param) {
         for (mp_uint_t i = 1; i < path_num; i++) {
             char *p1 = strchr(p, PATHLIST_SEP_CHAR);
             if (p1 == NULL) {
-                p1 = p + strlen(p);
+                p1 = p + bsd_strlen(p);
             }
             if (p[0] == '~' && p[1] == '/' && home != NULL) {
                 // Expand standalone ~ to $HOME
@@ -118,6 +118,8 @@ gc_collect(void) {
 #endif
 }
 
+
+
 EMSCRIPTEN_KEEPALIVE int
 do_code(const char *src,  int is_file) {
     mp_lexer_t *lex;
@@ -127,7 +129,7 @@ do_code(const char *src,  int is_file) {
     if (is_file)
         lex = mp_lexer_new_from_file(src);
     else
-        lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
+        lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, bsd_strlen(src), 0);
 
     if (lex == NULL) {
         printf("152:malloc: lexer %s\n",src);

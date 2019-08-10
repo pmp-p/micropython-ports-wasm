@@ -81,9 +81,6 @@ else:
 builtins.await_ = await_
 
 
-builtins.await_ = await_
-
-
 def awaited(fn, *argv, **kw):
 
     def syscall(*argv,**kw):

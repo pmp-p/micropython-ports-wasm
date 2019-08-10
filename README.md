@@ -1,5 +1,12 @@
 # MicroPython and Web Assembly (wasm)
 
+### currently paused because reached somehow limit of emscripten compiler by abusing jump tables
+
+working versions are before the release tag.
+
+### meanwhile trying new upstream clang with micropython no nlr branch which is better for stackless
+
+https://github.com/pmp-p/micropython/tree/wasm-nonlr/ports/wasm-no-nlr
 
 
 ## What ?

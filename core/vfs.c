@@ -29,6 +29,7 @@ mp_import_stat_t mp_import_stat(const char *path) {
 
 
 #if !MICROPY_READER_POSIX && MICROPY_EMIT_WASM
+extern size_t bsd_strlen(const char *str);
 
 mp_lexer_t *
 mp_lexer_new_from_file(const char *filename) {
@@ -51,7 +52,7 @@ mp_lexer_new_from_file(const char *filename) {
         fprintf(stderr, "READ ERROR: mp_lexer_new_from_file(%s size=%lld)\n", filename, (long long)size_of_file );
         return NULL;
     }
-    mp_lexer_t* lex = mp_lexer_new_from_str_len(qstr_from_str(filename), cbuf, strlen(cbuf), 0);
+    mp_lexer_t* lex = mp_lexer_new_from_str_len(qstr_from_str(filename), cbuf, bsd_strlen(cbuf), 0);
     //fprintf(stderr, "===== EXPECT FAILURE =====\n%s\n===== EXPECT FAILURE ========\n" ,  cbuf);
     free(cbuf); // <- remove that and emcc -shared will break
     return lex;

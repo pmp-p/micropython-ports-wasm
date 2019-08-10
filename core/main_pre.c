@@ -51,8 +51,8 @@ static char **g_argv; //[];
 
 int endswith(const char * str, const char * suffix)
 {
-  int str_len = strlen(str);
-  int suffix_len = strlen(suffix);
+  int str_len = bsd_strlen(str);
+  int suffix_len = bsd_strlen(suffix);
 
   return
     (str_len >= suffix_len) && (0 == strcmp(str + (str_len-suffix_len), suffix));
@@ -83,9 +83,11 @@ show_os_loop(int state) {
     int last = SHOW_OS_LOOP;
     if (state>=0) {
         SHOW_OS_LOOP = state;
-        if (state>0)
-            fprintf(stderr,"------------- showing os loop --------------\n");
-        else {
+        if (state>0) {
+            //fprintf(stderr,"------------- showing os loop --------------\n");
+            fprintf(stderr,"------------- showing os loop / starting repl --------------\n");
+            repl_started = 1;
+        } else {
             if (last!=state)
                 fprintf(stderr,"------------- hiding os loop --------------\n");
         }

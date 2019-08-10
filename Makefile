@@ -39,6 +39,16 @@ ifdef EMSCRIPTEN
 	CPP += --sysroot $(EMSCRIPTEN)/system
 	CPP += -include $(BUILD)/clang_predefs.h	
 	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
+
+	#check if not using emscripten-upstream branch
+	ifeq (,$(findstring upstream/bin, $(EMMAKEN_COMPILER)))
+		WASM_FLAGS += -s "BINARYEN_TRAP_MODE='clamp'"
+		LDFLAGS += -Wl,-Map=$@.map,--cref
+	else
+		CFLAGS += -fPIC -D__WASM__
+		CPP += -D__WASM__
+	endif  
+	
 else
 	ifdef CLANG
 		CC=clang
@@ -64,7 +74,7 @@ endif
 # include py core make definitions
 include ../../py/py.mk
 
-CLANG = 1
+
 SIZE = echo
 LD = $(CC)
 
@@ -73,16 +83,29 @@ INC += -I../..
 INC += -I$(BUILD)
 
 
-CFLAGS = $(INC) -Wall -Werror -ansi -std=gnu99
+CFLAGS += $(INC)  -Wall -Werror -ansi -std=gnu99 
+
+
+LD = $(CC)
+#LD_SHARED = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
+LD_SHARED += -fno-exceptions -fno-rtti
+
 
 #Debugging/Optimization
+WASM_FLAGS += -O0 -g4 --source-map-base http://localhost:8000/
+LD_SHARED += -O0 -g4 --source-map-base http://localhost:8000/
+
 ifeq ($(DEBUG), 1)
-CFLAGS += -O0
-CC += -g4
-LD += -g4
+	CC += -O0 -g4
+	LD += -O0 -g4
 else
-CFLAGS += -O3 -DNDEBUG
+	#OPTIM=1
+	#DLO=1
+	CFLAGS += -DNDEBUG
+	CC += -O0 -g4
+	LD += -O0 -g4
 endif
+
 
 ifneq ($(FROZEN_DIR),)
 # To use frozen source modules, put your .py files in a subdirectory (eg scripts/)
@@ -104,16 +127,7 @@ endif
 
 MPY_CROSS_FLAGS += -mcache-lookup-bc
 
-LD = $(CC)
-#LD_SHARED = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
-LD_SHARED = -fno-exceptions -fno-rtti
-
-ifdef WASM_FILE_API
-	LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr', '_repl_run''_writecode', '_Py_InitializeEx', '_PyRun_SimpleString', '_PyRun_VerySimpleFile']"
-else
-	LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_strmp', '_show_os_loop']"
-endif
-
+LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_show_os_loop']"
 
 SRC_C = \
 	core/vfs.c \
@@ -213,9 +227,6 @@ endif
 
 
 
-#OPTIM=1
-#DLO=1
-
 LD_PROG += -s MAIN_MODULE=1
 
 # COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
@@ -247,7 +258,6 @@ else
 		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=0	
 	else
 		COPT += -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 -s DEMANGLE_SUPPORT=1
-		COPT += -O0 -g4 --source-map-base http://localhost:8000/
 		LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 		
 	endif
 
@@ -257,13 +267,15 @@ endif
 
 
 COPT += -s NO_EXIT_RUNTIME=1
+#? -s LEGALIZE_JS_FFI=0
 
 #no compression or dlopen(wasm) will fail on chrom*
 COPT += -s LZ4=0 --memory-init-file 0
 COPT += -s TOTAL_MEMORY=512MB -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 
 
-WASM_FLAGS= -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1 -s BINARYEN_TRAP_MODE=\"clamp\"
+WASM_FLAGS += -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1  -fno-inline
+#only valid for fastcomp -s BINARYEN_TRAP_MODE=\"clamp\"
 
 ifdef ASYNC
 	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
@@ -289,6 +301,7 @@ THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
 
 check:
 	$(ECHO) EMSDK=$(EMSDK)
+	$(ECHO) UPSTREAM=$(UPSTREAM)	
 	$(ECHO) EMSCRIPTEN=$(EMSCRIPTEN)
 	$(ECHO) EMSDK_NODE=$(EMSDK_NODE)
 	$(ECHO) EMSCRIPTEN_TOOLS=$(EMSCRIPTEN_TOOLS)
@@ -300,7 +313,7 @@ check:
 	$(ECHO) EM_CONFIG=$(EM_CONFIG)
 	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(shell env|grep ^EM)
-	$(ECHO) "[$(PREPRO)]"
+	$(ECHO) "[$(CPP)]"
 
 
 clean:
