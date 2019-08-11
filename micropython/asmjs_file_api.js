@@ -33,31 +33,12 @@ var miss = [
 "types/index.html",
 "uselect.py",
 "uselect/__init__.py",
-"uselect/index.html",
-"xpy/__init__.py",
-"xpy/builtins/__init__.py",
-"xpy/builtins/index.html",
-"imp_pivot/__init__.py",
-"imp_pivot/index.html",
-"xpy/femtoui/__init__.py",
-"xpy/femtoui/index.html",
-"ulink/__init__.py",
-"ulink/index.html",
-"datetime/__init__.py",
-"datetime/index.html",
-"_datetime/__init__.py",
-"_datetime/index.html",
-"_datetime.py",
-"asyncio/asyncify/__init__.py",
-"asyncio/asyncify/index.html",
-"imp_empty_pivot_module/__init__.py",
-"imp_empty_pivot_module/index.html",
-]
+"uselect/index.html",]
 
-window.urls = {"cors": null, "name":"webcache","id":-1, "index": "/index.html", "err":miss}
+window.urls = {"cors": null, "name":"webcache","id":-1, "index": "/index.html", "miss":miss}
 
 
-function awfull_get(url, charset) {
+function awfull_get(url) {
     function updateProgress (oEvent) {
       if (oEvent.lengthComputable) {
         var percentComplete = oEvent.loaded / oEvent.total;
@@ -86,13 +67,11 @@ function awfull_get(url, charset) {
 
         } else {
             window.currentTransferSize = oReq.response.length;
-            //console.log("awfull_get: Transfer is complete saving : "+window.currentTransferSize);
+            console.log("awfull_get: Transfer is complete saving : "+window.currentTransferSize);
         }
     }
-    if (charset)
-        oReq.overrideMimeType("text/plain; charset="+charset);
-    else
-        oReq.overrideMimeType("text/plain; charset=x-user-defined");
+
+    oReq.overrideMimeType("text/plain; charset=x-user-defined");
     oReq.addEventListener("progress", updateProgress);
     oReq.addEventListener("load", transferComplete);
     oReq.addEventListener("error", transferFailed);
@@ -111,10 +90,10 @@ function wasm_file_open(url, cachefile){
         //we need to build the target path, it could be a module import.
 
         //transform to relative path to /
-        while (cachefile.startsWith("/"))
+        while (cachefile.startswith("/"))
             cachefile = cachefile.substring(1)
 
-        while (url.startsWith("/"))
+        while (url.startswith("/"))
             url = url.substring(1)
 
         // is it still a path with at least a one char folder ?
@@ -129,19 +108,17 @@ function wasm_file_open(url, cachefile){
                     //FS.createPath('/', dirname, true, true)
                 } catch (err) {
                     if (err.code !== 'EEXIST') throw err
-                    else
-                        console.log("wasm_file_open:" + err)
                 }
                 dirpath = dirpath + "/" + current_folder
             }
-            //console.log("+dir: "+dirpath+" +file: " + path.shift())
+            console.log("+dir: "+dirpath+" +file: " + path.shift())
         } else {
             // this is a root folder, abort
             if (url.indexOf(".") <1 )
                 return -1
         }
         cachefile = "/" + url
-        //console.log("in /  +" + cachefile)
+        console.log("in /  +" + cachefile)
     }
 
     try {
@@ -181,30 +158,24 @@ function wasm_file_exists(url, need_dot) {
     // -1 not found , 1 is a file on server , 2 is a directory
 
     function url_exists(url,code) {
-        if (urls.err.indexOf(url)>-1)
+        if (urls.miss.indexOf(url)>-1)
             return -1
 
         var xhr = new XMLHttpRequest()
         xhr.open('HEAD', url, false)
-        try {
-            xhr.send()
-        } catch (x) {
-            console.log("NETWORK ERROR :" + x)
-            return -1
-        }
-
+        xhr.send()
         if (xhr.status == 200 )
             return code
-        urls.err[url]=xhr.status
+        urls.miss[url]=xhr.status
         return -1
     }
 
     // we know those are all MEMFS local files.
     // and yes it's the same folder name as in another OS apps
-    if (url.startsWith('assets/'))
+    if (url.startswith('assets/'))
         return -1
 
-    if (url.endsWith('.mpy'))
+    if (url.endswith('.mpy'))
         return -1
 
 
@@ -214,7 +185,7 @@ function wasm_file_exists(url, need_dot) {
 
         // .mpy is blacklisted for now
         // so if it's not .py then it's a folder check.
-        if (!url.endsWith('.py')) {
+        if (!url.endswith('.py')) {
             var found = -1
 
             // TODO: gain 1 call if .py exists we can discard both __init__ and index checks

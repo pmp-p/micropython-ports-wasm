@@ -1,7 +1,3 @@
-#ifndef UPYTHON_H
-
-#include <stdarg.h>
-
 #include "py/nlr.h"
 #include "py/compile.h"
 #include "py/runtime.h"
@@ -18,7 +14,7 @@
 #else
     #define EMSCRIPTEN_KEEPALIVE
 #endif
-extern size_t bsd_strlen(const char *str);
+
 EMSCRIPTEN_KEEPALIVE void Py_InitializeEx(int param);
 EMSCRIPTEN_KEEPALIVE void PyRun_SimpleString(const char * code);
 #if WASM_FILE_API
@@ -45,13 +41,6 @@ static char heap[32*1024*1024];
 #define PyObject mp_obj_t
 
 
-#include "core/ringbuf_b.h"
-#include "core/ringbuf_o.h"
-
-
 int PyArg_ParseTuple(PyObject *argv, const char *fmt, ...);
-static int repl_started = -100;
-#define UPYTHON_H 1
 
-#endif //UPYTHON_H
 

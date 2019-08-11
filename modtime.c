@@ -41,6 +41,55 @@
 
 #include <stdio.h>
 
+
+#include <time.h>
+#include <sys/time.h>
+
+// mingw32 defines CLOCKS_PER_SEC as ((clock_t)<somevalue>) but preprocessor does not handle casts
+#if defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
+#define MP_REMOVE_BRACKETSA(x)
+#define MP_REMOVE_BRACKETSB(x) MP_REMOVE_BRACKETSA x
+#define MP_REMOVE_BRACKETSC(x) MP_REMOVE_BRACKETSB x
+#define MP_CLOCKS_PER_SEC MP_REMOVE_BRACKETSC(CLOCKS_PER_SEC)
+#else
+#define MP_CLOCKS_PER_SEC CLOCKS_PER_SEC
+#endif
+
+#if defined(MP_CLOCKS_PER_SEC)
+#define CLOCK_DIV (MP_CLOCKS_PER_SEC / 1000.0F)
+#else
+#error Unsupported clock() implementation
+#endif
+
+
+#define show_clock 1
+
+#if show_clock
+
+#if 1
+    // Note: this is deprecated since CPy3.3, but pystone still uses it.
+    STATIC mp_obj_t mod_time_clock(void) {
+    #if MICROPY_PY_BUILTINS_FLOAT
+        // float cannot represent full range of int32 precisely, so we pre-divide
+        // int to reduce resolution, and then actually do float division hoping
+        // to preserve integer part resolution.
+        return mp_obj_new_float((float)(clock() / 1000) / CLOCK_DIV);
+    #else
+        return mp_obj_new_int((mp_int_t)clock());
+    #endif
+    }
+#else
+    STATIC mp_obj_t mod_time_clock(void) {
+
+            return 0;
+    }
+#endif
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mod_time_clock_obj, mod_time_clock);
+#endif
+
+
+
 STATIC mp_obj_t mod_time_time(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -125,6 +174,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mod_time_localtime_obj, 0, 1, mod_tim
 
 STATIC const mp_rom_map_elem_t mp_module_time_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_utime) },
+#if  show_clock
+	{ MP_ROM_QSTR(MP_QSTR_clock), MP_ROM_PTR(&mod_time_clock_obj) },
+#endif
     { MP_ROM_QSTR(MP_QSTR_sleep), MP_ROM_PTR(&mod_time_sleep_obj) },
     { MP_ROM_QSTR(MP_QSTR_sleep_ms), MP_ROM_PTR(&mod_time_sleep_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_sleep_us), MP_ROM_PTR(&mod_time_sleep_us_obj) },

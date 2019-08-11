@@ -1,32 +1,5 @@
 # (c) 2014-2018 Paul Sokolovsky. MIT license.
-# (c) 2019- Pmp P. MIT license.
-
-#
-#       The POSIX AIO interface consists of the following functions:
-#
-#       aio_read(3)     Enqueue a read request.  This is the asynchronous
-#                       analog of read(2).
-#
-#       aio_write(3)    Enqueue a write request.  This is the asynchronous
-#                       analog of write(2).
-#
-#       aio_fsync(3)    Enqueue a sync request for the I/O operations on a
-#                       file descriptor.  This is the asynchronous analog of
-#                       fsync(2) and fdatasync(2).
-#
-#       aio_error(3)    Obtain the error status of an enqueued I/O request.
-#
-#       aio_return(3)   Obtain the return status of a completed I/O request.
-#
-#       aio_suspend(3)  Suspend the caller until one or more of a specified
-#                       set of I/O requests completes.
-#
-#       aio_cancel(3)   Attempt to cancel outstanding I/O requests on a
-#                       specified file descriptor.
-#
-#       lio_listio(3)   Enqueue multiple I/O requests using a single function
-#
-#
+# (c) 2019- Paul P. MIT license.
 
 import sys
 
@@ -34,48 +7,20 @@ type_gen = type((lambda: (yield))())
 
 cur_task = [0, 0, 0]
 
-auto = 0
-# for asyncio tasks
+auto = None
 failure = False
-
-# for io errors ( dom==gpu / websocket==socket  )
 io_error = False
+
 
 _event_loop = None
 
-def task(t, *argv, **kw):
-    global _event_loop
-    if _event_loop is None:
-        get_event_loop()
-    print("about to start %s(*%r,**%r)" % (t.__name__, argv,kw) )
-    _event_loop.create_task( t(*argv,**kw) )
-
-
-def start(*argv):
-    argv = list(argv)
+def run(*argv):
     global auto, _event_loop
-    # TODO: keep track of the multiple __main__  and handle their loop separately
-    # a subprograms
-
-    if auto < 2:
-        if _event_loop is None:
-            get_event_loop()
-
-        main = getattr(__import__('__main__'), '__main__', None)
-        if main:
-            _event_loop.create_task( main(0,[]) )
-
-    else:
-        print("asyncio.start : event_loop already exists, will not add task __main__ !")
-
-    # TODO: should global argc/argv should be passed ?
-    # what about argc/argv conflicts ?
-    # shared argparse / usage ?
-
-    while len(argv):
-        task(argv)
-
-    auto = 2
+    get_event_loop()
+    main = getattr(__import__('__main__'), '__main__', None)
+    if main:
+        _event_loop.create_task( main(0,[] ) )
+    auto = 1
 
 
 def __auto__():
@@ -128,7 +73,6 @@ if __EMSCRIPTEN__:
 
     # on emscripten browser runs the loop both for IO and tasks
     from .io import step
-    from .asyncify import asyncify
 
 import utime as time
 import utimeq

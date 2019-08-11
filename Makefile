@@ -21,11 +21,6 @@ QSTR_DEFS = qstrdefsport.h
 
 
 ifdef EMSCRIPTEN
-	ifdef ASYNC
-		CFLAGS += -D__EMTERPRETER__=1 
-		CFLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
-		CFLAGS += -s EMTERPRETIFY_SYNCLIST='["_mp_execute_bytecode"]' -s EMTERPRETIFY_ADVISE=1
-	endif
 
 	ifdef WASM_FILE_API
 # note that WASM_FILE_API will pull filesystem function into the wasm lib	
@@ -34,11 +29,20 @@ ifdef EMSCRIPTEN
 
 	CC = emcc
 	
+	ifdef LVGL
+		LVOPTS = -DMICROPY_PY_LVGL=1
+		CFLAGS += $(LVOPTS)
+		JSFLAGS += -s USE_SDL=2
+		CFLAGS_USERMOD += $(LVOPTS) -s USE_SDL=2 -Wno-unused-function -Wno-for-loop-analysis
+		CPP += -DMICROPY_PY_LVGL=1
+	endif
+	
+	
 	# Act like 'emcc'
 	CPP = clang -E -undef -D__CPP__ -D__EMSCRIPTEN__
 	CPP += --sysroot $(EMSCRIPTEN)/system
 	CPP += -include $(BUILD)/clang_predefs.h	
-	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
+	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(JSFLAGS) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 
 	#check if not using emscripten-upstream branch
 	ifeq (,$(findstring upstream/bin, $(EMMAKEN_COMPILER)))
@@ -48,6 +52,8 @@ ifdef EMSCRIPTEN
 		CFLAGS += -fPIC -D__WASM__
 		CPP += -D__WASM__
 	endif  
+	
+	LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_show_os_loop', '_Py_InitializeExPy']"
 	
 else
 	ifdef CLANG
@@ -62,14 +68,6 @@ endif
 
 
 
-ifdef LVGL
-	LVOPTS = -DMICROPY_PY_LVGL=1
-	CFLAGS += $(LVOPTS)
-	CC += $(LVOPTS)
-	JSFLAGS += -s USE_SDL=2
-	CFLAGS_USERMOD += $(LVOPTS) -s USE_SDL=2 -Wno-unused-function -Wno-for-loop-analysis
-	CPP += -DMICROPY_PY_LVGL=1
-endif
 
 # include py core make definitions
 include ../../py/py.mk
@@ -127,7 +125,6 @@ endif
 
 MPY_CROSS_FLAGS += -mcache-lookup-bc
 
-LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_show_os_loop']"
 
 SRC_C = \
 	core/vfs.c \
@@ -229,18 +226,6 @@ endif
 
 LD_PROG += -s MAIN_MODULE=1
 
-# COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
-# exception thrown: Error: FS error,Error
-#    at new ErrnoError (http://127.0.0.1:8000/micropython.js:1:107185)
-#    at Object.mknod (http://127.0.0.1:8000/micropython.js:1:92046)
-#    at Object.mkdir (http://127.0.0.1:8000/micropython.js:1:92379)
-#    at Object.createFolder (http://127.0.0.1:8000/micropython.js:1:109472)
-#    at wasm_file_open (http://127.0.0.1:8000/asmjs_file_api.js:116:24)
-#    at Array.ASM_CONSTS (http://127.0.0.1:8000/micropython.js:1:37375)
-#    at _emscripten_asm_const_ii (http://127.0.0.1:8000/micropython.js:1:37616)
-#    at wasm-function[194]:71
-#    at wasm-function[1214]:46
-#    at wasm-function[955]:720
 
 ifdef DLO
 #	DLO = $(LIBMICROPYTHON) --use-preload-plugins
@@ -330,7 +315,7 @@ libs: $(OBJ)
 $(PROG): libs
 	$(ECHO) "Building executable $@"
 	$(Q)$(CC) $(CFLAGS_EXTRA) $(INC) $(COPT) $(WASM_FLAGS) $(LD_PROG) $(THR_FLAGS) \
- -o $@ main.c -ldl -lm -lc \
+ -o $@ main.c -ldl -lm -lc -lmicropython -L. \
  $(DLO) \
  --preload-file assets@/assets \
  --preload-file micropython/lib@/lib

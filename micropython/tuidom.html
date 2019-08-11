@@ -143,7 +143,9 @@ async def __main__():
         loop.create_task( scroll_banner() )
         loop.create_task( scroll_test() )
 
-asyncio.start()
+
+loop.create_task(__main__())
+asyncio.auto =1
 
 </script>
 <br/>

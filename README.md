@@ -1,13 +1,5 @@
 # MicroPython and Web Assembly (wasm)
 
-### currently paused because reached somehow limit of emscripten compiler by abusing jump tables
-
-working versions are before the release tag.
-
-### meanwhile trying new upstream clang with micropython no nlr branch which is better for stackless
-
-https://github.com/pmp-p/micropython/tree/wasm-nonlr/ports/wasm-no-nlr
-
 
 ## What ?
 
@@ -130,6 +122,13 @@ for 1&2 you will need to provide a javascript term_impl(text) function that outp
 ![Preview1](./docs/runtest.png)
 
 
+meet me on  #microPython or #micropython-fr on freenode
+
+https://kiwi.freenode.net/?nick=upy-wasm-guest&channel=#micropython-fr
+
+
+
+
 
 ## History:
 
@@ -160,61 +159,4 @@ https://www.bountysource.com/issues/5037165-emscripten
 https://github.com/micropython/micropython/issues/3474
 
 https://github.com/kkimdev/epsilon
-
-
-
-## Experimental Features (current or future):
-
-Using requestIdleCallback
-https://developers.google.com/web/updates/2015/08/using-requestidlecallback
-
-multi core interpreters
-https://github.com/ericsnowcurrently/multi-core-python/wiki
-
-multiplexed rpc
-https://brionv.com/log/2019/05/10/wasm-rpc-thoughts/
-
-a C api for pythons ?
-https://github.com/pyhandle/hpy
-
-
-native code compiler ?
-https://github.com/windelbouwman/ppci-mirror
-
-
-integrated gui
-https://github.com/littlevgl/lv_binding_micropython
-
-
-various shared/distributed memory objects related subjects.
-https://github.com/apache/arrow
-https://capnproto.org/
-http://doc.pypy.org/en/latest/stm.html#python-3-cpython-and-others
-
-mesh network
-https://github.com/chr15m/bugout
-https://chr15m.github.io/bep44-for-decentralized-applications.html
-
-
-
-
-## goal ( far far away ):
-
-
-This is a research project aimed toward a cooperative multitasking multicore/multinode python solution.
-Though still keeping some level of preemption over coroutines at byte code level for soft-rt purpose.
-
-
-testing on browser+wasm makes it easier than baremetal.
-
-
-
-
-meet me on  #microPython or #micropython-fr on freenode
-
-https://kiwi.freenode.net/?nick=upy-wasm-guest&channel=#micropython-fr
-
-
-
-#
 

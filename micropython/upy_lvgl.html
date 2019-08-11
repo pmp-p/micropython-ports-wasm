@@ -174,7 +174,7 @@ lv.scr_load(scr)
 
 def run_code(code):
     m = runc(code)
-    asyncio.start()
+    asyncio.auto = 1
     return 'running...'
 
 #FIXME run samples in their own namespaces
@@ -190,7 +190,7 @@ def run_from(url, module=globals(),patch=''):
         code = [ code.read().decode(),"\n\n",patch,"__compiled__=1" ]
         m = runc(''.join(code), globals(), file)
         if __compiled__:
-            asyncio.start()
+            asyncio.auto = 1
             print("Compilation ok")
         else:
             print("Compilation or interpretation not complete, not running lvgl loop")

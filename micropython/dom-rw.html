@@ -1,102 +1,7 @@
-<html><head>
+<html><head><script type="text/µpython">#sync
+print("Hello World 1")
 
-<script type="text/µpython">#sync is the default
-embed.log("CODE: Begin")
-print( sleep(.05) ) #should not block at all it's overloaded as a generator
-#import syscall
-#i=iter([1,2,3])
-embed.log("CODE: End")
 </script>
-
-
-<!--
-<script type="text/µpython">#sync is the default
-if 0:
-    embed.os_showloop()
-    embed.log("CODE1: Begin")
-    print("Hello World ..")
-    embed.log("sleep")
-    import syscall
-    embed.log("end sleep")
-    print(". 1")
-    embed.log("CODE1: End")
-
-def testx(crash=3):
-    print("Hello World ..")
-    embed.log("sleep")
-    if crash>3:import syscall
-    embed.log("end sleep")
-    print(".",crash)
-</script>
-
-
-<script type="text/µpython">#sync is the default
-embed.log("CODE2: Begin")
-print("Hello World ..")
-embed.log("sleep")
-x=sleep(5) #should not block at all it's overloaded as a generator
-#import syscall  # do it
-embed.log("end sleep")
-print(". 2")
-#testx()
-embed.log("CODE2: End")
-</script>
-
-
-<script type="text/µpython">
-import time
-embed.log("        ****************** Begin ****************")
-print("        ****************** Begin ****************")
-def f1(a):
-    print('f1',a)
-
-def f2(b):
-    print('f2',b)
-    f1(1)
-
-def f3(c):
-    print('f3',c)
-    f2(2)
-
-f3(3)
-
-#for countdown in (2,1,0):
-#    print("---- {} -----".format(countdown) )
-#time.sleep(.001)
-
-#for countdown in (3,2,1,0):
-#    print("---- {} -----".format(countdown) )
-#    x= time.sleep(countdown)
-print("         ***************** End ******************")
-embed.log("         ***************** End ******************")
-</script>
-
--->
-
-
-<!-- <script type="text/µpython">#!demos/dom-ex.py</script>
-
-<script type="text/µpython">#!async  ****note the async keyword in the shebang ****
-
-# this one would freeze browser and kill script without async or emterpreting(slow)
-sleep(5)
-
-#print("Hé!", sys)
-tic = 5
-while tic:
-    await asyncio.sleep(1)
-    print("async count down", tic)
-    tic-=1
-print("Hello World 2 (was async)")
-</script>
-
-
-<script type="text/µpython">#need to start from sync
-asyncio.start()
-</script>
-
--->
-
 <meta charset="utf-8">
 <meta name=viewport content='width=device-width,initial-scale=1'>
 
@@ -154,6 +59,18 @@ asyncio.start()
     <p>
 
 
+<script language="µpython" src="demos/dom-rw.py"></script>
+
+<script type="text/µpython" async>#
+def __main__(argc,argv):
+    tic = 5
+    while tic:
+        await asyncio.sleep(1)
+        print("async count down", tic)
+        tic-=1
+    print("Hello World 2 (was async)")
+asyncio.run()
+</script>
 
 
 <br/>
