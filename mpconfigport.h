@@ -3,6 +3,8 @@
 #define MODULES_H "modules.h"
 #include MODULES_H
 
+#define mp_hal_ticks_cpu() 0
+
 // options to control how Micro Python is built
 #define MICROPY_QSTR_BYTES_IN_HASH  (1)
 #define MICROPY_ERROR_REPORTING     (MICROPY_ERROR_REPORTING_TERSE)
@@ -22,9 +24,6 @@
 
 #define MICROPY_MODULE_GETATTR (1)
 #define MICROPY_MODULE_SPECIAL_METHODS (1)
-
-
-#define MICROPY_QSTR_EXTRA_POOL     mp_qstr_frozen_const_pool
 
 #define MICROPY_PY_BUILTINS_FROZENSET (1)
 
@@ -128,12 +127,13 @@
 #define MICROPY_PY_BUILTINS_BYTEARRAY (1)
 #define MICROPY_PY_DESCRIPTORS        (1)
 #define MICROPY_PY_BUILTINS_ENUMERATE (1)
-#define MICROPY_PY_BUILTINS_EXECFILE  (1) // <============================ NON STANDARD PY2
+#define MICROPY_PY_BUILTINS_EXECFILE  (1) // <========================== NON STANDARD PY2
 #define MICROPY_PY_BUILTINS_FILTER    (1)
 //#define MICROPY_PY_BUILTINS_FLOAT     (1) because MICROPY_FLOAT_IMPL_DOUBLE
 #define MICROPY_PY_BUILTINS_HELP_MODULES (0)
 #define MICROPY_PY_BUILTINS_MEMORYVIEW (1)
 #define MICROPY_PY_BUILTINS_MIN_MAX   (1)
+#define MICROPY_PY_BUILTINS_NEXT2     (1) // <====== next2 make next() compat with cpython
 #define MICROPY_PY_BUILTINS_PROPERTY  (1)
 #define MICROPY_PY_BUILTINS_REVERSED  (1)
 #define MICROPY_PY_BUILTINS_SET       (1)
@@ -148,7 +148,7 @@
 #define MICROPY_PY_CMATH            (1)
 
 //? TEST THAT THING !
-#define MICROPY_PY_FFI              (1) // <================================ NON STANDARD NOT CPY
+#define MICROPY_PY_FFI              (1) // <========================= NON STANDARD NOT CPY
 
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)

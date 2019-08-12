@@ -19,12 +19,39 @@
 #include "ffi/ffi.c"
 
 
+
 // https://github.com/micropython/micropython/commit/9d8347a9aac40f8cc168b0226c2e74f776a7d4bf
 // vstr_t *repl_line;
 extern char *repl_line;
 
 static int repl_started = -1;
 static int KPANIC = 0;
+
+size_t
+bsd_strlen(const char *str) {
+        const char *s;
+        for (s = str; *s; ++s);
+        return (s - str);
+}
+
+static int SHOW_OS_LOOP=0;
+
+EMSCRIPTEN_KEEPALIVE int
+show_os_loop(int state) {
+    int last = SHOW_OS_LOOP;
+    if (state>=0) {
+        SHOW_OS_LOOP = state;
+        if (state>0) {
+            //fprintf(stderr,"------------- showing os loop --------------\n");
+            fprintf(stderr,"------------- showing os loop / starting repl --------------\n");
+            repl_started = 1;
+        } else {
+            if (last!=state)
+                fprintf(stderr,"------------- hiding os loop --------------\n");
+        }
+    }
+    return (last>0);
+}
 
 
 void
@@ -151,6 +178,7 @@ repl_run(int warmup) {
 int
 main(int argc, char *argv[]) {
 
+#if 0
     //keep symbol global for wasm debugging
     fprintf(stderr,"//#FIXME: add sys.executable to sys\n");
 
@@ -174,6 +202,9 @@ main(int argc, char *argv[]) {
     RangeError: WebAssembly.Compile is disallowed on the main thread, if the buffer size is larger than 4KB.
     Use WebAssembly.compile, or compile on a worker thread.
 */
+#else
+    #pragma message (" ----------- dlopen off for upstream, no FFI ! ---------")
+#endif
 
     //setenv("HOME","/data/data/u.root.upy",0);
     setenv("HOME","/",1);

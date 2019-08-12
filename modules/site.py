@@ -110,30 +110,6 @@ del await_
 #del awaited_sleep
 
 
-old_sdh = __repl_print__
+displayhook = __repl_print__
 
 
-async def late_repl(argv):
-    embed.os_stderr("ASYNC-REPL: %r\n" % argv)
-    await argv
-    embed.os_stderr("ASYNC-REPL: done")
-
-if 0:
-    # async ?
-    def printer(argv):
-        global old_sdh
-        if argv is not None:
-            if repr(argv).count("'") > 1:
-                if repr(argv).split("'", 2)[1].startswith("awaited_"):
-                    embed.log("comefrom 90")
-                    for x in argv:
-                        embed.log("%r" % x)
-                        syscall.stack.append(argv)
-                    embed.log("goto 85")
-        return old_sdh(argv)
-
-
-    builtins.__repl_print__ = printer
-
-    # mask
-    del printer

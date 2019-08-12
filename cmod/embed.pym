@@ -19,7 +19,7 @@
 #include "py/smallint.h"
 
 
-extern char *repl_line;
+//extern char *repl_line;
 extern int show_os_loop(int state);
 
 
@@ -158,50 +158,5 @@ def ticks_period() -> int:
     return mp_obj_new_int_from_uint( MICROPY_PY_UTIME_TICKS_PERIOD );
 
 
-def os_read() -> bytes:
-    return bytes( repl_line );
 
-// TODO: remove after tests
-
-
-def os_read_useless() -> bytes:
-    // simple read string
-
-    static char buf[256];
-    //fputs(p, stdout);
-    char *s = fgets(buf, sizeof(buf), stdin);
-    if (!s) {
-        //return mp_obj_new_int(0);
-        buf[0]=0;
-        fprintf(stderr,"embed.os_read EOF\n" );
-    } else {
-        int l = strlen(buf);
-        if (buf[l - 1] == '\n') {
-            if ( (l>1) && (buf[l - 2] == '\r') )
-                buf[l - 2] = 0;
-            else
-                buf[l - 1] = 0;
-        } else {
-            l++;
-        }
-        fprintf(stderr,"embed.os_read [%s]\n", buf );
-    }
-    return bytes(buf);
-    # py comment #1
-
-
-def echosum1(num : int=0) -> int:
-    return MP_OBJ_NEW_SMALL_INT(num+1);
-
-# py comment #2
-
-def callsome(fn : void=npe) -> void:
-    (*fn)();
-
-
-def somecall(s:str='pouet'):
-    fprintf(stderr, "FPRINTF[%s]\n", mp_obj_str_get_str(s) );
-    print(s);
-
-// c comment #3
 

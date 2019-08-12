@@ -189,7 +189,7 @@ function init_repl_begin(){
     var scripts = document.getElementsByTagName('script')
 
     var doscripts = true
-try {
+//try {
     window.plink.shm = Module._repl_init()
 
     // get repl max buffer size but don't start it yet
@@ -235,7 +235,7 @@ try {
 
     // give time for page scripts to display before repl banner
     setTimeout(init_repl_end, 64)
-} catch(x) {console.log('failed to create interpreter repl') }
+//} catch(x) {console.log('failed to create interpreter repl') }
 }
 
 

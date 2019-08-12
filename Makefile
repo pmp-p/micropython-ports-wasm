@@ -10,7 +10,7 @@ CROSS = 0
 # clang has slightly different options to GCC
 #CLANG = 1
 
-
+CFLAGS_USERMOD += -Wno-unused-function
 
 include ../../py/mkenv.mk
 
@@ -46,7 +46,7 @@ ifdef EMSCRIPTEN
 		LVOPTS = -DMICROPY_PY_LVGL=1
 		CFLAGS += $(LVOPTS)
 		JSFLAGS += -s USE_SDL=2
-		CFLAGS_USERMOD += $(LVOPTS) -s USE_SDL=2 -Wno-unused-function -Wno-for-loop-analysis
+		CFLAGS_USERMOD += $(LVOPTS) -s USE_SDL=2 -Wno-for-loop-analysis
 		CPP += -DMICROPY_PY_LVGL=1
 	endif
 	
@@ -62,7 +62,8 @@ ifdef EMSCRIPTEN
 		WASM_FLAGS += -s "BINARYEN_TRAP_MODE='clamp'"
 		LDFLAGS += -Wl,-Map=$@.map,--cref
 	else
-		CFLAGS += -fPIC -D__WASM__
+#		CFLAGS += -fPIC -D__WASM__  #  -fPIC=> error: undefined symbol: fp$gc_collect$v
+		CFLAGS += -D__WASM__
 		CPP += -D__WASM__
 	endif  
 	
@@ -96,7 +97,7 @@ INC += -I../..
 INC += -I$(BUILD)
 
 
-CFLAGS += $(INC)  -Wall -Werror -ansi -std=gnu99 
+CFLAGS += $(INC)  -Wall -ansi -std=gnu99 
 
 
 
@@ -137,7 +138,7 @@ SRC_C = \
 
 
 # optionnal experimental FFI
-SRC_C+= \
+SRC_C += \
 	modffi.c \
 	ffi/types.c \
 	ffi/prep_cif.c \
@@ -203,17 +204,12 @@ $(BUILD)/clang_predefs.h:
 Makefile: $(BUILD)/clang_predefs.h	
 endif
 
-
-
-#see https://github.com/emscripten-core/emscripten/issues/7811
-#COPT+= -s EXPORT_ALL=1
-
 # https://github.com/emscripten-core/emscripten/wiki/Linking
 
-LD_LIB = -s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1 -s TOTAL_MEMORY=512MB
+LD_LIB = -s EXPORT_ALL=1 -s WASM=1 -s TOTAL_MEMORY=512MB
+# -s SIDE_MODULE=1  upstream lose dlopen https://github.com/emscripten-core/emscripten/issues/8995
 
 
-# EMOPTS+= -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 1
 
 COPT += -s ENVIRONMENT=web
 COPT += -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=1
@@ -223,10 +219,8 @@ ifdef WASM_FILE_API
 	COPT += -s FORCE_FILESYSTEM=1
 endif	
 
-
-
-LD_PROG += -s MAIN_MODULE=1
-
+# LD_PROG += -s MAIN_MODULE=1
+# relocation R_WASM_MEMORY_ADDR_LEB cannot be used against symbol mp_state_ctx; recompile with -fPIC
 
 ifdef DLO
 #	DLO = $(LIBMICROPYTHON) --use-preload-plugins
@@ -253,6 +247,8 @@ endif
 
 
 COPT += -s NO_EXIT_RUNTIME=1
+COPT +=  -s "EXTRA_EXPORTED_RUNTIME_METHODS=['getValue']"
+
 #? -s LEGALIZE_JS_FFI=0
 
 #no compression or dlopen(wasm) will fail on chrom*
@@ -285,6 +281,7 @@ clean:
 	$(RM) -rf $(BUILD) $(CLEAN_EXTRA) $(LIBMICROPYTHON)
 	$(shell rm $(BASENAME)/$(BASENAME).* || echo echo test data cleaned up)
 
+ifdef SHARED
 libs: $(OBJ)
 	$(ECHO) "Linking static $(LIBMICROPYTHON)"
 	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
@@ -299,7 +296,18 @@ $(PROG): libs
  --preload-file micropython/lib@/lib
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
+else
 
+$(PROG): $(OBJ)
+	$(ECHO) "Building dynamic executable $@"
+	$(Q)$(CC) $(CFLAGS_EXTRA) $(INC) $(COPT) $(WASM_FLAGS) $(LD_PROG) $(THR_FLAGS) \
+ -o $@ main.c -ldl -lm -lc $(OBJ)\
+ --preload-file assets@/assets \
+ --preload-file micropython/lib@/lib
+	$(shell mv $(BASENAME).* $(BASENAME)/)
+
+
+endif
 
 
 

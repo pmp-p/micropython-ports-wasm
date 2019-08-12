@@ -51,7 +51,7 @@ STATIC mp_obj_t PyBytes_FromString(char *string){
 #include "py/smallint.h"
 
 
-extern char *repl_line;
+//extern char *repl_line;
 extern int show_os_loop(int state);
 
 
@@ -337,98 +337,7 @@ embed_ticks_period(size_t argc, const mp_obj_t *argv) {
 } /* ticks_period */
 
 
-/* #15@175 os_read() -> bytes  */
 
-STATIC mp_obj_t //bytes
-embed_os_read(size_t argc, const mp_obj_t *argv) {
-    return bytes( repl_line );
-    //return bytes()
-} /* os_read */
-
-// TODO: remove after tests
-
-
-/* #16@182 os_read_useless() -> bytes  */
-
-STATIC mp_obj_t //bytes
-embed_os_read_useless(size_t argc, const mp_obj_t *argv) {
-    // simple read string
-
-    static char buf[256];
-    //fputs(p, stdout);
-    char *s = fgets(buf, sizeof(buf), stdin);
-    if (!s) {
-        //return mp_obj_new_int(0);
-        buf[0]=0;
-        fprintf(stderr,"embed.os_read EOF\n" );
-    } else {
-        int l = strlen(buf);
-        if (buf[l - 1] == '\n') {
-            if ( (l>1) && (buf[l - 2] == '\r') )
-                buf[l - 2] = 0;
-            else
-                buf[l - 1] = 0;
-        } else {
-            l++;
-        }
-        fprintf(stderr,"embed.os_read [%s]\n", buf );
-    }
-    return bytes(buf);
-    //return bytes()
-} /* os_read_useless */
-//   # py comment #1
-
-
-/* #17@209 echosum1(num : int=0) -> int  */
-
-STATIC mp_obj_t //int
-embed_echosum1(size_t argc, const mp_obj_t *argv) {
-
-    int num;
-    if (argc>0)
-        num = mp_obj_get_int(argv[0]);
-    else num = 0 ;
-
-
-    return MP_OBJ_NEW_SMALL_INT(num+1);
-    //return int()
-} /* echosum1 */
-
-// py comment #2
-
-/* #18@215 callsome(fn : void=npe) -> void  */
-
-STATIC mp_obj_t //ptr
-embed_callsome(size_t argc, const mp_obj_t *argv) {
-
-    void (*fn)(void);
-    if (argc>0)
-        fn = (void*)argv[0] ;
-    else fn = &null_pointer_exception;
-
-
-    (*fn)();
-    return None;
-} /* callsome */
-
-
-/* #19@220 somecall(s:str='pouet')  */
-
-STATIC mp_obj_t //void
-embed_somecall(size_t argc, const mp_obj_t *argv) {
-
-    mp_obj_t s;
-    if (argc>0)
-        s = (mp_obj_t*)argv[0];
-    else s =  mp_obj_new_str_via_qstr("pouet",5);
-
-
-    fprintf(stderr, "FPRINTF[%s]\n", mp_obj_str_get_str(s) );
-    print(s);
-    return None;
-} /* somecall */
-
-// c comment #3
 
 
 
@@ -436,12 +345,6 @@ embed_somecall(size_t argc, const mp_obj_t *argv) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_builtins_vars_obj,
     0, 1, embed_builtins_vars);
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_callsome_obj,
-    0, 1, embed_callsome);
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_echosum1_obj,
-    0, 1, embed_echosum1);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_log_obj,
     0, 1, embed_log);
@@ -454,12 +357,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_hook_obj,
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_print_obj,
     0, 1, embed_os_print);
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_read_obj,
-    0, 0, embed_os_read);
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_read_useless_obj,
-    0, 0, embed_os_read_useless);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_os_showloop_obj,
     0, 0, embed_os_showloop);
@@ -475,9 +372,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_sleep_obj,
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_sleep_ms_obj,
     0, 1, embed_sleep_ms);
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_somecall_obj,
-    0, 1, embed_somecall);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(embed_ticks_add_obj,
     0, 2, embed_ticks_add);
@@ -496,20 +390,15 @@ STATIC const mp_map_elem_t embed_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___file__), MP_ROM_QSTR(MP_QSTR_flashrom) },
 
     {MP_ROM_QSTR(MP_QSTR_builtins_vars), (mp_obj_t)&embed_builtins_vars_obj },
-    {MP_ROM_QSTR(MP_QSTR_callsome), (mp_obj_t)&embed_callsome_obj },
-    {MP_ROM_QSTR(MP_QSTR_echosum1), (mp_obj_t)&embed_echosum1_obj },
     {MP_ROM_QSTR(MP_QSTR_log), (mp_obj_t)&embed_log_obj },
     {MP_ROM_QSTR(MP_QSTR_os_compile), (mp_obj_t)&embed_os_compile_obj },
     {MP_ROM_QSTR(MP_QSTR_os_hook), (mp_obj_t)&embed_os_hook_obj },
     {MP_ROM_QSTR(MP_QSTR_os_print), (mp_obj_t)&embed_os_print_obj },
-    {MP_ROM_QSTR(MP_QSTR_os_read), (mp_obj_t)&embed_os_read_obj },
-    {MP_ROM_QSTR(MP_QSTR_os_read_useless), (mp_obj_t)&embed_os_read_useless_obj },
     {MP_ROM_QSTR(MP_QSTR_os_showloop), (mp_obj_t)&embed_os_showloop_obj },
     {MP_ROM_QSTR(MP_QSTR_os_stderr), (mp_obj_t)&embed_os_stderr_obj },
     {MP_ROM_QSTR(MP_QSTR_os_write), (mp_obj_t)&embed_os_write_obj },
     {MP_ROM_QSTR(MP_QSTR_sleep), (mp_obj_t)&embed_sleep_obj },
     {MP_ROM_QSTR(MP_QSTR_sleep_ms), (mp_obj_t)&embed_sleep_ms_obj },
-    {MP_ROM_QSTR(MP_QSTR_somecall), (mp_obj_t)&embed_somecall_obj },
     {MP_ROM_QSTR(MP_QSTR_ticks_add), (mp_obj_t)&embed_ticks_add_obj },
     {MP_ROM_QSTR(MP_QSTR_ticks_period), (mp_obj_t)&embed_ticks_period_obj },
     {MP_ROM_QSTR(MP_QSTR_time_ms), (mp_obj_t)&embed_time_ms_obj },
