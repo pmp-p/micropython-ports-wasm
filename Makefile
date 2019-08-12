@@ -21,13 +21,26 @@ QSTR_DEFS = qstrdefsport.h
 
 
 ifdef EMSCRIPTEN
-
+	JSFLAGS ?= --source-map-base http://localhost:8000/
+	
 	ifdef WASM_FILE_API
 # note that WASM_FILE_API will pull filesystem function into the wasm lib	
 		CFLAGS += -DWASM_FILE_API=1
 	endif
 
 	CC = emcc
+	LD = $(CC)
+
+	ifeq ($(DEBUG), 1)
+		CC += -O0 -g4
+		LD += -O0 -g4
+	else
+		#OPTIM=1
+		#DLO=1
+		CFLAGS += -DNDEBUG
+		CC += -O3 -g0
+		LD += -O3 -g0
+	endif
 	
 	ifdef LVGL
 		LVOPTS = -DMICROPY_PY_LVGL=1
@@ -42,7 +55,7 @@ ifdef EMSCRIPTEN
 	CPP = clang -E -undef -D__CPP__ -D__EMSCRIPTEN__
 	CPP += --sysroot $(EMSCRIPTEN)/system
 	CPP += -include $(BUILD)/clang_predefs.h	
-	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(JSFLAGS) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
+	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 
 	#check if not using emscripten-upstream branch
 	ifeq (,$(findstring upstream/bin, $(EMMAKEN_COMPILER)))
@@ -53,7 +66,9 @@ ifdef EMSCRIPTEN
 		CPP += -D__WASM__
 	endif  
 	
-	LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_show_os_loop', '_Py_InitializeExPy']"
+	
+	
+	LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_show_os_loop', '_repl_init']"
 	
 else
 	ifdef CLANG
@@ -63,17 +78,17 @@ else
 		CC = gcc
 		CPP = gcc -E -D__CPP__
 	endif
+	LD = $(CC)	
 endif
-
-
-
-
 
 # include py core make definitions
 include ../../py/py.mk
 
-
+#../../py/mkrules.mk:128
 SIZE = echo
+STRIP = echo
+
+
 LD = $(CC)
 
 INC += -I.
@@ -84,25 +99,11 @@ INC += -I$(BUILD)
 CFLAGS += $(INC)  -Wall -Werror -ansi -std=gnu99 
 
 
-LD = $(CC)
+
 #LD_SHARED = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
 LD_SHARED += -fno-exceptions -fno-rtti
 
 
-#Debugging/Optimization
-WASM_FLAGS += -O0 -g4 --source-map-base http://localhost:8000/
-LD_SHARED += -O0 -g4 --source-map-base http://localhost:8000/
-
-ifeq ($(DEBUG), 1)
-	CC += -O0 -g4
-	LD += -O0 -g4
-else
-	#OPTIM=1
-	#DLO=1
-	CFLAGS += -DNDEBUG
-	CC += -O0 -g4
-	LD += -O0 -g4
-endif
 
 
 ifneq ($(FROZEN_DIR),)
@@ -195,7 +196,7 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 ifdef EMSCRIPTEN
 $(BUILD)/clang_predefs.h:
 	$(Q)mkdir -p $(dir $@)
-	$(Q)emcc $(CFLAGS) $(CFLAGS_EXTRA) $(JSFLAGS) -E -x c /dev/null -dM > $@
+	$(Q)emcc $(CFLAGS) $(CFLAGS_EXTRA) $(CFLAGS_USERMOD) -E -x c /dev/null -dM > $@
 
 # Create `clang_predefs.h` as soon as possible, using a Makefile trick
 
@@ -260,27 +261,6 @@ COPT += -s TOTAL_MEMORY=512MB -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
 
 
 WASM_FLAGS += -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1  -fno-inline
-#only valid for fastcomp -s BINARYEN_TRAP_MODE=\"clamp\"
-
-ifdef ASYNC
-	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
-	WASM_FLAGS += -s EMTERPRETIFY_WHITELIST='[ "_embed_sleep", "_embed_sleep_ms", "_py_iter_one",\
- "_mp_execute_bytecode", "_fun_bc_call",\
- "_mp_call_method_n_kw", "_mp_call_function_n_kw",\
- "_mp_import_name", \
- "_mpsl_call_method_n_kw_var", "_mpsl_call_function_n_kw", "_mpsl_iternext_allow_raise",\
- "_gen_instance_close",\
- "_gen_instance_iternext",\
- "_gen_instance_send",\
- "_gen_instance_throw",\
- "_mp_obj_gen_resume",\
- "_mp_resume"]'
-	
-#	WASM_FLAGS += -s EMTERPRETIFY_SYNCLIST='["_mp_obj_gen_resume"]'  -s EMTERPRETIFY_ADVISE=1
-
-endif
-
-
 
 THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
 
@@ -311,17 +291,13 @@ libs: $(OBJ)
 	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
 	$(Q)$(LD) $(LD_SHARED) $(LD_LIB) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc
 
-	
 $(PROG): libs
-	$(ECHO) "Building executable $@"
+	$(ECHO) "Building dynamic executable $@"
 	$(Q)$(CC) $(CFLAGS_EXTRA) $(INC) $(COPT) $(WASM_FLAGS) $(LD_PROG) $(THR_FLAGS) \
- -o $@ main.c -ldl -lm -lc -lmicropython -L. \
- $(DLO) \
+ -o $@ main.c -ldl -lm -lc $(LIBMICROPYTHON)\
  --preload-file assets@/assets \
  --preload-file micropython/lib@/lib
-# 
 	$(shell mv $(BASENAME).* $(BASENAME)/)
-#
 
 
 
