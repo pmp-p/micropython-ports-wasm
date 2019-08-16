@@ -5,6 +5,37 @@ then
     echo not to be sourced, use chmod +x on script
 else
     reset
+    export EM_CONFIG="${EMSDK}/EM_CONFIG"
+
+    rm ~/.emscripten
+    ln -sf "${EM_CONFIG}" ~/.emscripten
+
+    if cmp "${EM_CONFIG}" ~/.emscripten
+    then
+        echo ok cache
+    else
+        echo "# OMG WHY ???"
+        cat "${EM_CONFIG}" > ~/.emscripten
+    fi
+
+    WD="$(pwd)"
+    cd "${EMSDK}"
+
+    tmpfile=`mktemp` || exit 1
+    ./emsdk construct_env $tmpfile
+    echo  $tmpfile
+    . $tmpfile
+    rm -f $tmpfile
+
+    cd "${WD}"
+    export PATH
+    export EM_CACHE="${EMSDK}/EM_CACHE"
+    export EM_PORTS="${EMSDK}/EM_PORTS"
+
+    mkdir -p "${EM_CACHE}" "${EM_PORTS}"
+
+    env|grep ^EM
+    echo $PATH
 
     export PYTHONDONTWRITEBYTECODE=1
     for py in 8 7 6

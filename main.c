@@ -1,3 +1,59 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <assert.h>
+#include <stdarg.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "fdfile.h"
+
+#include "py/compile.h"
+#include "py/emitglue.h"
+#include "py/objtype.h"
+#include "py/runtime.h"
+#include "py/parse.h"
+#include "py/bc0.h"
+#include "py/bc.h"
+#include "py/repl.h"
+#include "py/gc.h"
+#include "py/mperrno.h"
+#include "lib/utils/pyexec.h"
+
+
+#include "emscripten.h"
+
+/*
+CFLAGS="-Wfatal-errors -Wall -Wextra -Wunused -Werror -Wno-format-extra-args -Wno-format-zero-length\
+ -Winit-self -Wimplicit -Wimplicit-int -Wmissing-include-dirs -Wswitch-default -Wswitch-enum\
+ -Wunused-parameter -Wdouble-promotion -Wchkp -Wno-coverage-mismatch -Wstrict-overflow\
+ -Wformat-nonliteral -Wformat-security -Wformat-signedness -Wnonnull -Wnonnull-compare\
+ -Wnull-dereference -Wignored-qualifiers -Wignored-attributes\
+ -Wmain -Wpedantic -Wmisleading-indentation -Wmissing-braces -Wmissing-include-dirs\
+ -Wparentheses -Wsequence-point -Wshift-overflow=2 -Wswitch -Wswitch-default -Wswitch-bool\
+ -Wsync-nand -Wunused-but-set-parameter -Wunused-but-set-variable -Wunused-function -Wunused-label\
+ -Wunused-parameter -Wunused-result -Wunused-variable -Wunused-const-variable=2 -Wunused-value\
+ -Wuninitialized -Winvalid-memory-model -Wmaybe-uninitialized -Wstrict-aliasing=3\
+ -Wsuggest-attribute=pure -Wsuggest-attribute=const\
+ -Wsuggest-attribute=noreturn -Wsuggest-attribute=format -Wmissing-format-attribute\
+ -Wdiv-by-zero -Wunknown-pragmas -Wbool-compare -Wduplicated-cond\
+ -Wtautological-compare -Wtrampolines -Wfloat-equal -Wfree-nonheap-object -Wunsafe-loop-optimizations\
+ -Wpointer-arith -Wnonnull-compare -Wtype-limits -Wcomments -Wtrigraphs -Wundef\
+ -Wendif-labels -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wclobbered\
+ -Wconversion -Wdate-time -Wempty-body -Wjump-misses-init -Wsign-compare -Wsign-conversion\
+ -Wfloat-conversion -Wsizeof-pointer-memaccess -Wsizeof-array-argument -Wpadded -Wredundant-decls\
+ -Wnested-externs -Winline -Wbool-compare -Wno-int-to-pointer-cast -Winvalid-pch -Wlong-long\
+ -Wvariadic-macros -Wvarargs -Wvector-operation-performance -Wvla -Wvolatile-register-var\
+ -Wpointer-sign -Wstack-protector -Woverlength-strings -Wunsuffixed-float-constants\
+ -Wno-designated-init -Whsa\
+ -march=x86-64 -m64 -Wformat=2 -Warray-bounds=2 -Wstack-usage=120000 -Wstrict-overflow=5 -fmax-errors=5 -g\
+ -std=c99 -D_POSIX_SOURCE -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE=700 -pedantic-errors"
+*/
+
 #define DBG 0
 #define DLOPEN 0
 
@@ -5,64 +61,8 @@
 
 #define SYS_MAX_RECURSION 32
 
-#include "core/main_pre.c"
-
-#include <setjmp.h>
-
-
-// to have correct pointer cast on .call those must be included here
-#include "core/objfun.c"
-#include "core/objclosure.c"
-#include "core/objboundmeth.c"
-#include "core/objgenerator.c"
-#include "core/objtype.c"
-
-
-
-
-#include "py/runtime.h"
-#include "core/vm.c"
-
-
-#include "vm/stackwith.c"
-#include "core/modbuiltins.c" // mpsl_iternext_allow_raise is in stackwith.c
-
-
-EMSCRIPTEN_KEEPALIVE int VM_depth = 0;
-
-extern mp_obj_t mp_builtin___import__(size_t n_args, const mp_obj_t *args);
-
-
-#include "vm/gosub.c"
-
-static mp_lexer_t *lex;
-
-#define VM_DECODE_UINT \
-    mp_uint_t unum = 0; \
-    do { \
-        unum = (unum << 7) + (*CTX.ip & 0x7f); \
-    } while ((*CTX.ip++ & 0x80) != 0)
-
-#define VM_DECODE_ULABEL CTX.ulab = (CTX.ip[0] | (CTX.ip[1] << 8)); CTX.ip += 2
-#define VM_DECODE_SLABEL CTX.slab = (CTX.ip[0] | (CTX.ip[1] << 8)) - 0x8000; CTX.ip += 2
-
-#define VM_DECODE_QSTR \
-    CTX.qst = CTX.ip[0] | CTX.ip[1] << 8; \
-    CTX.ip += 2;
-
-#define VM_DECODE_PTR \
-    VM_DECODE_UINT; \
-    CTX.ptr = (void*)(uintptr_t)CTX.code_state->fun_bc->const_table[unum]
-
-#define VM_DECODE_OBJ \
-    VM_DECODE_UINT; \
-    mp_obj_t obj = (mp_obj_t)CTX.code_state->fun_bc->const_table[unum]
-
-
-
-#include "vm/debug.c"
-
-static int coropass =0 ;
+static int g_argc;
+static char **g_argv; //[];
 
 size_t
 bsd_strlen(const char *str)
@@ -72,85 +72,131 @@ bsd_strlen(const char *str)
         return (s - str);
 }
 
-int code_prepare() {
-    //lib/utils/pyexec.c:#define EXEC_FLAG_IS_REPL (4)
 
+
+
+
+
+/* =====================================================================================
+    bad sync experiment with file access trying to help on
+        https://github.com/littlevgl/lvgl/issues/792
+
+    status: better than nothing.
+*/
+
+#include "wasm_file_api.c"
+#include "wasm_import_api.c"
+
+static int KPANIC = 0;
+
+
+
+
+
+
+
+char **copy_argv(int argc, char *argv[]) {
+  // calculate the contiguous argv buffer size
+  int length=0;
+  size_t ptr_args = argc + 1;
+  for (int i = 0; i < argc; i++)
+  {
+    length += (bsd_strlen(argv[i]) + 1);
+  }
+  char** new_argv = (char**)malloc((ptr_args) * sizeof(char*) + length);
+  // copy argv into the contiguous buffer
+  length = 0;
+  for (int i = 0; i < argc; i++)
+  {
+    new_argv[i] = &(((char*)new_argv)[(ptr_args * sizeof(char*)) + length]);
+    strcpy(new_argv[i], argv[i]);
+    length += (bsd_strlen(argv[i]) + 1);
+  }
+  // insert NULL terminating ptr at the end of the ptr array
+  new_argv[ptr_args-1] = NULL;
+  return (new_argv);
+}
+
+
+
+#include "upython.c"
+
+
+EMSCRIPTEN_KEEPALIVE int
+repl_run(int warmup) {
+    if (warmup==1)
+        return MPI_SHM_SIZE;
+    //Py_NewInterpreter();
+    repl_started = MPI_SHM_SIZE;
     return 1;
 }
 
-void code_free(){
 
-}
+#include "vmsl/vmreg.h"
 
-void repl_done(){
-    //mark repl buffer consummed as a null str
-    repl_line[0] = 0;}
-
-
-typedef struct _mp_reader_mem_t {
-    size_t free_len; // if >0 mem is freed on close by: m_free(beg, free_len)
-    const byte *beg;
-    const byte *cur;
-    const byte *end;
-} mp_reader_mem_t;
+#include "vmsl/vmreg.c"
 
 void
-py_iter_one(void) {
+main_loop_or_step(void) {
+call_:;
+    if (VMOP < VMOP_WARMUP) {
+        if (VMOP < VMOP_INIT) {
+            puts("init");
+            crash_point = &&VM_stackmess;
+            Py_Initialize();
+            Py_NewInterpreter();
 
-    if (VMOP<0) {
-        crash_point = &&VM_stackmess;
-        py_iter_init();
-        VMOP = VMOP_NONE;
-        fun_ptr();
+            VMOP = VMOP_INIT;
+            //fun_ptr();
+            entry_point[0]=JMP_NONE;
+            exit_point[0]=JMP_NONE;
+            come_from[0]=0;
+            type_point[0]=0;
 
-        return;
+            for (int i=0; i<SYS_MAX_RECURSION; i++)
+                mp_new_interpreter(&mpi_ctx, i, 0 , 0);
+
+            // 0 hypervisor with no branching ( can use optimized original vm.c )
+            // 1 supervisor
+            // 2 __main__
+
+            mp_new_interpreter(&mpi_ctx, 1, 0, 2);
+
+            // 2 has no parent for now, just back to OS
+            mp_new_interpreter(&mpi_ctx, 2, 0, 0);
+
+            ctx_current = 1;
+            while ( mpi_ctx[ctx_current].childcare )
+                ctx_current = (int)mpi_ctx[ctx_current].childcare;
+
+            fprintf(stdout,"running __main__ on pid=%d\n", ctx_current);
+            return;
+        } // no continuation -> syscall
+
+        if (VMOP==VMOP_INIT) {
+            VMOP = VMOP_WARMUP;
+            puts("test");
+            PyRun_SimpleString("import site");
+            PyRun_SimpleString("print('Hello Python')");
+
+            strcpy( i_main.shm_stdin , "import pystone;pystone.main()");
+            //CALL( def_PyRun_SimpleString, main_loop_or_step_189, "PyRun_SimpleString");
+            CALL( def_PyRun_SimpleString, "main_loop_or_step");
+            puts("-resuming-");
+            //VMOP=VM_H_CF_OR_SC;
+            return;
+        }
     }
 
-    if ( CTX.vmloop_state >= VM_PAUSED )
-        CTX.vmloop_state--;
 
-
-    if (CTX.vmloop_state > VM_RESUMING) {
-        fprintf(stderr," - paused -\n");
-        return;
+    if (i_main.shm_stdin[0]) {
+        int retval = do_str(i_main.shm_stdin, MP_PARSE_FILE_INPUT);
+        i_main.shm_stdin[0] = 0;
     }
-
-    if (!rbb_is_empty(&out_rbb)) {
-        // flush stdout
-        unsigned char out_c = 0;
-        printf("{\"%c\":\"",49);
-        //TODO put a 0 at end and printf buffer directly
-        while (rbb_pop(&out_rbb, &out_c))
-            printf("%c", out_c );
-        printf("\"}\n");
-    }
-
-
-
-
-
-    //fprintf(stderr,"loop(repl=%d, panic=%d, code=%lu)\n", repl_started, KPANIC, bsd_strlen(repl_line) );
-
-    if (KPANIC)
-        return;
-
-    if (!repl_started)
-        return;
-
-    // io demux will be done here too via io_loop(json_state)
-
-    //is it async top level ?
-    if (endswith(repl_line, "#async-tl")) {
-        fprintf(stderr, "#async-tl -> aio.asyncify()\n");
-        PyRun_SimpleString("aio.asyncify()");
-        repl_done();
-        return;
-    }
-
 
 
     if ( (ENTRY_POINT != JMP_NONE)  && !JUMPED_IN) {
-        fprintf(stderr,"spawn vm %d entry => %d\n", ctx_current, CTX.pointer);
+        fprintf(stderr,"re-enter-on-entry %d => %d\n", ctx_current, CTX.pointer);
         void* jump_entry;
         jump_entry = ENTRY_POINT;
         // Never to re-enter as this point. can only use the exit.
@@ -158,17 +204,36 @@ py_iter_one(void) {
         goto *jump_entry;
     }
 
+    // allow that here ?
+    if ( (EXIT_POINT != JMP_NONE)  && JUMPED_IN) {
+        fprintf(stderr,"re-enter-on-exit %d => %d\n", ctx_current, CTX.pointer);
 
-    if (!bsd_strlen(repl_line))
-        return;
+        // was it gosub
+        if (JUMP_TYPE == TYPE_SUB)
+            RETURN;
 
+        // was it branching
+        if (JUMP_TYPE == TYPE_JUMP)
+            COME_FROM;
+    }
 
-    if (endswith(repl_line, "#aio.step\n")) {
-        fprintf(stderr,"loop(AIO)\n" );
-        // running repl after script in cpython is sys.flags.inspect, should monitor and init repl
+    while (!KPANIC) {
+        if (!rbb_is_empty(&out_rbb)) {
+            // flush stdout
+            unsigned char out_c = 0;
+            printf("{\"%c\":\"",49);
+            //TODO put a 0 at end and printf buffer directly
+            while (rbb_pop(&out_rbb, &out_c))
+                printf("%c", out_c );
+            printf("\"}\n");
+        }
+
+        if (VMOP==VM_H_CF_OR_SC)
+            goto VM_stackmess;
 
         // only when scripting interface is idle and repl ready
         while (repl_started) {
+
             // should give a way here to discard repl events feeding  "await input()" instead
             int rx = EM_ASM_INT({
                 if (window.stdin_array.length)
@@ -182,99 +247,114 @@ py_iter_one(void) {
                 pyexec_event_repl_process_char(rx);
             } else break;
         }
-
-        // WORKAROUND the ~1K strlen crash
-        return;
-    } else
-        fprintf(stderr,"loop(code=%lu)\n", bsd_strlen(repl_line) );
-
-    #define EXEC_FLAG_IS_REPL (4)
-    mp_reader_new_mem(&CTX.reader, (const byte*)repl_line, bsd_strlen(repl_line), 0);
-    CTX.lex = mp_lexer_new(MP_QSTR__lt_stdin_gt_, CTX.reader);
-
-    if (CTX.lex == NULL) {
-        printf("152:malloc: lexer %lu\n", bsd_strlen(repl_line));
-        KPANIC = 1;
         return;
     }
 
-    // TODO where/when call aio.step() if no repl ?
-    // call asyncio auto stepping first in case of no repl
-    //   PyRun_SimpleString("aio.step()");
-    // actually plink does the call.
+// def PyRun_SimpleString(const_char_p src) -> void;
+def_PyRun_SimpleString: {
+//return:
+    int ret = 0;
+//args:
+    char* src = i_main.shm_stdin;
+    mp_parse_input_kind_t input_kind = MP_PARSE_FILE_INPUT;
+//vars
+    nlr_buf_t nlr;
 
-#if __WASM__
-#error unsupported
-#else
-    static nlr_buf_t main_nlr;
+//code
+    if (nlr_push(&nlr) == 0) {
+        mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
+        qstr source_name = lex->source_name;
+        mp_parse_tree_t parse_tree = mp_parse(lex, input_kind);
+        mp_obj_t module_fun = mp_compile(&parse_tree, source_name, MP_EMIT_OPT_NONE, false);
+        mp_call_function_0(module_fun);
+        src[0]=0;
+        nlr_pop();
+    } else {
 
-    if (nlr_push(&main_nlr) != 0) {
+        // RETEXC =  ???
         // uncaught exception
-        clog("194: uncaught exception !");
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)main_nlr.ret_val);
-        KPANIC = 1;
-        return;
+        if (mp_obj_is_subclass_fast(mp_obj_get_type((mp_obj_t)nlr.ret_val), &mp_type_SystemExit)) {
+            mp_obj_t exit_val = mp_obj_exception_get_value(MP_OBJ_FROM_PTR(nlr.ret_val));
+            if (exit_val != mp_const_none) {
+                mp_int_t int_val;
+                if (mp_obj_get_int_maybe(exit_val, &int_val)) {
+                    ret = int_val & 255;
+                } else {
+                    ret = 1;
+                }
+            }
+        } else {
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+            ret = 1;
+        }
     }
-#endif
+    COME_FROM;
+} // PyRun_SimpleString
 
-    CTX.parse_tree = mp_parse(CTX.lex, MP_PARSE_FILE_INPUT);
 
 
-    clog(" -------------------- BEGIN --------------------");
-    //mp_raw_code_t *rc = mp_compile_to_raw_code(parse_tree, source_file, emit_opt, is_repl);
-    mp_raw_code_t *rc = mp_compile_to_raw_code(&CTX.parse_tree, CTX.source_name, MP_EMIT_OPT_NONE, false);
-    CTX.self_in = mp_make_function_from_raw_code(rc, MP_OBJ_NULL, MP_OBJ_NULL);
 
-// =======================================================================================
-// Begin : fun_bc_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args)
-VM_fun_bc_call:
-    clog("mpsl:%d fun_bc_call", ctx_current);
 
-    #include "vm/stackless.c"
 
-#if __WASM__
-#error unsupported
-#else
-    nlr_pop();
-#endif
-
-    if (EXIT_POINT != JMP_NONE) {
-        fprintf(stderr,"resuming vm %d ptr=%d\n", ctx_current, CTX.pointer);
-        // was it gosub
-        if (JUMP_TYPE == TYPE_SUB)
-            RETURN;
-
-        // was it branching
-        if (JUMP_TYPE == TYPE_JUMP)
-            COME_FROM;
-
-        //FATAL("VM_jump_table_exit: invalid jump table");
-    }
-
-    if (show_os_loop(0)) {
-        fprintf(stderr," ----------- END -------------------\n");
-        coropass = 1;
-        //?? TODO:CTX CTX.vmloop_state = VM_IDLE;
-        clear_shared_array_buffer();
-    }
-
-    //mark repl buffer consummed
-    repl_line[0] = 0;
-
-    #include "vm/stackmess.c"
+VM_stackmess:
+    puts("no guru meditation, bye");
+    #if !ASYNCIFY
+    emscripten_cancel_main_loop();
+    #endif
+    return;
+VM_syscall:;
+    puts("-syscall-");
 }
 
-/* =====================================================================================
-    bad sync experiment with file access trying to help on
-        https://github.com/littlevgl/lvgl/issues/792
 
-    status: better than nothing.
-*/
+int
+main(int argc, char *argv[]) {
 
-#include "wasm_file_api.c"
-#include "wasm_import_api.c"
+    g_argc = argc;
+    g_argv = copy_argv(argc, argv);
 
-//=====================================================================================
+    fprintf(stdout,"Hello WASM\n");
+
+#if !ASYNCIFY
+    emscripten_set_main_loop( main_loop_or_step, 0, 1);  // <= this will exit to js now.
+#else
+    while (!KPANIC) {
+        emscripten_sleep(1);
+        main_loop_or_step();
+    }
+#endif
+    puts("no guru meditation");
+    return 0;
+}
 
 
-#include "core/main_post.c"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+
+
+

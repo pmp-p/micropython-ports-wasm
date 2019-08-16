@@ -1,7 +1,7 @@
 import embed
 import imp
 
-def asyncify():
+def convert():
     code = []
 
     for line in embed.os_read().decode().split('\n'):

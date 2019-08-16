@@ -4,10 +4,15 @@
   January 17, 2015.
   Released into the public domain.
 */
-
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "ringbuf_o.h"
-#include <string.h>
+
+
 
 typedef struct rbo_t {
   // Invariant: end and start is always in bounds
@@ -160,7 +165,7 @@ rbo_pop(rbo_t *self, void *object) {
     {
       memcpy(object, self->buf+self->start*self->size, self->size);
       self->elements--;
-      // don't incriment start if removing last element
+      // don't increment start if removing last element
       if (!self->isEmpty(self)) self->incr_start_index(self);
       ret = object;
     }

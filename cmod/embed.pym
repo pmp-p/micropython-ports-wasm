@@ -19,7 +19,7 @@
 #include "py/smallint.h"
 
 
-extern char *repl_line;
+//extern char *repl_line;
 extern int show_os_loop(int state);
 
 
@@ -158,8 +158,8 @@ def ticks_period() -> int:
     return mp_obj_new_int_from_uint( MICROPY_PY_UTIME_TICKS_PERIOD );
 
 
-def os_read() -> bytes:
-    return bytes( repl_line );
+//def os_read() -> bytes:
+//    return bytes( repl_line );
 
 // TODO: remove after tests
 

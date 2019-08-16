@@ -20,6 +20,9 @@
 
 #include <time.h>
 
+void mp_hal_delay_ms(mp_uint_t ms) {  }
+void mp_hal_delay_us(mp_uint_t us) {  }
+
 
 
 struct timespec ts;

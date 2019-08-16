@@ -21,11 +21,6 @@ QSTR_DEFS = qstrdefsport.h
 
 
 ifdef EMSCRIPTEN
-	ifdef ASYNC
-		CFLAGS += -D__EMTERPRETER__=1 
-		CFLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
-		CFLAGS += -s EMTERPRETIFY_SYNCLIST='["_mp_execute_bytecode"]' -s EMTERPRETIFY_ADVISE=1
-	endif
 
 	ifdef WASM_FILE_API
 # note that WASM_FILE_API will pull filesystem function into the wasm lib	
@@ -33,21 +28,67 @@ ifdef EMSCRIPTEN
 	endif
 
 	CC = emcc
+	LD = $(CC)
 	
-	# Act like 'emcc'
-	CPP = clang -E -undef -D__CPP__ -D__EMSCRIPTEN__
+	ifeq ($(DEBUG), 1)
+		CC += -O0 -g4
+		LD += -O0 -g4
+	else
+		#OPTIM=1
+		#DLO=1
+		CFLAGS += -DNDEBUG
+		CC += -O3 -g0
+		LD += -O3 -g0
+	endif
+
+	ifdef LVGL
+		LVOPTS = -DMICROPY_PY_LVGL=1
+		CFLAGS += $(LVOPTS)
+		JSFLAGS += -s USE_SDL=2
+		CFLAGS_USERMOD += $(LVOPTS) -s USE_SDL=2 -Wno-unused-function -Wno-for-loop-analysis
+		CPP += -DMICROPY_PY_LVGL=1
+	endif
+	
+	
+	# make clang++ Act like 'emcc' but for preprocessing use
+	CPP = ${EMSCRIPTEN}/../bin/clang -E -undef -D__CPP__ -D__EMSCRIPTEN__
 	CPP += --sysroot $(EMSCRIPTEN)/system
 	CPP += -include $(BUILD)/clang_predefs.h	
-	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
+	CPP += $(addprefix -isystem, $(shell env LC_ALL=C $(CC) $(JSFLAGS) $(CFLAGS_EXTRA) -E -x c++ /dev/null -v 2>&1 |sed -e '/^\#include <...>/,/^End of search/{ //!b };d'))
 
 	#check if not using emscripten-upstream branch
 	ifeq (,$(findstring upstream/bin, $(EMMAKEN_COMPILER)))
 		WASM_FLAGS += -s "BINARYEN_TRAP_MODE='clamp'"
 		LDFLAGS += -Wl,-Map=$@.map,--cref
+		CFLAGS += $(INC) -Wall -Werror -ansi -std=gnu11 -DFASTCOMP=1
+
+		# optionnal experimental FFI
+		SRC_C+= \
+ modffi.c \
+ ffi/types.c \
+ ffi/prep_cif.c
+
 	else
-		CFLAGS += -fPIC -D__WASM__
+# shared need -fPIC
+		ifdef SHARED
+# old error gone 'error: undefined symbol: fp$gc_collect$v'	
+# new error is a wasm-ld crash	
+			CFLAGS += -fPIC
+		endif
+# or 'wasm-ld: error: libmicropython.a(nlr.o): relocation R_WASM_MEMORY_ADDR_LEB cannot be used against symbol mp_state_ctx; recompile with -fPIC' 
+		ifdef ASYNCIFY
+			CFLAGS += -DASYNCIFY=1 
+			COPT += -s ASYNCIFY
+		endif
+
+		CFLAGS += -D__WASM__ -Wno-unused-variable		
 		CPP += -D__WASM__
+		CFLAGS += $(INC) -Wall -ansi -std=gnu11 
+
+		# NO FFI on upstream for now
 	endif  
+
+	LD_PROG += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_show_os_loop']"
 	
 else
 	ifdef CLANG
@@ -57,36 +98,24 @@ else
 		CC = gcc
 		CPP = gcc -E -D__CPP__
 	endif
+	CFLAGS += $(INC) -Wall -Werror -ansi -std=gnu11 
+
 endif
 
 
-
-
-ifdef LVGL
-	LVOPTS = -DMICROPY_PY_LVGL=1
-	CFLAGS += $(LVOPTS)
-	CC += $(LVOPTS)
-	JSFLAGS += -s USE_SDL=2
-	CFLAGS_USERMOD += $(LVOPTS) -s USE_SDL=2 -Wno-unused-function -Wno-for-loop-analysis
-	CPP += -DMICROPY_PY_LVGL=1
-endif
 
 # include py core make definitions
 include ../../py/py.mk
 
 
 SIZE = echo
-LD = $(CC)
 
 INC += -I.
 INC += -I../..
 INC += -I$(BUILD)
 
 
-CFLAGS += $(INC)  -Wall -Werror -ansi -std=gnu99 
 
-
-LD = $(CC)
 #LD_SHARED = -Wl,-map,$@.map -Wl,-dead_strip -Wl,-no_pie
 LD_SHARED += -fno-exceptions -fno-rtti
 
@@ -95,16 +124,6 @@ LD_SHARED += -fno-exceptions -fno-rtti
 WASM_FLAGS += -O0 -g4 --source-map-base http://localhost:8000/
 LD_SHARED += -O0 -g4 --source-map-base http://localhost:8000/
 
-ifeq ($(DEBUG), 1)
-	CC += -O0 -g4
-	LD += -O0 -g4
-else
-	#OPTIM=1
-	#DLO=1
-	CFLAGS += -DNDEBUG
-	CC += -O0 -g4
-	LD += -O0 -g4
-endif
 
 
 ifneq ($(FROZEN_DIR),)
@@ -127,22 +146,16 @@ endif
 
 MPY_CROSS_FLAGS += -mcache-lookup-bc
 
-LD_SHARED += -s EXPORTED_FUNCTIONS="['_main', '_shm_ptr','_repl_run', '_show_os_loop']"
 
 SRC_C = \
-	core/vfs.c \
-	wasm_mphal.c \
+	core/vfs.c core/ringbuf_b.c core/ringbuf_o.c \
 	file.c \
 	modos.c \
 	modtime.c \
 	moduos_vfs.c \
 
 
-# optionnal experimental FFI
-SRC_C+= \
-	modffi.c \
-	ffi/types.c \
-	ffi/prep_cif.c \
+
 
 SRC_LIB= $(addprefix lib/, \
 	utils/stdout_helpers.c \
@@ -184,7 +197,6 @@ OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
 
 CFLAGS += $(CFLAGS_EXTRA)
 
-
 	
 all: $(PROG)
 
@@ -198,7 +210,7 @@ LIBMICROPYTHON = lib$(BASENAME)$(TARGET).a
 ifdef EMSCRIPTEN
 $(BUILD)/clang_predefs.h:
 	$(Q)mkdir -p $(dir $@)
-	$(Q)emcc $(CFLAGS) $(CFLAGS_EXTRA) $(JSFLAGS) -E -x c /dev/null -dM > $@
+	$(Q)emcc $(CFLAGS) $(JSFLAGS) -E -x c /dev/null -dM > $@
 
 # Create `clang_predefs.h` as soon as possible, using a Makefile trick
 
@@ -211,8 +223,6 @@ endif
 #COPT+= -s EXPORT_ALL=1
 
 # https://github.com/emscripten-core/emscripten/wiki/Linking
-
-LD_LIB = -s EXPORT_ALL=1 -s WASM=1 -s SIDE_MODULE=1 -s TOTAL_MEMORY=512MB
 
 
 # EMOPTS+= -Oz -g0 -s FORCE_FILESYSTEM=1  --memory-init-file 1
@@ -227,28 +237,13 @@ endif
 
 
 
-LD_PROG += -s MAIN_MODULE=1
-
-# COPT += -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
-# exception thrown: Error: FS error,Error
-#    at new ErrnoError (http://127.0.0.1:8000/micropython.js:1:107185)
-#    at Object.mknod (http://127.0.0.1:8000/micropython.js:1:92046)
-#    at Object.mkdir (http://127.0.0.1:8000/micropython.js:1:92379)
-#    at Object.createFolder (http://127.0.0.1:8000/micropython.js:1:109472)
-#    at wasm_file_open (http://127.0.0.1:8000/asmjs_file_api.js:116:24)
-#    at Array.ASM_CONSTS (http://127.0.0.1:8000/micropython.js:1:37375)
-#    at _emscripten_asm_const_ii (http://127.0.0.1:8000/micropython.js:1:37616)
-#    at wasm-function[194]:71
-#    at wasm-function[1214]:46
-#    at wasm-function[955]:720
-
 ifdef DLO
 #	DLO = $(LIBMICROPYTHON) --use-preload-plugins
  	DLO = --use-preload-plugins 
 	DLO += --preload-file libmicropython.wasm@/lib/libmicropython.so
 	COPT += -s ASSERTIONS=1 -s DISABLE_EXCEPTION_CATCHING=1 -s DEMANGLE_SUPPORT=0
 	COPT += -Oz -g0 --no-heap-copy
-	LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1 -s EXPORT_ALL=1 
+	LD_PROG +=-s ERROR_ON_UNDEFINED_SYMBOLS=1
 else
 	DLO= $(LIBMICROPYTHON)
 	ifdef OPTIM
@@ -271,35 +266,82 @@ COPT += -s NO_EXIT_RUNTIME=1
 
 #no compression or dlopen(wasm) will fail on chrom*
 COPT += -s LZ4=0 --memory-init-file 0
-COPT += -s TOTAL_MEMORY=512MB -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_STACK=16777216
+COPT += -s ALLOW_MEMORY_GROWTH=0  -s TOTAL_STACK=16777216
+#COPT += -s TOTAL_MEMORY=512MB #no
+COPT += -s TOTAL_MEMORY=640MB
+#COPT += -s TOTAL_MEMORY=768MB #yes
 
-
-WASM_FLAGS += -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1  -fno-inline
+WASM_FLAGS += -s WASM=1 -s BINARYEN_ASYNC_COMPILATION=1 -s EXPORT_ALL=1
 #only valid for fastcomp -s BINARYEN_TRAP_MODE=\"clamp\"
 
-ifdef ASYNC
-	WASM_FLAGS += -s EMTERPRETIFY=1 -s EMTERPRETIFY_ASYNC=1 -s 'EMTERPRETIFY_FILE="micropython.binary"'
-	WASM_FLAGS += -s EMTERPRETIFY_WHITELIST='[ "_embed_sleep", "_embed_sleep_ms", "_py_iter_one",\
- "_mp_execute_bytecode", "_fun_bc_call",\
- "_mp_call_method_n_kw", "_mp_call_function_n_kw",\
- "_mp_import_name", \
- "_mpsl_call_method_n_kw_var", "_mpsl_call_function_n_kw", "_mpsl_iternext_allow_raise",\
- "_gen_instance_close",\
- "_gen_instance_iternext",\
- "_gen_instance_send",\
- "_gen_instance_throw",\
- "_mp_obj_gen_resume",\
- "_mp_resume"]'
+
+THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
+
+
+clean:
+	$(RM) -rf $(BUILD) $(CLEAN_EXTRA) $(LIBMICROPYTHON)
+	$(shell rm $(BASENAME)/$(BASENAME).* || echo echo test data cleaned up)
+
+
+
+COPT += $(JSFLAGS) $(WASM_FLAGS)
+
+
+lib-static: $(OBJ)
+	$(ECHO) "Linking static $(LIBMICROPYTHON)"
+	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
+
+lib-shared: $(OBJ)	
+	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
+	$(Q)$(LD) $(LD_SHARED) $(LD_LIB) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc
+
+libs: lib-static lib-shared
+
+ifdef SHARED
+LD_PROG += $(WASM_FLAGS) -s MAIN_MODULE=1 -s ERROR_ON_MISSING_LIBRARIES=0
+LD_LIB += $(WASM_FLAGS) -s SIDE_MODULE=1 
 	
-#	WASM_FLAGS += -s EMTERPRETIFY_SYNCLIST='["_mp_obj_gen_resume"]'  -s EMTERPRETIFY_ADVISE=1
+$(PROG): lib-shared
+	$(ECHO) "Building shared executable $@"
+	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
+ --preload-file assets@/assets \
+ --preload-file micropython/lib@/lib \
+ -o $@ main.c -L . -l$(BASENAME)$(TARGET) -ldl -lm -lc
+	$(shell mv $(BASENAME).* $(BASENAME)/)
+
+else
+
+LD_PROG += -s EXPORT_ALL=1 -s WASM=1
+	
+$(PROG): lib-static
+	$(ECHO) "Building static executable $@"
+	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
+ -o $@ main.c $(OBJ) -ldl -lm -lc lib$(BASENAME)$(TARGET).a \
+ --preload-file assets@/assets \
+ --preload-file micropython/lib@/lib
+	$(shell mv $(BASENAME).* $(BASENAME)/)
 
 endif
 
 
 
-THR_FLAGS=-s FETCH=1 -s USE_PTHREADS=0
-
 check:
+	$(ECHO) 
+	$(ECHO) "============================================================"
+	$(ECHO) "CC=[$(CC)]"	
+	$(ECHO) "CPP=[$(CPP)]"
+	$(ECHO) "COPT=[$(COPT)]"	
+	$(ECHO) JSFLAGS=$(JSFLAGS)	
+	$(ECHO)
+	$(ECHO) CXX=$(CXX)
+	$(ECHO) AS=$(AS)
+	$(ECHO) LD=$(LD)
+	$(ECHO) OBJCOPY=$(OBJCOPY)
+	$(ECHO) SIZE=$(SIZE)
+	$(ECHO) STRIP=$(STRIP)
+	$(ECHO) AR=$(AR)
+	$(ECHO)	
+#emscripten specifics	
 	$(ECHO) EMSDK=$(EMSDK)
 	$(ECHO) UPSTREAM=$(UPSTREAM)	
 	$(ECHO) EMSCRIPTEN=$(EMSCRIPTEN)
@@ -311,39 +353,7 @@ check:
 	$(ECHO) EMCC_FORCE_STDLIBS=$(EMCC_FORCE_STDLIBS)
 	$(ECHO) EM_CACHE=$(EM_CACHE)
 	$(ECHO) EM_CONFIG=$(EM_CONFIG)
-	$(ECHO) CPPFLAGS=$(CPPFLAGS)
 	$(shell env|grep ^EM)
-	$(ECHO) "[$(CPP)]"
-
-
-clean:
-	$(RM) -rf $(BUILD) $(CLEAN_EXTRA) $(LIBMICROPYTHON)
-	$(shell rm $(BASENAME)/$(BASENAME).* || echo echo test data cleaned up)
-
-libs: $(OBJ)
-	$(ECHO) "Linking static $(LIBMICROPYTHON)"
-	$(Q)$(AR) rcs $(LIBMICROPYTHON) $(OBJ)
-	$(ECHO) "Linking shared lib$(BASENAME)$(TARGET).wasm"
-	$(Q)$(LD) $(LD_SHARED) $(LD_LIB) -o lib$(BASENAME)$(TARGET).wasm $(OBJ) -ldl -lc
-
-	
-$(PROG): libs
-	$(ECHO) "Building executable $@"
-	$(Q)$(CC) $(CFLAGS_EXTRA) $(INC) $(COPT) $(WASM_FLAGS) $(LD_PROG) $(THR_FLAGS) \
- -o $@ main.c -ldl -lm -lc \
- $(DLO) \
- --preload-file assets@/assets \
- --preload-file micropython/lib@/lib
-# 
-	$(shell mv $(BASENAME).* $(BASENAME)/)
-#
-
-
-
-
-
-
-
-
-
-
+	$(ECHO)	
+	$(shell ${EMSCRIPTEN}/../bin/clang -v 2>&1|grep ^clang )
+	#terminate on error so python webserver won't start

@@ -1,12 +1,18 @@
 # MicroPython and Web Assembly (wasm)
 
-### currently paused because reached somehow limit of emscripten compiler by abusing jump tables
+### NEWS:
 
-working versions are before the release tag.
+16 august 2019 : retrying stackless with clang CI intregration
+ this is using emsdk tot-upstream (tip of tree) not latest-upstream (yet)
 
-### meanwhile trying new upstream clang with micropython no nlr branch which is better for stackless
 
+10 august 2019 : currently paused because reached somehow limit of emscripten compiler by abusing jump tables
+   meanwhile trying new upstream clang with micropython no nlr branch which is better for stackless
 https://github.com/pmp-p/micropython/tree/wasm-nonlr/ports/wasm-no-nlr
+
+
+old working versions always stored in branches.
+
 
 
 ## What ?
@@ -18,6 +24,7 @@ but we want to run python virtual machine and its own bytecode ;) so thanks to m
 we'll be able to by compiling micropython core to wasm bytecode first.
 
 
+
 ## Requirements
 
  - Linux OS with gcc/clang, a decent build environnement and libltdl-dev
@@ -25,6 +32,7 @@ we'll be able to by compiling micropython core to wasm bytecode first.
  - have python3 in your path 3.6 should do it but 3.7 / 3.8 are safer.
 
  - Follow the instructions for getting started with Emscripten [here](http://kripken.github.io/emscripten-site/docs/getting_started/downloads.html).
+
 
 
 ## Getting started
@@ -72,7 +80,7 @@ cd micropython
 # or lvgl enabled ( wip could not work )
 # git clone --recursive --recurse-submodules https://github.com/littlevgl/lv_micropython.git
 # cd lv_micropython
-# git checkout dev-6.0
+# git checkout lvgl_javascript
 # git submodule update --recursive --init
 # if you want to use asyncio with lvgl just add the patch https://patch-diff.githubusercontent.com/raw/littlevgl/lv_binding_micropython/pull/30.diff
 # that allows you to service with SDL.run_once()
@@ -90,15 +98,28 @@ cd wasm
 
 #transpile the mixed python/C module to pure C
 #use a python3 version with annotations support !
-. modgen.sh
-
+# . modgen.sh
 
 . /path/to/emsdk/emsdk_set_env.sh
 
 # for LVGL support use "./rebuild.sh LVGL=1" instead
 # test will be run automatically.
-emmake make USER_C_MODULES=cmod && . runtest.sh
+# emmake make USER_C_MODULES=cmod && . runtest.sh
 
+# modgen and make have been merged in rebuild-upsteam.sh script
+chmod +x *sh
+
+# avoid using ./rebuild-fastcom.sh
+# only there for testing clang 8-10 and binaryen discrepancy
+
+./rebuild-upstream.sh
+
+# fast rebuild
+# ./rebuild-upstream.sh fast=1
+
+# using asyncfy (bad perf even on upstream) avoid fast=1 when changing
+# mode
+# ./rebuild-upstream.sh ASYNCIFY=1
 
 ```
 

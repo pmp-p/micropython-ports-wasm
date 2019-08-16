@@ -1,7 +1,10 @@
-
-#define MODULES_H "modules.h"
-// #include MODULES_H
 #define MODULES_LINKS
+
+#define MICROPY_VM_HOOK_BC 1
+
+
+
+#define mp_hal_ticks_cpu() 0
 
 
 // options to control how Micro Python is built
@@ -61,10 +64,25 @@
 #define MICROPY_EMIT_INLINE_THUMB   (0)
 
 
-#define MICROPY_STACKLESS           (1)
-#define MICROPY_STACKLESS_STRICT    (1)   // <=========================== 1!
-#define MICROPY_ENABLE_PYSTACK      (1)
-#define MICROPY_OPT_COMPUTED_GOTO   (1)
+#if 1
+// 0 0 0 0 ! RuntimeError: memory access out of bounds
+// 0 0 0 1 ! silent crash
+// 0 0 1 0 = 11.15 Kpy/s
+    #define MICROPY_STACKLESS           (0)
+    #define MICROPY_STACKLESS_STRICT    (0)
+    #define MICROPY_ENABLE_PYSTACK      (1)
+    #define MICROPY_OPT_COMPUTED_GOTO   (0)
+#else
+// 1 0 1 1  = 10.6 Kpy/s
+// 1 0 1 0  = 10.8 K
+// 1 1 1 0  = 10.6
+// 1 1 1 1  = 10.6
+    #define MICROPY_STACKLESS           (1)
+    #define MICROPY_STACKLESS_STRICT    (0)   // <=============== 1! or too much collect
+    #define MICROPY_ENABLE_PYSTACK      (1)
+    #define MICROPY_OPT_COMPUTED_GOTO   (0)
+#endif
+
 
 // nlr.h  MICROPY_NLR_* must match a supported arch
 // define or autodetect will fail to select WASM
@@ -162,7 +180,11 @@
 #define MICROPY_PY_CMATH            (1)
 
 //? TEST THAT THING !
+#if 1
+    #define MICROPY_PY_FFI              (0)
+#else
 #define MICROPY_PY_FFI              (1) // <========================== NON STANDARD NOT CPY
+#endif
 
 #define MICROPY_PY_FUNCTION_ATTRS   (1)
 #define MICROPY_PY_GC               (1)

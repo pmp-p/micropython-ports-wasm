@@ -128,7 +128,12 @@ if __EMSCRIPTEN__:
 
     # on emscripten browser runs the loop both for IO and tasks
     from .io import step
-    from .asyncify import asyncify
+    try:
+        from .asyncify import convert
+    except ImportError as e:
+        print("134: not support for async repl")
+        sys.print_exception(e)
+
 
 import utime as time
 import utimeq

@@ -19,8 +19,10 @@
     #define EMSCRIPTEN_KEEPALIVE
 #endif
 extern size_t bsd_strlen(const char *str);
-EMSCRIPTEN_KEEPALIVE void Py_InitializeEx(int param);
-EMSCRIPTEN_KEEPALIVE void PyRun_SimpleString(const char * code);
+
+//EMSCRIPTEN_KEEPALIVE void Py_InitializeEx(int param);
+//EMSCRIPTEN_KEEPALIVE void PyRun_SimpleString(const char * code);
+
 #if WASM_FILE_API
 EMSCRIPTEN_KEEPALIVE void PyRun_SimpleFile(FILE *fp, const char *filename);
 EMSCRIPTEN_KEEPALIVE void PyRun_VerySimpleFile(const char *filename);
