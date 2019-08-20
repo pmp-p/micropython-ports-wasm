@@ -2,6 +2,8 @@
 
 ### NEWS:
 
+20 august 2019 : blocked again https://bugs.llvm.org/show_bug.cgi?id=43060
+
 16 august 2019 : retrying stackless with clang CI intregration
  this is using emsdk tot-upstream (tip of tree) not latest-upstream (yet)
 
