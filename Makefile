@@ -333,7 +333,7 @@ $(PROG): lib-static
 endif
 
 ifdef WHOLE
-LD_PROG += -s EXPORT_ALL=1 -s WASM=1 -s MAIN_MODULE=1
+LD_PROG += -s EXPORT_ALL=1 -s WASM=1
 
 $(PROG): $(OBJ)
 	$(ECHO) "Building static executable $@"
