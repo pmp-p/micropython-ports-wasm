@@ -9,6 +9,7 @@ VM_ENTRY(MP_BC_CALL_METHOD): {
     // (unum >> 8) & 0xff == n_keyword
     CTX.sp -= (unum & 0xff) + ((unum >> 7) & 0x1fe) + 1;
 
+    #if MICROPY_STACKLESS
     if (mp_obj_get_type(*CTX.sp) == &mp_type_fun_bc) {
         CTX.code_state->ip = CTX.ip;
         CTX.code_state->sp = CTX.sp;
@@ -36,8 +37,8 @@ VM_ENTRY(MP_BC_CALL_METHOD): {
         }
     }
 
-
-    ctx_get_next();
+#endif
+    ctx_get_next(CTX_NEW);
     NEXT.args = CTX.sp ;
 
     NEXT.self_in = NEXT.args[0];
@@ -50,13 +51,15 @@ VM_ENTRY(MP_BC_CALL_METHOD): {
         NEXT.args += 2 - adjust;
     }
 
-    if ( strlen(FUN_NAME)>1 )
-        GOSUB(SUB_call_function_n_kw, RET_BC_CALL_METHOD, FUN_NAME );
-    else
-        GOSUB(SUB_call_function_n_kw, RET_BC_CALL_METHOD, "?BC_CALL_METHOD?" );
+    if ( strlen(FUN_NAME)>1 ) {
+        GOSUB(def_mp_call_function_n_kw, FUN_NAME );
+    } else {
+        GOSUB(def_mp_call_function_n_kw, "?BC_CALL_METHOD?" );
+    }
+
 RET_BC_CALL_METHOD:
     VM_SET_TOP(SUBVAL);
-    VM_DISPATCH();
+    continue;
 }
 
 

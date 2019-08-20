@@ -5,6 +5,12 @@
 
 #define MPI_SHM_SIZE 32768
 
+#define MP_IO_SIZE 1024
+#define MP_IO_ADDR (MPI_SHM_SIZE - MP_IO_SIZE)
+
+
+#define IO_KBD 0
+
 #if MICROPY_ENABLE_PYSTACK
     #define MP_STACK_SIZE 65536
     static mp_obj_t pystack[MP_STACK_SIZE];
@@ -42,7 +48,8 @@ show_os_loop(int state) {
 
 struct
 PyInterpreterState {
-    char *shm_stdin ;
+    char *shm_stdio ;
+    char *shm_input_event_0;
 };
 
 
@@ -58,13 +65,25 @@ static struct PyThreadState i_state ;
 // should check null
 char*
 shm_ptr() {
-    return &i_main.shm_stdin[0];
+    return &i_main.shm_stdio[0];
 }
 
 char*
+shm_get_ptr(int major,int minor) {
+    // keyboards
+    if (major==IO_KBD) {
+        if (minor==0)
+            return &i_main.shm_stdio[MP_IO_ADDR];
+    }
+}
+
+
+
+char*
 Py_NewInterpreter() {
-    i_main.shm_stdin = (char *)malloc(MPI_SHM_SIZE);
-    i_main.shm_stdin[0] = 0 ;
+    i_main.shm_stdio = (char *)malloc(MPI_SHM_SIZE);
+    i_main.shm_stdio[0] = 0 ;
+
     i_state.interp = & i_main;
     pyexec_event_repl_init();
     return shm_ptr();
@@ -99,8 +118,8 @@ Py_Initialize() {
 
 int
 PyRun_SimpleString(const char* command) {
-    strcpy( i_main.shm_stdin , command);
-    int retval = do_str(i_main.shm_stdin, MP_PARSE_FILE_INPUT);
-    i_main.shm_stdin[0] = 0;
+    strcpy( i_main.shm_stdio , command);
+    int retval = do_str(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
+    i_main.shm_stdio[0] = 0;
     return retval;
 }

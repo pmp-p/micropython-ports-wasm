@@ -19,7 +19,6 @@ EM_CACHE ?= $(HOME)/.emscripten_cache
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
 
-
 ifdef EMSCRIPTEN
 
 	ifdef WASM_FILE_API
@@ -297,30 +296,52 @@ lib-shared: $(OBJ)
 
 libs: lib-static lib-shared
 
+
+
+
+
 ifdef SHARED
-LD_PROG += $(WASM_FLAGS) -s MAIN_MODULE=1 -s ERROR_ON_MISSING_LIBRARIES=0
+LD_PROG += $(WASM_FLAGS) -s MAIN_MODULE=1
 LD_LIB += $(WASM_FLAGS) -s SIDE_MODULE=1 
-	
+
 $(PROG): lib-shared
 	$(ECHO) "Building shared executable $@"
+	$(shell cp lib$(BASENAME)$(TARGET).wasm lib$(BASENAME)$(TARGET).so)
 	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
  --preload-file assets@/assets \
  --preload-file micropython/lib@/lib \
  -o $@ main.c -L . -l$(BASENAME)$(TARGET) -ldl -lm -lc
 	$(shell mv $(BASENAME).* $(BASENAME)/)
 
-else
+endif
 
-LD_PROG += -s EXPORT_ALL=1 -s WASM=1
-	
+
+ifdef STATIC
+# ============ SERIOUSLY BROKEN ==================
+LD_PROG += $(WASM_FLAGS) -s MAIN_MODULE=1
+LD_LIB += $(WASM_FLAGS) -fPIC -s SIDE_MODULE=1
+
+#LD_PROG += -s ERROR_ON_UNDEFINED_SYMBOLS=0
 $(PROG): lib-static
 	$(ECHO) "Building static executable $@"
 	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
- -o $@ main.c $(OBJ) -ldl -lm -lc lib$(BASENAME)$(TARGET).a \
+ -o $@ main.c -ldl -lm -lc lib$(BASENAME)$(TARGET).a \
  --preload-file assets@/assets \
  --preload-file micropython/lib@/lib
 	$(shell mv $(BASENAME).* $(BASENAME)/)
+# ============ SERIOUSLY BROKEN ==================
+endif
 
+ifdef WHOLE
+LD_PROG += -s EXPORT_ALL=1 -s WASM=1 -s MAIN_MODULE=1
+
+$(PROG): $(OBJ)
+	$(ECHO) "Building static executable $@"
+	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
+ -o $@ main.c $(OBJ) -ldl -lm -lc  \
+ --preload-file assets@/assets \
+ --preload-file micropython/lib@/lib
+	$(shell mv $(BASENAME).* $(BASENAME)/)
 endif
 
 

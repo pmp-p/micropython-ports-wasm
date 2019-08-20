@@ -163,10 +163,10 @@ function preRun(){
     var argv = window.location.href.split('?',2)
     var e;
     while (e=argv.shift())
-        Module.arguments.push(e)
-    argv = Module.arguments.pop().split('&')
+        arguments_.push(e)
+    argv = arguments_.pop().split('&')
     while (e=argv.shift())
-        Module.arguments.push(e)
+        arguments_.push(e)
 
     if ( defined('PYTHONSTARTUP') )
         PYTHONSTARTUP()
@@ -191,7 +191,7 @@ function postRun() {
 
 function init_repl_begin(){
 
-    console.log("init_repl: Begin (" + Module.arguments.length+")")
+    console.log("init_repl: Begin (" + arguments_.length+")")
     var scripts = document.getElementsByTagName('script')
 
     window.pyscripts = new Array()
@@ -204,9 +204,9 @@ function init_repl_begin(){
 
     console.log("init_repl: shm "+window.plink.shm+"["+PyRun_SimpleString_MAXSIZE +"]")
 
-    if (Module.arguments.length>1) {
+    if (arguments_.length>1) {
 
-        var argv0 = ""+Module.arguments[1]
+        var argv0 = "" + arguments_[1]
         if (argv0.startsWith('http'))
             if (window.urls.cors)
                 argv0 = window.urls.cors(argv0)

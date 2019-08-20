@@ -57,8 +57,8 @@ parser.add_argument("--ssl",default=False,help="enable ssl with server.pem and k
 if 'fast=1' in sys.argv:
     parser.add_argument("fast",default=False,help="do not clean up")
 
-if 'ASYNC=1' in sys.argv:
-    parser.add_argument("ASYNC",default=False,help="use emterpreter build")
+if 'ASYNCIFY=1' in sys.argv:
+    parser.add_argument("ASYNCIFY",default=False,help="use emterpreter build")
 
 parser.add_argument("port", action="store", default=8000, type=int, nargs="?", help="Specify alternate port [default: 8000]")
 

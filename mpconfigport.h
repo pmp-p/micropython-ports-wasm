@@ -1,6 +1,17 @@
 #define MODULES_LINKS
 
+#include "dev_conf.h"
+
+#if __DEV__
 #define MICROPY_VM_HOOK_BC 1
+
+#ifdef STATIC
+    #undef STATIC
+#endif
+
+#define STATIC    // mpconfig.h:1402   => bad pointer cast and bad linking
+#endif
+
 
 
 
@@ -18,6 +29,7 @@
 #define MICROPY_BUILTIN_METHOD_CHECK_SELF_ARG (0)
 #define MICROPY_CAN_OVERRIDE_BUILTINS (1)
 
+// 1 or build/frozen_mpy.c:7:2: error: "incompatible MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE"
 #define MICROPY_OPT_CACHE_MAP_LOOKUP_IN_BYTECODE (1)
 
 #define MICROPY_MODULE_WEAK_LINKS   (0)
@@ -78,7 +90,7 @@
 // 1 1 1 0  = 10.6
 // 1 1 1 1  = 10.6
     #define MICROPY_STACKLESS           (1)
-    #define MICROPY_STACKLESS_STRICT    (0)   // <=============== 1! or too much collect
+    #define MICROPY_STACKLESS_STRICT    (1)   // <=============== 1! or too much collect
     #define MICROPY_ENABLE_PYSTACK      (1)
     #define MICROPY_OPT_COMPUTED_GOTO   (0)
 #endif

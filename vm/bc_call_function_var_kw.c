@@ -8,6 +8,7 @@ VM_ENTRY(MP_BC_CALL_FUNCTION_VAR_KW): {
     // We have following stack layout here:
     // fun arg0 arg1 ... kw0 val0 kw1 val1 ... seq dict <- TOS
     CTX.sp -= (unum & 0xff) + ((unum >> 7) & 0x1fe) + 2;
+    #if MICROPY_STACKLESS
     if (mp_obj_get_type(*CTX.sp) == &mp_type_fun_bc) {
         CTX.code_state->ip = CTX.ip;
         CTX.code_state->sp = CTX.sp;
@@ -39,8 +40,9 @@ VM_ENTRY(MP_BC_CALL_FUNCTION_VAR_KW): {
             goto run_code_state;
         }
     }
+    #endif
 
-    ctx_get_next();
+    ctx_get_next(CTX_NEW);
 
     static mp_call_args_t out_args;
     mp_call_prepare_args_n_kw_var(false, unum, CTX.sp, &out_args);
@@ -52,11 +54,11 @@ VM_ENTRY(MP_BC_CALL_FUNCTION_VAR_KW): {
     NEXT.n_args = out_args.n_args;
     NEXT.n_kw = out_args.n_kw;
 
-    GOSUB(SUB_call_function_n_kw, RET_call_function_var_kw, "BC_CALL_FUNCTION_VAR_KW");
-RET_call_function_var_kw:
+    GOSUB(def_mp_call_function_n_kw, "BC_CALL_FUNCTION_VAR_KW");
+
     if (CTX.sub_alloc)
         mp_nonlocal_free(CTX.sub_args, CTX.sub_alloc);
 
     VM_SET_TOP(SUBVAL);
-    VM_DISPATCH();
+    continue;
 }

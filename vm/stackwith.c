@@ -1,6 +1,6 @@
 extern mp_obj_t closure_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
 extern mp_obj_t bound_meth_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
-extern mp_obj_t checked_fun_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
+//extern mp_obj_t checked_fun_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
 extern mp_obj_t mp_obj_instance_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
 extern mp_obj_t gen_wrap_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
 extern mp_obj_t native_gen_wrap_call(mp_obj_t self_in, size_t n_args, size_t n_kw, const mp_obj_t *args);
@@ -10,10 +10,10 @@ void fun_ptr() {
     clog("================================================");
     clog("closure_call=%p", &closure_call );
     clog("bound_meth_call=%p", &bound_meth_call);
-    clog("checked_fun_call=%p", &checked_fun_call );
+    //clog("checked_fun_call=%p", &checked_fun_call );
     clog("mp_obj_instance_call=%p", &mp_obj_instance_call );
     clog("gen_wrap_call=%p", &gen_wrap_call );
-    clog("native_gen_wrap_call=%p", &native_gen_wrap_call );
+    //clog("native_gen_wrap_call=%p", &native_gen_wrap_call );
     obj_fun_ptr();
 }
 

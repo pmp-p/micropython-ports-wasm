@@ -3,7 +3,6 @@
 
 
 #ifndef VM_REG_H
-    #include "vmsl/vmconf.h"
 
     #define clog(...) { fprintf(stderr, __VA_ARGS__ );fprintf(stderr, "\n"); }
     struct mp_registers {
@@ -86,9 +85,7 @@ void *crash(const char *panic){
 
 
 void ctx_free(){
-    #if 1 // CTX_DEBUG
-    clog("CTX %d freed for %d", ctx_current, CTX.parent);
-    #endif
+    clog("CTX %d free for %d", ctx_current, CTX.parent);
     CTX_STATE = VM_IDLE;
 }
 
@@ -97,13 +94,53 @@ static int come_from[MAX_BRANCHING];
 #define deferred 1
 
 void zigzag(void* jump_entry, void* jump_back, int jump_type){
-    come_from[++point_ptr] = CTX.pointer; // when set to 0 it's origin mark.
+    come_from[++point_ptr] = CTX.pointer; // when set to 0 its origin mark.
     CTX.pointer = point_ptr;
     JUMPED_IN = 0;
     ENTRY_POINT = jump_entry;
     EXIT_POINT = jump_back;
     JUMP_TYPE = jump_type;
 }
+
+
+
+
+#define CTX_COPY 1
+#define CTX_NEW 0
+
+// prepare a child context for a possibly recursive call,
+// NEXT.*  will then gives access to that ctx (inited from CTX if CTX_COPY ) until GOSUB()
+// after GOSUB CTX is restored automaticallly to parent and return value is in CTX.sub_value
+
+void ctx_get_next(int copy) {
+    //push
+    int ctx;
+    for (ctx=3; ctx<SYS_MAX_RECURSION; ctx++)
+        if (mpi_ctx[ctx].vmloop_state == VM_IDLE){
+            // should default to syscall ? VM_PAUSED
+            mpi_ctx[ctx].vmloop_state = VM_WARMUP ;
+            break;
+        }
+    if (ctx==SYS_MAX_RECURSION)
+        fprintf(stderr,"FATAL: SYS_MAX_RECURSION reached");
+    #if CTX_DEBUG
+    else
+        clog("CTX reservation %d",ctx);
+    #endif
+    //track
+    CTX.childcare = ctx ;
+    mp_new_interpreter(&mpi_ctx, ctx, ctx_current, 0);
+    ctx_next = ctx;
+
+    if (copy) {
+        NEXT.self_in = CTX.self_in;
+        NEXT.code_state = CTX.code_state ;
+        NEXT.n_args = CTX.n_args;
+        NEXT.n_kw = CTX.n_kw;
+        NEXT.args = CTX.args;
+    }
+}
+
 
 void ctx_switch(){
     NEXT_STATE  = VM_RUNNING;
@@ -147,6 +184,11 @@ void* ctx_call(void* jump_entry, void *jump_back, const char *jt_origin,const ch
  CONCAT(call_,__LINE__):;\
 }
 
+#define JUMP(arg0, caller) \
+{\
+ goto *ctx_call(&&arg0, &&CONCAT(call_,__LINE__), TOSTRING(arg0), caller, !deferred);\
+ CONCAT(call_,__LINE__):;\
+}
 
 void* ctx_sub(void* jump_entry, void* jump_back, const char* jto, const char* jback, const char* context) {
     // set the new context so zigzag @ are set
@@ -157,7 +199,13 @@ void* ctx_sub(void* jump_entry, void* jump_back, const char* jto, const char* jb
     JUMPED_IN = 1 ;
     return jump_entry;
 }
-#define GOSUB(arg0, arg1, arg2) goto *ctx_sub(&&arg0, &&arg1, TOSTRING(arg0), TOSTRING(arg1), arg2 )
+//#define GOSUB(arg0, arg1, arg2) goto *ctx_sub(&&arg0, &&arg1, TOSTRING(arg0), TOSTRING(arg1), arg2 )
+
+#define GOSUB(arg0, caller) \
+{\
+ goto *ctx_sub(&&arg0, &&CONCAT(call_,__LINE__), TOSTRING(arg0), TOSTRING(CONCAT(call_,__LINE__)), caller ) ;\
+ CONCAT(call_,__LINE__):;\
+}
 
 
 void* ctx_come_from() {
@@ -172,7 +220,7 @@ void* ctx_come_from() {
     return_point = EXIT_POINT;
 
     if (point_ptr!=CTX.pointer) {
-        return crash("jumping back from upper branch not allowed");
+        return crash("ERROR: jumping back from upper branch not allowed, maybe ctx_get_next missing for GOSUB ?");
     } else
         point_ptr--;
     clog("<<< ZZ[%d]",ctx_current);
@@ -188,6 +236,7 @@ void* ctx_return(){
     int ptr_back = come_from[CTX.pointer];
 
 #if VM_FULL
+    PARENT.sub_vm_return_kind = CTX.vm_return_kind;
     PARENT.sub_value = CTX.return_value;
     PARENT.sub_alloc = CTX.alloc;
     PARENT.sub_args  = CTX.args ;
@@ -206,15 +255,12 @@ void* ctx_return(){
     // not a zigzag branching free registers
     if (!ptr_back)
         ctx_free();
-    else {
-        return crash("ERROR: RETURN in BRANCH");
-    }
 
     // not a zigzag go upper context
     if ( JUMP_TYPE == TYPE_SUB)
         ctx_current = CTX.parent;
     else
-        return crash("ERROR: RETURN in BRANCH");
+        return crash("239:ERROR: RETURN in non SUB BRANCH");
 
     return return_point;
 }
@@ -228,20 +274,90 @@ void* ctx_return(){
 #define STRINGIFY2(a, b) a ## b
 #define CONCAT(x, y) STRINGIFY2(x, y)
 
+struct mp_stack {
+    int gen_i;
+    int gen_n;
+    int has_default;
+    int default_value;
+    int __line__ ;
+    const char *name;
+    const char *value;  // some in memory rpc struct
+};
 
 
+// Duff's device thanks a lot to https://www.chiark.greenend.org.uk/~sgtatham/coroutines.html
 
 
+#define Begin switch(generator_context->__line__) { case 0:
 
-static int cond1 = 1;
-#define FUN_NAME "some_name"
+#define yield(x)\
+do {\
+    generator_context->__line__ = __LINE__;\
+    return x; \
+case __LINE__:; } while (0)
+
+#define End };
 
 
+#define STRINGIFY(a) #a
+#define TOSTRING(x) STRINGIFY(x)
 
-// check_timer(): check if that timer occurred
-EM_JS(bool, check_timer, (), {
-  return Module.timer;
+// static int enumerator=0;
+#define vars(generator_name) static struct mp_stack generator_context = { .gen_i=0, .gen_n = 1, .has_default = 0, .default_value = 666, .__line__ = 0, .name=TOSTRING(generator_name) }
+
+#define async_def(generator_name, gen_type, ...) \
+	gen_type generator_name(struct mp_stack *generator_context) { \
+        Begin; \
+		__VA_ARGS__ \
+        End;\
+        generator_context->gen_n = 0;\
+        return generator_context->default_value;\
+	}\
+
+#define async_iter(generator_name) \
+    vars(generator_name);\
+    if (generator_context.gen_n) generator_context.gen_i=generator_name(&generator_context); \
+    if (generator_context.gen_n)
+
+#define async_next(generator_name, defval) \
+    vars(generator_name); if (!generator_context.has_default) { generator_context.has_default = 1; generator_context.default_value = defval; }\
+    int had_next = generator_context.gen_n; \
+    if (had_next) generator_context.gen_i = generator_name(&generator_context); \
+    if (had_next)
+
+
+// -------------------------- attempt to be pythonic --------------------
+#define self (*generator_context)
+#define iterator generator_context->gen_i
+#define next generator_context->gen_n
+
+
+async_def(gen1, int, {
+    while (next) {
+        printf("gen1 %s ",self.name);
+        if (iterator++ == 10) break;
+        yield(iterator);
+    }
 });
+
+
+async_def(gen2, int, {
+    for (iterator = 0; iterator < 5; iterator++) {
+        printf("gen2 %s ",self.name);
+        yield(iterator);
+    }
+});
+
+#undef self
+#undef iterator
+#undef next
+
+#define iterator generator_context.gen_i
+
+// ------------------------------------------------------------------------
+
+
+// #define FUN_NAME "FUN_NAME"
 
 
 

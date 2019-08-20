@@ -1,9 +1,11 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+# flake8: noqa
 
 """
 "PYSTONE" Benchmark Program
 
-Version:        Python/1.2 (corresponds to C/1.1 plus 3 Pystone fixes)
+Version:        Python/1.1 (corresponds to C/1.1 plus 2 Pystone fixes)
 
 Author:         Reinhold P. Weicker,  CACM Vol 27, No 10, 10/84 pg. 1013.
 
@@ -14,6 +16,14 @@ Author:         Reinhold P. Weicker,  CACM Vol 27, No 10, 10/84 pg. 1013.
                 Translated from C to Python by Guido van Rossum.
 
 Version History:
+
+                Inofficial version 1.1.1 by Chris Arndt:
+
+                - Make it run under Python 2 and 3 by using
+                  "from __future__ import print_function".
+                - Change interpreter name in shebang line to plain
+                  "python".
+                - Add source code encoding declaration.
 
                 Version 1.1 corrects two bugs in version 1.0:
 
@@ -30,21 +40,20 @@ Version History:
                 percent faster than version 1.0, so benchmark figures
                 of different versions can't be compared directly.
 
-                Version 1.2 changes the division to floor division.
-
-                Under Python 3 version 1.1 would use the normal division
-                operator, resulting in some of the operations mistakenly
-                yielding floats. Version 1.2 instead uses floor division
-                making the benchmark a integer benchmark again.
-
 """
+
+from __future__ import print_function
 
 LOOPS = 50000
 try:
-    from utime import clock
+    from time import clock
 except:
-    from time import time as clock
-__version__ = "1.2"
+    try:
+        from utime import clock
+    except:
+        from time import time as clock
+
+__version__ = "1.1.1"
 
 [Ident1, Ident2, Ident3, Ident4, Ident5] = range(1, 6)
 
@@ -66,10 +75,8 @@ TRUE = 1
 FALSE = 0
 
 def main(loops=LOOPS):
-    benchtime, stones = Proc0(loops) #pystones(loops)
-    print("Pystone(%s) time for %d passes = %g" % \
-          (__version__, loops, benchtime))
-    print("This machine benchmarks at %g pystones/second" % stones)
+    benchtime, stones = pystones(loops)
+    print("%g" % benchtime)
 
 
 def pystones(loops=LOOPS):
@@ -112,13 +119,11 @@ def Proc0(loops=LOOPS):
     starttime = clock()
 
     for i in range(loops):
-
         Proc5()
         Proc4()
         IntLoc1 = 2
         IntLoc2 = 3
         String2Loc = "DHRYSTONE PROGRAM, 2'ND STRING"
-
         EnumLoc = Ident2
         BoolGlob = not Func2(String1Loc, String2Loc)
         while IntLoc1 < IntLoc2:
@@ -128,29 +133,21 @@ def Proc0(loops=LOOPS):
         Proc8(Array1Glob, Array2Glob, IntLoc1, IntLoc3)
         PtrGlb = Proc1(PtrGlb)
         CharIndex = 'A'
-
         while CharIndex <= Char2Glob:
             if EnumLoc == Func1(CharIndex, 'C'):
                 EnumLoc = Proc6(Ident1)
             CharIndex = chr(ord(CharIndex)+1)
-
         IntLoc3 = IntLoc2 * IntLoc1
-        IntLoc2 = IntLoc3 // IntLoc1
+        IntLoc2 = IntLoc3 / IntLoc1
         IntLoc2 = 7 * (IntLoc3 - IntLoc2) - IntLoc1
         IntLoc1 = Proc2(IntLoc1)
 
-    print("begin")
     benchtime = clock() - starttime - nulltime
-    b="begin"
-    e="end"
     if benchtime == 0.0:
         loopsPerBenchtime = 0.0
     else:
         loopsPerBenchtime = (loops / benchtime)
-    try:
-        return benchtime, loopsPerBenchtime
-    finally:
-        print(b,"passes", loops, "time",benchtime, "benchmark =",loopsPerBenchtime, e)
+    return benchtime, loopsPerBenchtime
 
 def Proc1(PtrParIn):
     PtrParIn.PtrComp = NextRecord = PtrGlb.copy()
@@ -285,8 +282,4 @@ if __name__ == '__main__':
             error("Invalid argument %r;" % sys.argv[1])
     else:
         loops = LOOPS
-    try:
-        main(loops)
-    except Exception as e:
-        print("ex",e)
-    print("end")
+    main(loops)

@@ -1,49 +1,8 @@
-#! /usr/bin/env python3
-
-"""
-"PYSTONE" Benchmark Program
-
-Version:        Python/1.2 (corresponds to C/1.1 plus 3 Pystone fixes)
-
-Author:         Reinhold P. Weicker,  CACM Vol 27, No 10, 10/84 pg. 1013.
-
-                Translated from ADA to C by Rick Richardson.
-                Every method to preserve ADA-likeness has been used,
-                at the expense of C-ness.
-
-                Translated from C to Python by Guido van Rossum.
-
-Version History:
-
-                Version 1.1 corrects two bugs in version 1.0:
-
-                First, it leaked memory: in Proc1(), NextRecord ends
-                up having a pointer to itself.  I have corrected this
-                by zapping NextRecord.PtrComp at the end of Proc1().
-
-                Second, Proc3() used the operator != to compare a
-                record to None.  This is rather inefficient and not
-                true to the intention of the original benchmark (where
-                a pointer comparison to None is intended; the !=
-                operator attempts to find a method __cmp__ to do value
-                comparison of the record).  Version 1.1 runs 5-10
-                percent faster than version 1.0, so benchmark figures
-                of different versions can't be compared directly.
-
-                Version 1.2 changes the division to floor division.
-
-                Under Python 3 version 1.1 would use the normal division
-                operator, resulting in some of the operations mistakenly
-                yielding floats. Version 1.2 instead uses floor division
-                making the benchmark a integer benchmark again.
-
-"""
 
 LOOPS = 50000
-try:
-    from utime import clock
-except:
-    from time import time as clock
+
+from time import time
+
 __version__ = "1.2"
 
 [Ident1, Ident2, Ident3, Ident4, Ident5] = range(1, 6)
@@ -66,7 +25,7 @@ TRUE = 1
 FALSE = 0
 
 def main(loops=LOOPS):
-    benchtime, stones = Proc0(loops) #pystones(loops)
+    benchtime, stones = pystones(loops)
     print("Pystone(%s) time for %d passes = %g" % \
           (__version__, loops, benchtime))
     print("This machine benchmarks at %g pystones/second" % stones)
@@ -94,10 +53,10 @@ def Proc0(loops=LOOPS):
     global PtrGlb
     global PtrGlbNext
 
-    starttime = clock()
+    starttime = time()
     for i in range(loops):
         pass
-    nulltime = clock() - starttime
+    nulltime = time() - starttime
 
     PtrGlbNext = Record()
     PtrGlb = Record()
@@ -109,16 +68,14 @@ def Proc0(loops=LOOPS):
     String1Loc = "DHRYSTONE PROGRAM, 1'ST STRING"
     Array2Glob[8][7] = 10
 
-    starttime = clock()
+    starttime = time()
 
     for i in range(loops):
-
         Proc5()
         Proc4()
         IntLoc1 = 2
         IntLoc2 = 3
         String2Loc = "DHRYSTONE PROGRAM, 2'ND STRING"
-
         EnumLoc = Ident2
         BoolGlob = not Func2(String1Loc, String2Loc)
         while IntLoc1 < IntLoc2:
@@ -128,29 +85,21 @@ def Proc0(loops=LOOPS):
         Proc8(Array1Glob, Array2Glob, IntLoc1, IntLoc3)
         PtrGlb = Proc1(PtrGlb)
         CharIndex = 'A'
-
         while CharIndex <= Char2Glob:
             if EnumLoc == Func1(CharIndex, 'C'):
                 EnumLoc = Proc6(Ident1)
             CharIndex = chr(ord(CharIndex)+1)
-
         IntLoc3 = IntLoc2 * IntLoc1
         IntLoc2 = IntLoc3 // IntLoc1
         IntLoc2 = 7 * (IntLoc3 - IntLoc2) - IntLoc1
         IntLoc1 = Proc2(IntLoc1)
 
-    print("begin")
-    benchtime = clock() - starttime - nulltime
-    b="begin"
-    e="end"
+    benchtime = time() - starttime - nulltime
     if benchtime == 0.0:
         loopsPerBenchtime = 0.0
     else:
         loopsPerBenchtime = (loops / benchtime)
-    try:
-        return benchtime, loopsPerBenchtime
-    finally:
-        print(b,"passes", loops, "time",benchtime, "benchmark =",loopsPerBenchtime, e)
+    return benchtime, loopsPerBenchtime
 
 def Proc1(PtrParIn):
     PtrParIn.PtrComp = NextRecord = PtrGlb.copy()
@@ -270,6 +219,7 @@ def Func3(EnumParIn):
     if EnumLoc == Ident3: return TRUE
     return FALSE
 
+
 if __name__ == '__main__':
     import sys
     def error(msg):
@@ -290,3 +240,4 @@ if __name__ == '__main__':
     except Exception as e:
         print("ex",e)
     print("end")
+

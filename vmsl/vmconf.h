@@ -21,8 +21,6 @@ static int VMOP = -1;
 #define VMOP_PAUSE      5
 #define VMOP_SYSCALL    6
 
-
-
 static int sub_tracking = 0;
 
 static int ctx_current = 1;

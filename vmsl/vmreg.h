@@ -91,6 +91,7 @@ struct mp_registers {
     mp_obj_t sub_value;  // child ctx computed value.
     mp_obj_t *sub_args ; // child allocated memory ptr
     int sub_alloc ; // child allocated memory size
+    mp_vm_return_kind_t sub_vm_return_kind; // child result on mp_execute_bytecode() calls ( can be recursive )
 
     mp_vm_return_kind_t vm_return_kind;
     // last

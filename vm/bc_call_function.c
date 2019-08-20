@@ -30,20 +30,20 @@ VM_ENTRY(MP_BC_CALL_FUNCTION): {
         }
     }
 
-    ctx_get_next();
+    ctx_get_next(CTX_NEW);
     NEXT.self_in = *CTX.sp;
     NEXT.n_args = unum & 0xff;
     NEXT.n_kw =  (unum >> 8) & 0xff;
     NEXT.args = CTX.sp + 1;
 
-    if ( strlen(FUN_NAME)>1 )
-        GOSUB(SUB_call_function_n_kw, RET_call_function, FUN_NAME );
-    else
-        GOSUB(SUB_call_function_n_kw, RET_call_function, mp_obj_get_type_str(NEXT.self_in) );
-
-RET_call_function:
+    if ( strlen(FUN_NAME)>1 ) {
+        GOSUB(SUB_call_function_n_kw, FUN_NAME );
+    } else {
+        GOSUB(SUB_call_function_n_kw, mp_obj_get_type_str(NEXT.self_in) );
+    }
+//RET_call_function:
     VM_SET_TOP(SUBVAL);
-    VM_DISPATCH();
+    continue;
 
 }
 

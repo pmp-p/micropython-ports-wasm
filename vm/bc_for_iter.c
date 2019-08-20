@@ -1,10 +1,9 @@
-#if 1
 VM_ENTRY(MP_BC_FOR_ITER): {
     MARK_EXC_IP_SELECTIVE();
     VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
     CTX.code_state->sp = CTX.sp;
 
-    ctx_get_next();
+    ctx_get_next(CTX_NEW);
     NEXT.return_value = MP_OBJ_NULL;;
     NEXT.send_value = mp_const_none;
     NEXT.throw_value = MP_OBJ_NULL;
@@ -21,10 +20,10 @@ VM_ENTRY(MP_BC_FOR_ITER): {
     if (type->iternext != NULL) {
 
 
-clog(">>>  BC_FOR_ITER:gen_instance_iternext\n"  );
+        clog(">>>  BC_FOR_ITER:gen_instance_iternext\n"  );
             RETVAL = type->iternext(NEXT.self_in);
 
-        if ( (mp_fun_1_t)*type->iternext == &gen_instance_iternext_ptr ) {
+        if ( (void*)*type->iternext == &gen_instance_iternext ) {
             clog(">>> BC_FOR_ITER:type->iternext\n"  );
 #if 0
             static mp_vm_return_kind_t mpsl_obj_gen_resume;
@@ -53,9 +52,11 @@ clog(">>>  BC_FOR_ITER:gen_instance_iternext\n"  );
 
 
 #endif
-clog("<<< BC_FOR_ITER:type->iternext_return\n");
+            clog("<<< BC_FOR_ITER:type->iternext_return\n");
         }
-clog("<<< BC_FOR_ITER:gen_instance_iternext_return\n"  );
+
+        clog("<<< BC_FOR_ITER:gen_instance_iternext_return\n"  );
+
     } else {
         // check for __next__ method
         mp_obj_t dest[2];
@@ -74,6 +75,7 @@ clog("<<< BC_FOR_ITER:mp_call_method_n_kw_return\n");
             }
         }
     }
+
 //========================== end mpsl_iternext_allow_raise(mp_obj_t o_in)  ==================
     if (RETVAL == MP_OBJ_STOP_ITERATION) {
         CTX.sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
@@ -81,32 +83,7 @@ clog("<<< BC_FOR_ITER:mp_call_method_n_kw_return\n");
     } else {
         VM_PUSH(RETVAL); // push the next iteration value
     }
-    ctx_release();
-    VM_DISPATCH();
+    ctx_free();
+    continue;
 }
 
-#else
-
-    VM_ENTRY(MP_BC_FOR_ITER): {
-        MARK_EXC_IP_SELECTIVE();
-        VM_DECODE_ULABEL; // the jump offset if iteration finishes; for labels are always forward
-        CTX.code_state->sp = CTX.sp;
-        mp_obj_t obj;
-        if (CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1] == MP_OBJ_NULL) {
-            obj = CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 2];
-        } else {
-            obj = MP_OBJ_FROM_PTR(&CTX.sp[-MP_OBJ_ITER_BUF_NSLOTS + 1]);
-        }
-clog("    bc_for_iter:98 >> mpsl_iternext_allow_raise\n");
-        mp_obj_t value = mpsl_iternext_allow_raise(obj);
-
-clog("    bc_for_iter:101 << mpsl_iternext_allow_raise_return\n");
-        if (value == MP_OBJ_STOP_ITERATION) {
-            CTX.sp -= MP_OBJ_ITER_BUF_NSLOTS; // pop the exhausted iterator
-            CTX.ip += CTX.ulab; // jump to after for-block
-        } else {
-            VM_PUSH(value); // push the next iteration value
-        }
-        VM_DISPATCH();
-    }
-#endif

@@ -156,6 +156,27 @@ repl_run(int warmup) {
     return 1;
 }
 
+#if 0
+int endswith(const char * str, const char * suffix)
+{
+  int str_len = bsd_strlen(str);
+  int suffix_len = bsd_strlen(suffix);
+
+  return
+    (str_len >= suffix_len) && (0 == strcmp(str + (str_len-suffix_len), suffix));
+}
+
+#else
+int endswith(const char * str, const char * suffix)
+{
+  int str_len = strlen(str);
+  int suffix_len = strlen(suffix);
+
+  return
+    (str_len >= suffix_len) && (0 == strcmp(str + (str_len-suffix_len), suffix));
+}
+#endif
+
 
 #include "vmsl/vmreg.h"
 
@@ -244,11 +265,11 @@ call_:;
             COME_FROM;
     }
 
-/*
-    if (i_main.shm_stdio[0]) {
+#define io_stdin i_main.shm_stdio
+    if (io_stdin[0]) {
 
         //is it async top level ? let python access shared mem and rewrite code
-        if (endswith(repl_line, "#async-tl")) {
+        if (endswith(io_stdin, "#async-tl")) {
             fprintf(stderr, "#async-tl -> aio.asyncify()\n");
             PyRun_SimpleString("aio.asyncify()");
         } else {
@@ -257,8 +278,10 @@ call_:;
             //do_str(i_main.shm_stdio, MP_PARSE_FILE_INPUT);
         }
         // mark done
-        i_main.shm_stdio[0] = 0;
+        io_stdin[0] = 0;
     }
+#undef io_stdin
+
 
     while (!KPANIC) {
         if (!rbb_is_empty(&out_rbb)) {
@@ -275,7 +298,7 @@ call_:;
             goto VM_stackmess;
 
         char *keybuf ;
-        keybuf = repl_line ;
+        keybuf = shm_get_ptr(IO_KBD, 0) ;
 
         // only when scripting interface is idle and repl ready
         while (repl_started) {
@@ -289,7 +312,7 @@ call_:;
         }
         return;
     }
-*/
+
 
 
 // def PyRun_SimpleString(const_char_p src) -> int;

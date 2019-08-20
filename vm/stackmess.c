@@ -1,29 +1,29 @@
 VM_stackmess:
 
-if (VMOP==VMOP_NONE)
-    return;
+    if (VMOP==VMOP_NONE)
+        return;
 
-if (VMOP==VMOP_CRASH) {
-    clog("KP - game over");
-    //emscripten_pause_main_loop();
-    emscripten_cancel_main_loop();
-    return;
-}
+    if (VMOP==VMOP_CRASH) {
+        clog("KP - game over");
+        //emscripten_pause_main_loop();
+        emscripten_cancel_main_loop();
+        return;
+    }
 
-if (VMOP==VMOP_PAUSE) {
-    CTX.vmloop_state = VM_PAUSED + 3;
-    fprintf(stderr," - paused interpreter %d -\n", ctx_current);
-    return;
-}
+    if (VMOP==VMOP_PAUSE) {
+        CTX.vmloop_state = VM_PAUSED + 3;
+        fprintf(stderr," - paused interpreter %d -\n", ctx_current);
+        return;
+    }
 
-if (VMOP==VMOP_SYSCALL) {
-    CTX.vmloop_state = VM_SYSCALL;
-    if (show_os_loop(-1))
-        fprintf(stderr," - syscall %d -\n", ctx_current);
-    return;
-}
+    if (VMOP==VMOP_SYSCALL) {
+        CTX.vmloop_state = VM_SYSCALL;
+        if (show_os_loop(-1))
+            fprintf(stderr," - syscall %d -\n", ctx_current);
+        return;
+    }
 
-if (VMOP==VMOP_CALL) {
+    if (VMOP==VMOP_CALL) {
 /* unwrapping of
 
 mp_obj_t mp_call_function_n_kw(mp_obj_t fun_in, size_t n_args, size_t n_kw, const mp_obj_t *args)
@@ -53,18 +53,19 @@ SUB_call_function_n_kw: ;
         if (*type->call == &fun_bc_call) {
             clog("    [%d] <fun_bc_call(...) '%s' %d->%d>", CTX.sub_id, FUN_NAME, CTX.parent, ctx_current);
 
-
             if (!strcmp(FUN_NAME,"syscall")){
                 ctx_sti++;
                 clog("\n  ********* STI[%d]: MUST MAKE CTX>%d INTERRUPTIBLE ************ ", ctx_sti, ctx_current);
             }
-
+#if 0
+            #pragma message "total fail"
+#else
             if ( ctx_sti>0)
                 BRANCH(VM_fun_bc_call, VMOP_NONE, CTX_call_function_n_kw_cli, FUN_NAME);
-            else
-                BRANCH(VM_fun_bc_call, VMOP_NONE, CTX_call_function_n_kw_resume, FUN_NAME);
-        }   //no continuation
 
+            BRANCH(VM_fun_bc_call, VMOP_NONE, CTX_call_function_n_kw_resume, FUN_NAME);
+#endif
+        }   //no continuation
 
 
         if (*type->call == &closure_call) {
@@ -153,6 +154,7 @@ CTX_call_function_n_kw_free:
         RETURN;
 
     #undef FUN_NAME
+
     return;
 }
 // mp_call_function_n_kw
