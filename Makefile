@@ -318,13 +318,13 @@ endif
 
 ifdef STATIC
 # ============ SERIOUSLY BROKEN ==================
-LD_PROG += $(WASM_FLAGS) -s MAIN_MODULE=1
-LD_LIB += $(WASM_FLAGS) -fPIC -s SIDE_MODULE=1
+LD_PROG += $(CFLAGS) $(WASM_FLAGS) -s MAIN_MODULE=1 
+LD_LIB += $(WASM_FLAGS) -s SIDE_MODULE=1
+CFLAGS += -fPIC
 
-#LD_PROG += -s ERROR_ON_UNDEFINED_SYMBOLS=0
 $(PROG): lib-static
 	$(ECHO) "Building static executable $@"
-	$(Q)$(CC) $(CFLAGS) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
+	$(Q)$(CC) $(LD_PROG) $(INC) $(COPT) $(LD_PROG) $(THR_FLAGS) \
  -o $@ main.c -ldl -lm -lc lib$(BASENAME)$(TARGET).a \
  --preload-file assets@/assets \
  --preload-file micropython/lib@/lib
