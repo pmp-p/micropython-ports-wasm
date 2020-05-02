@@ -2,6 +2,10 @@
 
 ### NEWS:
 
+1 May 2020 : Project lives again, but is not compatible with either micropython or pycopy because of adoption of a no nlr, registers and a heavily customized vm.c
+i'll se how to integrate again when time comes. Meanwhile i'll try to maintain prebuilt and testsuite here  https://github.com/pmp-p/wapy
+
+
 20 august 2019 : blocked again https://bugs.llvm.org/show_bug.cgi?id=43060
 
 16 august 2019 : retrying stackless with clang CI intregration
