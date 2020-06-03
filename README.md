@@ -2,6 +2,35 @@
 
 ### NEWS:
 
+3 June 2020 : https://github.com/pmp-p/wapy/tree/wapy-wipdonotuse is quite stable and can run 2x to 5x slower than cpython native
+
+5x slower means full preemption like micropython.schedule can do on MCU except there it returns to js coroutines.
+
+so time.sleep, open(file & sockets), import are going to be implemented with "aio" functions (POSIX.1-2001, POSIX.1-2008)
+
+the ffi/ctypes support seems enough to run some  PySDL2 samples ( ctypes wrapper for CPython and SDL2 )
+
+
+demo: https://pmp-p.github.io/wapy/minide/
+
+to build : apply https://patch-diff.githubusercontent.com/raw/pmp-p/wapy/pull/3.diff on a micropython-master tree named build-no_nlr
+
+
+Neither micropython/micropython or pfalcon/pycopy seem actually attracted to have a bare metal preemptible VM :
+
+https://github.com/micropython/micropython/pull/4131#issuecomment-629597963
+
+https://github.com/pfalcon/pycopy/issues/18
+
+
+I don't see much point to bother integrate in upstream "ports" folder :
+so future of wapy could well be wasi-header-only or an arduino lib tied to Wasm3
+which should allow to write wapy drivers directly with bare-metal C or arduino.
+
+
+
+
+
 1 May 2020 : Project lives again, but is not compatible with either micropython or pycopy because of adoption of a no nlr, registers and a heavily customized vm.c
 i'll se how to integrate again when time comes. Meanwhile i'll try to maintain prebuilt and testsuite here  https://github.com/pmp-p/wapy
 
@@ -192,22 +221,28 @@ https://github.com/kkimdev/epsilon
 
 ## Experimental Features (current or future):
 
-Using requestIdleCallback
+Explicit exceptions :
+https://github.com/dpgeorge/micropython/tree/py-remove-nlr
+
+
+Using requestIdleCallback :
 https://developers.google.com/web/updates/2015/08/using-requestidlecallback
 
-multi core interpreters
+
+multi core interpreters :
 https://github.com/ericsnowcurrently/multi-core-python/wiki
 
-multiplexed rpc
+
+Multiplexed rpc :
 https://brionv.com/log/2019/05/10/wasm-rpc-thoughts/
 
-a C api for pythons ?
+
+A C api for pythons ?
 https://github.com/pyhandle/hpy
 
 
 native code compiler ?
 https://github.com/windelbouwman/ppci-mirror
-
 
 integrated gui
 https://github.com/littlevgl/lv_binding_micropython
