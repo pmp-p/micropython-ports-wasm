@@ -2,6 +2,10 @@
 
 ### NEWS:
 
+[![Gitter](https://badges.gitter.im/Wasm-Python/community.svg)](https://gitter.im/Wasm-Python/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+10 August 2020 : now WaPy can load as an es6 module, it also feature step-debugging for synchronous code.
+
 3 June 2020 : https://github.com/pmp-p/wapy/tree/wapy-wipdonotuse is quite stable and can run 2x to 5x slower than cpython native
 
 5x slower means full preemption like micropython.schedule can do on MCU except there it returns to js coroutines.
@@ -70,7 +74,16 @@ we'll be able to by compiling micropython core to wasm bytecode first.
 
 
 
-## Getting started
+## Getting started ( wapy, only basic js skill required )
+
+Get the content of  https://github.com/pmp-p/pmp-p.github.io/tree/master/wapy.es6 and hack it to your liking.
+
+
+
+
+## Getting started (this port)
+
+( does not apply to wapy, involves compilation )
 
 Beware this is not a micropython fork :
  it's a port folder to add support to official micropython for a new "machine"
